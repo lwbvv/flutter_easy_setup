@@ -1,4 +1,4 @@
-# flavor-go
+# easy_setup
 
 Flutter 프로젝트의 flavor(빌드 변형) 환경을 **한 번의 명령**으로 자동 설정하는 Dart CLI 도구입니다.
 
@@ -41,7 +41,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경을 **한 번의 명령**으
 dart pub global activate --source path .
 ```
 
-이후 어디서든 `flavor-go` 명령으로 실행할 수 있습니다.
+이후 어디서든 `easy_setup` 명령으로 실행할 수 있습니다.
 
 ### 방법 2: 직접 실행
 
@@ -52,8 +52,8 @@ dart run bin/easy_setup.dart [옵션]
 ### 방법 3: 네이티브 바이너리로 컴파일
 
 ```bash
-dart compile exe bin/easy_setup.dart -o flavor-go
-./flavor-go [옵션]
+dart compile exe bin/easy_setup.dart -o easy_setup
+./easy_setup [옵션]
 ```
 
 ---
@@ -65,7 +65,7 @@ dart compile exe bin/easy_setup.dart -o flavor-go
 Flutter 프로젝트 루트에 `easy_setup.yaml`을 만든 뒤 실행합니다:
 
 ```bash
-flavor-go
+easy_setup
 ```
 
 ### CLI 옵션
@@ -81,18 +81,18 @@ flavor-go
 
 ```bash
 # dry-run으로 미리보기
-flavor-go --dry-run
+easy_setup --dry-run
 
 # 특정 프로젝트 경로 지정
-flavor-go -p /path/to/flutter/project
+easy_setup -p /path/to/flutter/project
 
 # 두 옵션 함께 사용
-flavor-go -n -p /path/to/flutter/project
+easy_setup -n -p /path/to/flutter/project
 ```
 
 ### 실행 후 다음 단계
 
-`flavor-go` 실행이 완료되면 아래 명령을 순서대로 실행하세요:
+`easy_setup` 실행이 완료되면 아래 명령을 순서대로 실행하세요:
 
 ```bash
 flutter pub get

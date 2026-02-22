@@ -17,4 +17,4 @@ dev_dependencies:
   test: ^1.25.6
 
 executables:
-  flavor-go: easy_setup  # bin/easy_setup.dart를 'flavor-go' 명령어로 실행
+  easy_setup: easy_setup  # bin/easy_setup.dart를 'easy_setup' 명령어로 실행

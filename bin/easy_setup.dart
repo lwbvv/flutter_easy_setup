@@ -1,11 +1,11 @@
-// flavor-go CLI 진입점
+// easy_setup CLI 진입점
 //
 // Flutter 프로젝트의 flavor(빌드 변형) 설정을 자동으로 구성하는 CLI 도구입니다.
 // Android(build.gradle)와 iOS(xcconfig, pbxproj, scheme, Info.plist, Podfile)를
 // 한 번의 명령으로 모두 설정합니다.
 //
 // 사용법:
-//   flavor-go [options]
+//   easy_setup [options]
 //
 // 옵션:
 //   -h, --help          도움말 표시
@@ -74,8 +74,8 @@ void main(List<String> arguments) {
 
 /// CLI 사용법과 easy_setup.yaml 예시를 출력합니다.
 void _printUsage(ArgParser parser) {
-  print('flavor-go — Configure Flutter flavor setup for Android & iOS\n');
-  print('Usage: flavor-go [options]\n');
+  print('easy_setup — Configure Flutter flavor setup for Android & iOS\n');
+  print('Usage: easy_setup [options]\n');
   print(parser.usage);
   print('');
   print('Reads easy_setup.yaml in the Flutter project root.');
