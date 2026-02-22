@@ -1,8 +1,11 @@
-/// Support for doing something awesome.
+/// easy_setup 라이브러리의 공개 API를 정의합니다.
 ///
-/// More dartdocs go here.
+/// 이 파일은 외부에서 `import 'package:easy_setup/easy_setup.dart'`로
+/// 접근할 수 있는 공개 심볼(symbol)들을 re-export합니다.
 library;
 
-export 'src/easy_setup_base.dart';
-
-// TODO: Export any libraries intended for clients of this package.
+export 'src/commands/flavor_command.dart';
+export 'src/exceptions.dart';
+export 'src/models/flavor_config.dart';
+export 'src/utils/project_finder.dart';
+export 'src/utils/uuid_generator.dart';

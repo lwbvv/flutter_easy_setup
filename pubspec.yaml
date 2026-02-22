@@ -8,13 +8,13 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  args: ^2.7.0
-  yaml: ^3.1.3
-  # path: ^1.9.0
+  args: ^2.7.0 # 터미널 인자(--flavor dev 등)를 파싱할 때
+  yaml: ^3.1.3 # 사용자의 pubspec.yaml 설정을 읽어올 때
+  path: ^1.9.0
 
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.6
 
 executables:
-  flavor-go: easy_setup  # bin/easy_setup.dart를 'easy_setup'라는 명령어로 실행
+  flavor-go: easy_setup  # bin/easy_setup.dart를 'flavor-go' 명령어로 실행
