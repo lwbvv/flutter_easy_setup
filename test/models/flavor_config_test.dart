@@ -189,13 +189,14 @@ void main() {
     test('parses valid YAML file', () {
       final yamlFile = File('${tempDir.path}/easy_setup.yaml');
       yamlFile.writeAsStringSync('''
-flavors:
-  dev:
-    bundle_id: com.example.app.dev
-    name: MyApp Dev
-  prod:
-    bundle_id: com.example.app
-    name: MyApp
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.app.dev
+      name: MyApp Dev
+    prod:
+      bundle_id: com.example.app
+      name: MyApp
 ''');
 
       final config = EasySetupConfig.fromFile(yamlFile.path);
@@ -229,9 +230,25 @@ flavors:
       );
     });
 
-    test('throws SetupException when flavors key is missing', () {
+    test('throws SetupException when easy_setup key is missing', () {
       final yamlFile = File('${tempDir.path}/easy_setup.yaml');
       yamlFile.writeAsStringSync('something_else: true\n');
+
+      expect(
+        () => EasySetupConfig.fromFile(yamlFile.path),
+        throwsA(
+          isA<SetupException>().having(
+            (e) => e.message,
+            'message',
+            contains('Missing "easy_setup" key'),
+          ),
+        ),
+      );
+    });
+
+    test('throws SetupException when flavors key is missing', () {
+      final yamlFile = File('${tempDir.path}/easy_setup.yaml');
+      yamlFile.writeAsStringSync('easy_setup:\n  something_else: true\n');
 
       expect(
         () => EasySetupConfig.fromFile(yamlFile.path),
@@ -242,16 +259,17 @@ flavors:
     test('parses multiple flavors', () {
       final yamlFile = File('${tempDir.path}/easy_setup.yaml');
       yamlFile.writeAsStringSync('''
-flavors:
-  dev:
-    bundle_id: com.example.dev
-    name: Dev
-  staging:
-    bundle_id: com.example.staging
-    name: Staging
-  prod:
-    bundle_id: com.example.prod
-    name: Prod
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.dev
+      name: Dev
+    staging:
+      bundle_id: com.example.staging
+      name: Staging
+    prod:
+      bundle_id: com.example.prod
+      name: Prod
 ''');
 
       final config = EasySetupConfig.fromFile(yamlFile.path);
@@ -262,21 +280,22 @@ flavors:
     test('parses YAML with all optional fields', () {
       final yamlFile = File('${tempDir.path}/easy_setup.yaml');
       yamlFile.writeAsStringSync('''
-flavors:
-  dev:
-    bundle_id: com.example.app.dev
-    name: MyApp Dev
-    version_code: 1
-    version_name: "1.0.0-dev"
-    signing:
-      keystore: keys/dev.keystore
-      alias: dev-key
-    firebase:
-      android: config/dev/google-services.json
-      ios: config/dev/GoogleService-Info.plist
-    ios:
-      team_id: "ABCDEF1234"
-      app_icon: AppIcon-Dev
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.app.dev
+      name: MyApp Dev
+      version_code: 1
+      version_name: "1.0.0-dev"
+      signing:
+        keystore: keys/dev.keystore
+        alias: dev-key
+      firebase:
+        android: config/dev/google-services.json
+        ios: config/dev/GoogleService-Info.plist
+      ios:
+        team_id: "ABCDEF1234"
+        app_icon: AppIcon-Dev
 ''');
 
       final config = EasySetupConfig.fromFile(yamlFile.path);

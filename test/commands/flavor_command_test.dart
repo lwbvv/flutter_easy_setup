@@ -156,26 +156,28 @@ final _pbxproj = '// !\$*UTF8*\$!\n'
     '}\n';
 
 const _easySetupYaml = '''
-flavors:
-  dev:
-    bundle_id: com.example.app.dev
-    name: MyApp Dev
-  prod:
-    bundle_id: com.example.app
-    name: MyApp
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.app.dev
+      name: MyApp Dev
+    prod:
+      bundle_id: com.example.app
+      name: MyApp
 ''';
 
 const _easySetupYamlWithFirebase = '''
-flavors:
-  dev:
-    bundle_id: com.example.app.dev
-    name: MyApp Dev
-    firebase:
-      android: config/dev/google-services.json
-      ios: config/dev/GoogleService-Info.plist
-  prod:
-    bundle_id: com.example.app
-    name: MyApp
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.app.dev
+      name: MyApp Dev
+      firebase:
+        android: config/dev/google-services.json
+        ios: config/dev/GoogleService-Info.plist
+    prod:
+      bundle_id: com.example.app
+      name: MyApp
 ''';
 
 /// Creates a minimal Flutter project directory structure for integration tests.
@@ -258,7 +260,7 @@ void main() {
 
     test('throws SetupException when flavors are empty', () {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
-          .writeAsStringSync('flavors:\n');
+          .writeAsStringSync('easy_setup:\n  flavors:\n');
 
       // Provide valid YAML with empty flavors map — the YAML parser returns
       // null for the 'flavors' key which triggers a parse error.

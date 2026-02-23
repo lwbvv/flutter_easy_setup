@@ -1,0 +1,11 @@
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: studio.etch.setup-test.dev
+      name: MyApp Dev
+    staging:
+      bundle_id: studio.etch.setup-test.staging
+      name: MyApp Staging
+    prod:
+      bundle_id: studio.etch.setup-test
+      name: MyApp

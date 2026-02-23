@@ -122,15 +122,28 @@ class EasySetupConfig {
       throw SetupException(
         'easy_setup.yaml not found at $path\n'
         'Create it with:\n'
-        'flavors:\n'
-        '  dev:\n'
-        '    bundle_id: com.example.app.dev\n'
-        '    name: MyApp Dev',
+        'easy_setup:\n'
+        '  flavors:\n'
+        '    dev:\n'
+        '      bundle_id: com.example.app.dev\n'
+        '      name: MyApp Dev',
       );
     }
     try {
       final doc = loadYaml(file.readAsStringSync()) as Map;
-      final flavorsMap = doc['flavors'] as Map;
+      final easySetup = doc['easy_setup'];
+      if (easySetup == null || easySetup is! Map) {
+        throw SetupException(
+          'Missing "easy_setup" key in easy_setup.yaml.\n'
+          'Expected structure:\n'
+          'easy_setup:\n'
+          '  flavors:\n'
+          '    dev:\n'
+          '      bundle_id: com.example.app.dev\n'
+          '      name: MyApp Dev',
+        );
+      }
+      final flavorsMap = easySetup['flavors'] as Map;
       final flavors = <String, FlavorConfig>{};
       for (final entry in flavorsMap.entries) {
         flavors[entry.key as String] = FlavorConfig.fromYaml(entry.value as Map);

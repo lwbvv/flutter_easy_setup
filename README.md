@@ -107,16 +107,17 @@ flutter run --flavor dev -t lib/main.dart
 Flutter 프로젝트 루트에 `easy_setup.yaml` 파일을 생성합니다:
 
 ```yaml
-flavors:
-  dev:
-    bundle_id: com.example.app.dev
-    name: MyApp Dev
-  staging:
-    bundle_id: com.example.app.staging
-    name: MyApp Staging
-  prod:
-    bundle_id: com.example.app
-    name: MyApp
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.app.dev
+      name: MyApp Dev
+    staging:
+      bundle_id: com.example.app.staging
+      name: MyApp Staging
+    prod:
+      bundle_id: com.example.app
+      name: MyApp
 ```
 
 ### 필드 설명
