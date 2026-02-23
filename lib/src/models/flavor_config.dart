@@ -4,6 +4,63 @@ import 'package:yaml/yaml.dart';
 
 import '../exceptions.dart';
 
+/// Android signing 설정을 담는 모델 클래스입니다.
+class SigningConfig {
+  final String keystore;
+  final String alias;
+
+  const SigningConfig({required this.keystore, required this.alias});
+
+  factory SigningConfig.fromYaml(Map yaml) {
+    return SigningConfig(
+      keystore: yaml['keystore'] as String,
+      alias: yaml['alias'] as String,
+    );
+  }
+}
+
+/// Firebase 설정 파일 경로를 담는 모델 클래스입니다.
+class FirebaseConfig {
+  final String? android;
+  final String? ios;
+
+  const FirebaseConfig({this.android, this.ios});
+
+  factory FirebaseConfig.fromYaml(Map yaml) {
+    return FirebaseConfig(
+      android: yaml['android'] as String?,
+      ios: yaml['ios'] as String?,
+    );
+  }
+}
+
+/// iOS flavor별 추가 설정을 담는 모델 클래스입니다.
+class IosFlavorConfig {
+  final String? teamId;
+  final String? provisioningProfile;
+  final String? codeSignIdentity;
+  final String? entitlements;
+  final String? appIcon;
+
+  const IosFlavorConfig({
+    this.teamId,
+    this.provisioningProfile,
+    this.codeSignIdentity,
+    this.entitlements,
+    this.appIcon,
+  });
+
+  factory IosFlavorConfig.fromYaml(Map yaml) {
+    return IosFlavorConfig(
+      teamId: yaml['team_id'] as String?,
+      provisioningProfile: yaml['provisioning_profile'] as String?,
+      codeSignIdentity: yaml['code_sign_identity'] as String?,
+      entitlements: yaml['entitlements'] as String?,
+      appIcon: yaml['app_icon'] as String?,
+    );
+  }
+}
+
 /// 단일 flavor의 설정값을 담는 모델 클래스입니다.
 ///
 /// [bundleId]: 앱의 고유 식별자 (예: com.example.app.dev)
@@ -11,20 +68,38 @@ import '../exceptions.dart';
 class FlavorConfig {
   final String bundleId;
   final String name;
+  final int? versionCode;
+  final String? versionName;
+  final SigningConfig? signing;
+  final FirebaseConfig? firebase;
+  final IosFlavorConfig? ios;
 
-  const FlavorConfig({required this.bundleId, required this.name});
+  const FlavorConfig({
+    required this.bundleId,
+    required this.name,
+    this.versionCode,
+    this.versionName,
+    this.signing,
+    this.firebase,
+    this.ios,
+  });
 
   /// YAML 맵으로부터 FlavorConfig 인스턴스를 생성합니다.
-  ///
-  /// 예상되는 YAML 구조:
-  /// ```yaml
-  /// bundle_id: com.example.app.dev
-  /// name: MyApp Dev
-  /// ```
   factory FlavorConfig.fromYaml(Map yaml) {
     return FlavorConfig(
       bundleId: yaml['bundle_id'] as String,
       name: yaml['name'] as String,
+      versionCode: yaml['version_code'] as int?,
+      versionName: yaml['version_name'] as String?,
+      signing: yaml['signing'] != null
+          ? SigningConfig.fromYaml(yaml['signing'] as Map)
+          : null,
+      firebase: yaml['firebase'] != null
+          ? FirebaseConfig.fromYaml(yaml['firebase'] as Map)
+          : null,
+      ios: yaml['ios'] != null
+          ? IosFlavorConfig.fromYaml(yaml['ios'] as Map)
+          : null,
     );
   }
 }

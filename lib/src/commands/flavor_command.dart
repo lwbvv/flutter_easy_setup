@@ -1,5 +1,6 @@
 import '../android/build_gradle_modifier.dart';
 import '../exceptions.dart';
+import '../firebase/firebase_copier.dart';
 import '../ios/info_plist_modifier.dart';
 import '../ios/pbxproj_modifier.dart';
 import '../ios/podfile_modifier.dart';
@@ -13,8 +14,10 @@ import '../utils/project_finder.dart';
 /// 아래 순서대로 Android와 iOS 설정을 자동으로 수행합니다:
 ///   1. Flutter 프로젝트 루트 탐지
 ///   2. easy_setup.yaml 로드 및 파싱
-///   3. Android build.gradle — productFlavors 블록 추가
+///   3. Android build.gradle — productFlavors 블록 추가 (signingConfigs 포함)
+///   3.5. Android Firebase — google-services.json 복사
 ///   4. iOS xcconfig — flavor별 Debug/Release/Profile 설정 파일 생성
+///   4.5. iOS Firebase — GoogleService-Info.plist 복사
 ///   5. iOS project.pbxproj — 빌드 구성(XCBuildConfiguration) 추가
 ///   6. iOS xcscheme — flavor별 빌드 스키마 생성
 ///   7. iOS Info.plist — CFBundleDisplayName을 변수로 교체
@@ -50,6 +53,19 @@ class FlavorCommand {
     final gradlePath = ProjectFinder.androidBuildGradlePath(root);
     BuildGradleModifier.modify(gradlePath, config.flavors, dryRun: dryRun);
 
+    // 3.5단계: Android Firebase — google-services.json 복사
+    for (final entry in config.flavors.entries) {
+      final firebase = entry.value.firebase;
+      if (firebase?.android != null) {
+        FirebaseCopier.copyAndroidConfig(
+          root,
+          entry.key,
+          firebase!.android!,
+          dryRun: dryRun,
+        );
+      }
+    }
+
     // 4단계: iOS — flavor별 xcconfig 파일 생성 (Debug/Release/Profile)
     print('\n--- iOS xcconfig ---');
     final xcconfigDir = ProjectFinder.iosXcconfigDir(root);
@@ -60,6 +76,19 @@ class FlavorCommand {
         entry.value,
         dryRun: dryRun,
       );
+    }
+
+    // 4.5단계: iOS Firebase — GoogleService-Info.plist 복사
+    for (final entry in config.flavors.entries) {
+      final firebase = entry.value.firebase;
+      if (firebase?.ios != null) {
+        FirebaseCopier.copyIosConfig(
+          root,
+          entry.key,
+          firebase!.ios!,
+          dryRun: dryRun,
+        );
+      }
     }
 
     // 5단계: iOS — project.pbxproj에 빌드 구성 추가

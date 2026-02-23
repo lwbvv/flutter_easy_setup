@@ -21,27 +21,51 @@ class XcconfigGenerator {
     FlavorConfig config, {
     bool dryRun = false,
   }) {
+    final vars = _buildXcconfigVars(config);
+
     // Debug용 xcconfig — Debug.xcconfig를 상속
     _writeXcconfig(
       p.join(xcconfigDir, 'Debug-$flavor.xcconfig'),
-      '#include "Debug.xcconfig"\n'
-      'APP_DISPLAY_NAME=${config.name}\n',
+      '#include "Debug.xcconfig"\n$vars',
       dryRun: dryRun,
     );
     // Release용 xcconfig — Release.xcconfig를 상속
     _writeXcconfig(
       p.join(xcconfigDir, 'Release-$flavor.xcconfig'),
-      '#include "Release.xcconfig"\n'
-      'APP_DISPLAY_NAME=${config.name}\n',
+      '#include "Release.xcconfig"\n$vars',
       dryRun: dryRun,
     );
     // Profile용 xcconfig — Release.xcconfig를 상속 (프로파일은 릴리스 기반)
     _writeXcconfig(
       p.join(xcconfigDir, 'Profile-$flavor.xcconfig'),
-      '#include "Release.xcconfig"\n'
-      'APP_DISPLAY_NAME=${config.name}\n',
+      '#include "Release.xcconfig"\n$vars',
       dryRun: dryRun,
     );
+  }
+
+  /// FlavorConfig로부터 xcconfig 변수 문자열을 조합합니다.
+  static String _buildXcconfigVars(FlavorConfig config) {
+    final sb = StringBuffer();
+    sb.writeln('APP_DISPLAY_NAME=${config.name}');
+    final ios = config.ios;
+    if (ios != null) {
+      if (ios.teamId != null) {
+        sb.writeln('DEVELOPMENT_TEAM=${ios.teamId}');
+      }
+      if (ios.codeSignIdentity != null) {
+        sb.writeln('CODE_SIGN_IDENTITY=${ios.codeSignIdentity}');
+      }
+      if (ios.provisioningProfile != null) {
+        sb.writeln('PROVISIONING_PROFILE_SPECIFIER=${ios.provisioningProfile}');
+      }
+      if (ios.entitlements != null) {
+        sb.writeln('CODE_SIGN_ENTITLEMENTS=${ios.entitlements}');
+      }
+      if (ios.appIcon != null) {
+        sb.writeln('ASSETCATALOG_COMPILER_APPICON_NAME=${ios.appIcon}');
+      }
+    }
+    return sb.toString();
   }
 
   /// 개별 xcconfig 파일을 작성합니다.

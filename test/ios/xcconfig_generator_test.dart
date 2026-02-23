@@ -78,5 +78,78 @@ void main() {
 
       expect(File(p.join(nestedDir, 'Debug-dev.xcconfig')).existsSync(), isTrue);
     });
+
+    test('includes iOS config variables when ios config is present', () {
+      const configWithIos = FlavorConfig(
+        bundleId: 'com.example.app.dev',
+        name: 'MyApp Dev',
+        ios: IosFlavorConfig(
+          teamId: 'ABCDEF1234',
+          codeSignIdentity: 'Apple Development',
+          provisioningProfile: 'Dev Profile',
+          entitlements: 'ios/Runner/Dev.entitlements',
+          appIcon: 'AppIcon-Dev',
+        ),
+      );
+
+      XcconfigGenerator.generate(tempDir.path, 'dev', configWithIos);
+
+      final content = File(p.join(tempDir.path, 'Debug-dev.xcconfig')).readAsStringSync();
+      expect(content, contains('APP_DISPLAY_NAME=MyApp Dev'));
+      expect(content, contains('DEVELOPMENT_TEAM=ABCDEF1234'));
+      expect(content, contains('CODE_SIGN_IDENTITY=Apple Development'));
+      expect(content, contains('PROVISIONING_PROFILE_SPECIFIER=Dev Profile'));
+      expect(content, contains('CODE_SIGN_ENTITLEMENTS=ios/Runner/Dev.entitlements'));
+      expect(content, contains('ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-Dev'));
+    });
+
+    test('includes only provided iOS config variables (partial)', () {
+      const configWithPartialIos = FlavorConfig(
+        bundleId: 'com.example.app.dev',
+        name: 'MyApp Dev',
+        ios: IosFlavorConfig(
+          teamId: 'TEAM123',
+          appIcon: 'AppIcon-Dev',
+        ),
+      );
+
+      XcconfigGenerator.generate(tempDir.path, 'dev', configWithPartialIos);
+
+      final content = File(p.join(tempDir.path, 'Debug-dev.xcconfig')).readAsStringSync();
+      expect(content, contains('APP_DISPLAY_NAME=MyApp Dev'));
+      expect(content, contains('DEVELOPMENT_TEAM=TEAM123'));
+      expect(content, contains('ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-Dev'));
+      expect(content, isNot(contains('CODE_SIGN_IDENTITY=')));
+      expect(content, isNot(contains('PROVISIONING_PROFILE_SPECIFIER=')));
+      expect(content, isNot(contains('CODE_SIGN_ENTITLEMENTS=')));
+    });
+
+    test('does not include iOS variables when ios config is absent', () {
+      XcconfigGenerator.generate(tempDir.path, 'dev', config);
+
+      final content = File(p.join(tempDir.path, 'Debug-dev.xcconfig')).readAsStringSync();
+      expect(content, contains('APP_DISPLAY_NAME=MyApp Dev'));
+      expect(content, isNot(contains('DEVELOPMENT_TEAM=')));
+      expect(content, isNot(contains('CODE_SIGN_IDENTITY=')));
+      expect(content, isNot(contains('PROVISIONING_PROFILE_SPECIFIER=')));
+      expect(content, isNot(contains('CODE_SIGN_ENTITLEMENTS=')));
+      expect(content, isNot(contains('ASSETCATALOG_COMPILER_APPICON_NAME=')));
+    });
+
+    test('iOS config variables appear in all three xcconfig files', () {
+      const configWithIos = FlavorConfig(
+        bundleId: 'com.example.app.dev',
+        name: 'MyApp Dev',
+        ios: IosFlavorConfig(teamId: 'TEAM123'),
+      );
+
+      XcconfigGenerator.generate(tempDir.path, 'dev', configWithIos);
+
+      for (final prefix in ['Debug', 'Release', 'Profile']) {
+        final content = File(p.join(tempDir.path, '$prefix-dev.xcconfig')).readAsStringSync();
+        expect(content, contains('DEVELOPMENT_TEAM=TEAM123'),
+            reason: '$prefix xcconfig should contain DEVELOPMENT_TEAM');
+      }
+    });
   });
 }

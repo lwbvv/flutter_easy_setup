@@ -148,5 +148,138 @@ void main() {
       expect(result, contains('applicationId "com.example.staging"'));
       expect(result, contains('applicationId "com.example.prod"'));
     });
+
+    test('generates manifestPlaceholders for Groovy DSL', () {
+      final file = File('${tempDir.path}/build.gradle');
+      file.writeAsStringSync(_groovyGradle);
+
+      BuildGradleModifier.modify(file.path, flavors);
+
+      final result = file.readAsStringSync();
+      expect(result, contains('manifestPlaceholders = [appName: "MyApp Dev"]'));
+      expect(result, contains('manifestPlaceholders = [appName: "MyApp"]'));
+    });
+
+    test('generates manifestPlaceholders for Kotlin DSL', () {
+      final file = File('${tempDir.path}/build.gradle.kts');
+      file.writeAsStringSync(_kotlinGradle);
+
+      BuildGradleModifier.modify(file.path, flavors);
+
+      final result = file.readAsStringSync();
+      expect(result, contains('manifestPlaceholders += mapOf("appName" to "MyApp Dev")'));
+      expect(result, contains('manifestPlaceholders += mapOf("appName" to "MyApp")'));
+    });
+
+    test('generates versionCode and versionName when provided (Groovy)', () {
+      final flavorsWithVersion = {
+        'dev': const FlavorConfig(
+          bundleId: 'com.example.dev',
+          name: 'Dev',
+          versionCode: 10,
+          versionName: '1.0.0-dev',
+        ),
+      };
+      final file = File('${tempDir.path}/build.gradle');
+      file.writeAsStringSync(_groovyGradle);
+
+      BuildGradleModifier.modify(file.path, flavorsWithVersion);
+
+      final result = file.readAsStringSync();
+      expect(result, contains('versionCode 10'));
+      expect(result, contains('versionName "1.0.0-dev"'));
+    });
+
+    test('generates versionCode and versionName when provided (Kotlin)', () {
+      final flavorsWithVersion = {
+        'dev': const FlavorConfig(
+          bundleId: 'com.example.dev',
+          name: 'Dev',
+          versionCode: 10,
+          versionName: '1.0.0-dev',
+        ),
+      };
+      final file = File('${tempDir.path}/build.gradle.kts');
+      file.writeAsStringSync(_kotlinGradle);
+
+      BuildGradleModifier.modify(file.path, flavorsWithVersion);
+
+      final result = file.readAsStringSync();
+      expect(result, contains('versionCode = 10'));
+      expect(result, contains('versionName = "1.0.0-dev"'));
+    });
+
+    test('does not generate versionCode/versionName when not provided', () {
+      final file = File('${tempDir.path}/build.gradle');
+      file.writeAsStringSync(_groovyGradle);
+
+      BuildGradleModifier.modify(file.path, flavors);
+
+      final result = file.readAsStringSync();
+      // versionCode and versionName should NOT appear as standalone lines
+      // (they exist in the original defaultConfig but not in productFlavors)
+      expect(result, isNot(contains(RegExp(r'productFlavors[\s\S]*versionCode \d'))));
+    });
+
+    test('generates signingConfigs block when signing is provided (Groovy)', () {
+      final flavorsWithSigning = {
+        'dev': const FlavorConfig(
+          bundleId: 'com.example.dev',
+          name: 'Dev',
+          signing: SigningConfig(keystore: 'keys/dev.keystore', alias: 'dev-key'),
+        ),
+        'prod': const FlavorConfig(
+          bundleId: 'com.example.prod',
+          name: 'Prod',
+        ),
+      };
+      final file = File('${tempDir.path}/build.gradle');
+      file.writeAsStringSync(_groovyGradle);
+
+      BuildGradleModifier.modify(file.path, flavorsWithSigning);
+
+      final result = file.readAsStringSync();
+      // signingConfigs block should be inserted
+      expect(result, contains('signingConfigs {'));
+      expect(result, contains('storeFile file("keys/dev.keystore")'));
+      expect(result, contains('keyAlias "dev-key"'));
+      // dev flavor should reference its signingConfig
+      expect(result, contains('signingConfig signingConfigs.dev'));
+      // prod flavor should NOT have signingConfig reference in productFlavors
+      // (it has no signing config)
+    });
+
+    test('generates signingConfigs block when signing is provided (Kotlin)', () {
+      final flavorsWithSigning = {
+        'dev': const FlavorConfig(
+          bundleId: 'com.example.dev',
+          name: 'Dev',
+          signing: SigningConfig(keystore: 'keys/dev.keystore', alias: 'dev-key'),
+        ),
+      };
+      final file = File('${tempDir.path}/build.gradle.kts');
+      file.writeAsStringSync(_kotlinGradle);
+
+      BuildGradleModifier.modify(file.path, flavorsWithSigning);
+
+      final result = file.readAsStringSync();
+      expect(result, contains('signingConfigs {'));
+      expect(result, contains('create("dev")'));
+      expect(result, contains('storeFile = file("keys/dev.keystore")'));
+      expect(result, contains('keyAlias = "dev-key"'));
+      expect(result, contains('signingConfig = signingConfigs.getByName("dev")'));
+    });
+
+    test('does not generate signingConfigs block when no signing provided', () {
+      final file = File('${tempDir.path}/build.gradle');
+      file.writeAsStringSync(_groovyGradle);
+
+      BuildGradleModifier.modify(file.path, flavors);
+
+      final result = file.readAsStringSync();
+      // The original content has "signingConfigs.debug" inside buildTypes,
+      // but there should be no standalone "signingConfigs {" block
+      expect(result, isNot(contains(RegExp(r'^\s+signingConfigs \{', multiLine: true))));
+    });
   });
 }

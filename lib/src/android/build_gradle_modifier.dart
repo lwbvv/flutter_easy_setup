@@ -47,10 +47,29 @@ class BuildGradleModifier {
       throw SetupException('Could not find end of buildTypes block in build.gradle');
     }
 
-    // buildTypes 블록 바로 뒤에 flavor 설정 블록을 삽입
-    final flavorBlock = _buildFlavorBlock(flavors, isKts);
-    content =
-        '${content.substring(0, blockEnd + 1)}\n\n$flavorBlock${content.substring(blockEnd + 1)}';
+    // signingConfigs 블록 삽입 (signing이 있는 flavor가 있으면)
+    final signingBlock = _buildSigningConfigsBlock(flavors, isKts);
+    final hasSigningConfigsBlock = RegExp(r'\bsigningConfigs\s*\{').hasMatch(content);
+    if (signingBlock != null && !hasSigningConfigsBlock) {
+      // android { 블록 내, buildTypes 앞에 삽입
+      content = '${content.substring(0, buildTypesMatch.start)}$signingBlock\n    ${content.substring(buildTypesMatch.start)}';
+      // buildTypes 위치가 바뀌었으므로 다시 찾음
+      final newBuildTypesMatch = RegExp(r'\bbuildTypes\s*\{').firstMatch(content)!;
+      final newOpenBrace = content.indexOf('{', newBuildTypesMatch.start);
+      final newBlockEnd = _findBlockEnd(content, newOpenBrace);
+      if (newBlockEnd == -1) {
+        throw SetupException('Could not find end of buildTypes block in build.gradle');
+      }
+
+      final flavorBlock = _buildFlavorBlock(flavors, isKts);
+      content =
+          '${content.substring(0, newBlockEnd + 1)}\n\n$flavorBlock${content.substring(newBlockEnd + 1)}';
+    } else {
+      // buildTypes 블록 바로 뒤에 flavor 설정 블록을 삽입
+      final flavorBlock = _buildFlavorBlock(flavors, isKts);
+      content =
+          '${content.substring(0, blockEnd + 1)}\n\n$flavorBlock${content.substring(blockEnd + 1)}';
+    }
 
     if (dryRun) {
       print('  [dry-run] Would write Android flavor config to ${file.path}');
@@ -64,9 +83,6 @@ class BuildGradleModifier {
   // ---- 내부 헬퍼 메서드 ----
 
   /// 중괄호 깊이(depth)를 추적하여 짝이 맞는 닫는 중괄호의 인덱스를 반환합니다.
-  ///
-  /// [openBraceIndex]는 여는 중괄호 '{'의 위치입니다.
-  /// 짝을 찾지 못하면 -1을 반환합니다.
   static int _findBlockEnd(String content, int openBraceIndex) {
     int depth = 0;
     for (int i = openBraceIndex; i < content.length; i++) {
@@ -81,21 +97,47 @@ class BuildGradleModifier {
     return -1;
   }
 
+  /// signing이 있는 flavor들에 대해 signingConfigs 블록을 생성합니다.
+  /// signing이 있는 flavor가 없으면 null을 반환합니다.
+  static String? _buildSigningConfigsBlock(
+    Map<String, FlavorConfig> flavors,
+    bool isKts,
+  ) {
+    final signingFlavors = flavors.entries
+        .where((e) => e.value.signing != null)
+        .toList();
+    if (signingFlavors.isEmpty) return null;
+
+    final sb = StringBuffer();
+    if (isKts) {
+      sb.writeln('    signingConfigs {');
+      for (final entry in signingFlavors) {
+        final flavor = entry.key;
+        final signing = entry.value.signing!;
+        sb.writeln('        create("$flavor") {');
+        sb.writeln('            storeFile = file("${signing.keystore}")');
+        sb.writeln('            keyAlias = "${signing.alias}"');
+        sb.writeln('        }');
+      }
+      sb.writeln('    }');
+    } else {
+      sb.writeln('    signingConfigs {');
+      for (final entry in signingFlavors) {
+        final flavor = entry.key;
+        final signing = entry.value.signing!;
+        sb.writeln('        $flavor {');
+        sb.writeln('            storeFile file("${signing.keystore}")');
+        sb.writeln('            keyAlias "${signing.alias}"');
+        sb.writeln('        }');
+      }
+      sb.writeln('    }');
+    }
+    return sb.toString();
+  }
+
   /// flavor 설정을 위한 Gradle 코드 블록을 생성합니다.
   ///
   /// [isKts]가 true이면 Kotlin DSL 문법으로, false이면 Groovy DSL 문법으로 생성합니다.
-  ///
-  /// 생성 예시 (Groovy):
-  /// ```groovy
-  /// flavorDimensions "env"
-  /// productFlavors {
-  ///     dev {
-  ///         dimension "env"
-  ///         applicationId "com.example.app.dev"
-  ///         resValue "string", "app_name", "MyApp Dev"
-  ///     }
-  /// }
-  /// ```
   static String _buildFlavorBlock(
     Map<String, FlavorConfig> flavors,
     bool isKts,
@@ -112,6 +154,16 @@ class BuildGradleModifier {
         sb.writeln('            dimension = "env"');
         sb.writeln('            applicationId = "${config.bundleId}"');
         sb.writeln('            resValue("string", "app_name", "${config.name}")');
+        if (config.versionCode != null) {
+          sb.writeln('            versionCode = ${config.versionCode}');
+        }
+        if (config.versionName != null) {
+          sb.writeln('            versionName = "${config.versionName}"');
+        }
+        sb.writeln('            manifestPlaceholders += mapOf("appName" to "${config.name}")');
+        if (config.signing != null) {
+          sb.writeln('            signingConfig = signingConfigs.getByName("$flavor")');
+        }
         sb.writeln('        }');
       }
       sb.writeln('    }');
@@ -126,6 +178,16 @@ class BuildGradleModifier {
         sb.writeln('            dimension "env"');
         sb.writeln('            applicationId "${config.bundleId}"');
         sb.writeln('            resValue "string", "app_name", "${config.name}"');
+        if (config.versionCode != null) {
+          sb.writeln('            versionCode ${config.versionCode}');
+        }
+        if (config.versionName != null) {
+          sb.writeln('            versionName "${config.versionName}"');
+        }
+        sb.writeln('            manifestPlaceholders = [appName: "${config.name}"]');
+        if (config.signing != null) {
+          sb.writeln('            signingConfig signingConfigs.$flavor');
+        }
         sb.writeln('        }');
       }
       sb.writeln('    }');

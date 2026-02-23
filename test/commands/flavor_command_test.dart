@@ -165,8 +165,21 @@ flavors:
     name: MyApp
 ''';
 
+const _easySetupYamlWithFirebase = '''
+flavors:
+  dev:
+    bundle_id: com.example.app.dev
+    name: MyApp Dev
+    firebase:
+      android: config/dev/google-services.json
+      ios: config/dev/GoogleService-Info.plist
+  prod:
+    bundle_id: com.example.app
+    name: MyApp
+''';
+
 /// Creates a minimal Flutter project directory structure for integration tests.
-Directory _createFlutterProject(Directory parent) {
+Directory _createFlutterProject(Directory parent, {String? yamlContent}) {
   final root = parent;
 
   // pubspec.yaml (Flutter project)
@@ -178,7 +191,8 @@ dependencies:
 ''');
 
   // easy_setup.yaml
-  File(p.join(root.path, 'easy_setup.yaml')).writeAsStringSync(_easySetupYaml);
+  File(p.join(root.path, 'easy_setup.yaml'))
+      .writeAsStringSync(yamlContent ?? _easySetupYaml);
 
   // Android
   final androidAppDir = Directory(p.join(root.path, 'android', 'app'));
@@ -339,6 +353,46 @@ void main() {
       final podfile = File(p.join(root.path, 'ios', 'Podfile')).readAsStringSync();
       expect(podfile, contains("'Debug-dev' => :debug,"));
       expect(podfile, contains("'Release-prod' => :release,"));
+    });
+
+    test('copies Firebase config files when firebase is configured', () {
+      final root = _createFlutterProject(tempDir, yamlContent: _easySetupYamlWithFirebase);
+
+      // Create Firebase source files
+      final devConfigDir = Directory(p.join(root.path, 'config', 'dev'));
+      devConfigDir.createSync(recursive: true);
+      File(p.join(devConfigDir.path, 'google-services.json'))
+          .writeAsStringSync('{"project_id":"dev"}');
+      File(p.join(devConfigDir.path, 'GoogleService-Info.plist'))
+          .writeAsStringSync('<plist>dev</plist>');
+
+      FlavorCommand.run(projectRoot: root.path);
+
+      // Android Firebase config should be copied
+      final androidDest = File(p.join(
+        root.path, 'android', 'app', 'src', 'dev', 'google-services.json',
+      ));
+      expect(androidDest.existsSync(), isTrue);
+      expect(androidDest.readAsStringSync(), '{"project_id":"dev"}');
+
+      // iOS Firebase config should be copied
+      final iosDest = File(p.join(
+        root.path, 'ios', 'Runner', 'Firebase', 'dev', 'GoogleService-Info.plist',
+      ));
+      expect(iosDest.existsSync(), isTrue);
+      expect(iosDest.readAsStringSync(), '<plist>dev</plist>');
+    });
+
+    test('skips Firebase copy when source files do not exist', () {
+      final root = _createFlutterProject(tempDir, yamlContent: _easySetupYamlWithFirebase);
+
+      // Do NOT create Firebase source files — should not throw
+      FlavorCommand.run(projectRoot: root.path);
+
+      final androidDest = File(p.join(
+        root.path, 'android', 'app', 'src', 'dev', 'google-services.json',
+      ));
+      expect(androidDest.existsSync(), isFalse);
     });
   });
 }
