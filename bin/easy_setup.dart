@@ -1,24 +1,24 @@
 // easy_setup CLI 진입점
 //
-// Flutter 프로젝트의 flavor(빌드 변형) 설정을 자동으로 구성하는 CLI 도구입니다.
-// Android(build.gradle)와 iOS(xcconfig, pbxproj, scheme, Info.plist, Podfile)를
-// 한 번의 명령으로 모두 설정합니다.
+// Flutter 프로젝트 설정을 자동으로 구성하는 CLI 도구입니다.
 //
-// 사용법:
-//   easy_setup [options]
+// Commands:
+//   flavor    Flutter flavor 환경 설정 (Android + iOS)  [default]
+//   ci-cd     CI/CD 파이프라인 설정 생성 (Fastlane + GitHub Actions)
 //
-// 옵션:
+// Global Options:
 //   -h, --help          도움말 표시
 //   -n, --dry-run       실제 파일 변경 없이 미리보기만 수행
 //   -p, --project-root  Flutter 프로젝트 루트 경로 지정 (기본: 자동 탐지)
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:easy_setup/src/commands/ci_cd_command.dart';
 import 'package:easy_setup/src/commands/flavor_command.dart';
 import 'package:easy_setup/src/exceptions.dart';
 
 void main(List<String> arguments) {
-  // CLI 옵션 파서 설정
+  // 글로벌 옵션 파서 설정
   final parser = ArgParser()
     ..addFlag(
       'help',
@@ -38,10 +38,22 @@ void main(List<String> arguments) {
       help: 'Path to Flutter project root (default: auto-detect).',
     );
 
-  // 인자 파싱 — 잘못된 형식이면 사용법을 출력하고 종료
+  // 서브커맨드 결정: 첫 번째 인자가 알려진 커맨드인지 확인
+  String command = 'flavor'; // 기본값 — 하위 호환성
+  var commandArgs = arguments;
+
+  if (arguments.isNotEmpty && !arguments.first.startsWith('-')) {
+    final first = arguments.first;
+    if (first == 'flavor' || first == 'ci-cd') {
+      command = first;
+      commandArgs = arguments.sublist(1);
+    }
+  }
+
+  // 인자 파싱
   ArgResults args;
   try {
-    args = parser.parse(arguments);
+    args = parser.parse(commandArgs);
   } on FormatException catch (e) {
     stderr.writeln('Error: ${e.message}\n');
     _printUsage(parser);
@@ -57,15 +69,18 @@ void main(List<String> arguments) {
   final dryRun = args['dry-run'] as bool;
   final projectRoot = args['project-root'] as String?;
 
-  // flavor 설정 파이프라인 실행
+  // 서브커맨드 실행
   try {
-    FlavorCommand.run(dryRun: dryRun, projectRoot: projectRoot);
+    switch (command) {
+      case 'flavor':
+        FlavorCommand.run(dryRun: dryRun, projectRoot: projectRoot);
+      case 'ci-cd':
+        CiCdCommand.run(dryRun: dryRun, projectRoot: projectRoot);
+    }
   } on SetupException catch (e) {
-    // 예상된 오류 (파일 미발견, 파싱 실패 등)
     stderr.writeln('\n✗ ${e.message}');
     exit(1);
   } catch (e, st) {
-    // 예상치 못한 오류 — 스택 트레이스 포함 출력
     stderr.writeln('\n✗ Unexpected error: $e');
     stderr.writeln(st);
     exit(1);
@@ -74,18 +89,33 @@ void main(List<String> arguments) {
 
 /// CLI 사용법과 easy_setup.yaml 예시를 출력합니다.
 void _printUsage(ArgParser parser) {
-  print('easy_setup — Configure Flutter flavor setup for Android & iOS\n');
-  print('Usage: easy_setup [options]\n');
+  print('easy_setup — Configure Flutter project setup\n');
+  print('Usage: easy_setup <command> [options]\n');
+  print('Commands:');
+  print('  flavor    Configure Flutter flavors for Android & iOS (default)');
+  print('  ci-cd     Generate CI/CD pipeline files (Fastlane + GitHub Actions)\n');
   print(parser.usage);
   print('');
   print('Reads easy_setup.yaml in the Flutter project root.');
+  print('');
   print('Example easy_setup.yaml:');
   print('');
-  print('  flavors:');
-  print('    dev:');
-  print('      bundle_id: com.example.app.dev');
-  print('      name: MyApp Dev');
-  print('    prod:');
-  print('      bundle_id: com.example.app');
-  print('      name: MyApp');
+  print('  easy_setup:');
+  print('    flavors:');
+  print('      dev:');
+  print('        bundle_id: com.example.app.dev');
+  print('        name: MyApp Dev');
+  print('      prod:');
+  print('        bundle_id: com.example.app');
+  print('        name: MyApp');
+  print('');
+  print('    ci_cd:');
+  print('      ios:');
+  print('        storage: https://github.com/user/certs.git');
+  print('        team_id: XXXXXXXXXX');
+  print('        itc_team_id: YYYYYYYYYY');
+  print('        api_key:');
+  print('          id: KEY_ID');
+  print('          issuer_id: ISSUER_ID');
+  print('          key_path: fastlane/AuthKey.p8');
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 import '../exceptions.dart';
+import 'ci_cd_config.dart';
 
 /// Android signing 설정을 담는 모델 클래스입니다.
 class SigningConfig {
@@ -109,8 +110,9 @@ class FlavorConfig {
 /// [flavors]: flavor 이름(dev, prod 등)을 키로, [FlavorConfig]를 값으로 하는 맵
 class EasySetupConfig {
   final Map<String, FlavorConfig> flavors;
+  final CiCdConfig? ciCd;
 
-  const EasySetupConfig({required this.flavors});
+  const EasySetupConfig({required this.flavors, this.ciCd});
 
   /// [path]에 위치한 easy_setup.yaml 파일을 읽고 파싱합니다.
   ///
@@ -148,7 +150,9 @@ class EasySetupConfig {
       for (final entry in flavorsMap.entries) {
         flavors[entry.key as String] = FlavorConfig.fromYaml(entry.value as Map);
       }
-      return EasySetupConfig(flavors: flavors);
+      final ciCdMap = easySetup['ci_cd'];
+      final ciCd = ciCdMap != null ? CiCdConfig.fromYaml(ciCdMap as Map) : null;
+      return EasySetupConfig(flavors: flavors, ciCd: ciCd);
     } catch (e) {
       if (e is SetupException) rethrow;
       throw SetupException('Failed to parse easy_setup.yaml: $e');

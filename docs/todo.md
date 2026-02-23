@@ -38,12 +38,12 @@
 ## iOS
 
 ### 현재 지원
-- [x] `PRODUCT_BUNDLE_IDENTIFIER` (xcconfig → pbxproj)
-- [x] `APP_DISPLAY_NAME` (xcconfig → Info.plist)
-- [x] Build configurations (Debug/Release/Profile per flavor)
-- [x] `.xcscheme` 파일 생성
-- [x] Podfile 빌드 모드 매핑
-- [x] xcconfig 파일 생성 (`#include` 체인)
+- [x] `PRODUCT_BUNDLE_IDENTIFIER` (xcconfig → pbxproj) V
+- [x] `APP_DISPLAY_NAME` (xcconfig → Info.plist) V
+- [x] Build configurations (Debug/Release/Profile per flavor) V
+- [x] `.xcscheme` 파일 생성 V
+- [x] Podfile 빌드 모드 매핑 V
+- [x] xcconfig 파일 생성 (`#include` 체인) V
 
 ### 추가 가능 항목
 

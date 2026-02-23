@@ -1,8 +1,8 @@
 # easy_setup
 
-Flutter 프로젝트의 flavor(빌드 변형) 환경을 **한 번의 명령**으로 자동 설정하는 Dart CLI 도구입니다.
+Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을 **한 번의 명령**으로 자동 설정하는 Dart CLI 도구입니다.
 
-`easy_setup.yaml` 설정 파일 하나만 작성하면, Android와 iOS의 복잡한 빌드 설정을 모두 자동으로 구성합니다.
+`easy_setup.yaml` 설정 파일 하나만 작성하면, Android와 iOS의 복잡한 빌드 설정과 CI/CD 파이프라인(Fastlane + GitHub Actions)을 모두 자동으로 구성합니다.
 
 ---
 
@@ -12,6 +12,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경을 **한 번의 명령**으
 - [설치](#설치)
 - [사용법](#사용법)
 - [설정 파일 (easy_setup.yaml)](#설정-파일-easy_setupyaml)
+- [CI/CD 설정 (ci-cd 커맨드)](#cicd-설정-ci-cd-커맨드)
 - [자동으로 수정되는 파일](#자동으로-수정되는-파일)
 - [프로젝트 구조](#프로젝트-구조)
 - [모듈별 설명](#모듈별-설명)
@@ -30,6 +31,8 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경을 **한 번의 명령**으
 | **iOS** | flavor별 `.xcscheme` 파일 생성 |
 | **iOS** | `Info.plist`의 앱 이름을 xcconfig 변수로 교체 |
 | **iOS** | `Podfile`에 빌드 모드 매핑 추가 |
+| **CI/CD** | Fastlane 파일 자동 생성 (Gemfile, Matchfile, Appfile, Fastfile) |
+| **CI/CD** | GitHub Actions 워크플로우 자동 생성 (ios-deploy.yml) |
 
 ---
 
@@ -65,13 +68,24 @@ dart compile exe bin/easy_setup.dart -o easy_setup
 Flutter 프로젝트 루트에 `easy_setup.yaml`을 만든 뒤 실행합니다:
 
 ```bash
+# flavor 설정 (기본 커맨드)
 easy_setup
+easy_setup flavor
+
+# CI/CD 파이프라인 설정
+easy_setup ci-cd
 ```
 
 ### CLI 옵션
 
 ```
-옵션:
+Usage: easy_setup <command> [options]
+
+Commands:
+  flavor    Flutter flavor 환경 설정 (Android + iOS)  [default]
+  ci-cd     CI/CD 파이프라인 설정 생성 (Fastlane + GitHub Actions)
+
+Options:
   -h, --help            도움말 표시
   -n, --dry-run         파일을 변경하지 않고 미리보기만 수행
   -p, --project-root    Flutter 프로젝트 루트 경로 지정 (기본: 자동 탐지)
@@ -80,24 +94,33 @@ easy_setup
 ### 예시
 
 ```bash
-# dry-run으로 미리보기
+# flavor dry-run으로 미리보기
 easy_setup --dry-run
+
+# CI/CD 설정 미리보기
+easy_setup ci-cd --dry-run
 
 # 특정 프로젝트 경로 지정
 easy_setup -p /path/to/flutter/project
-
-# 두 옵션 함께 사용
-easy_setup -n -p /path/to/flutter/project
+easy_setup ci-cd -p /path/to/flutter/project
 ```
 
 ### 실행 후 다음 단계
 
-`easy_setup` 실행이 완료되면 아래 명령을 순서대로 실행하세요:
+**flavor 커맨드 후:**
 
 ```bash
 flutter pub get
 cd ios && pod install
 flutter run --flavor dev -t lib/main.dart
+```
+
+**ci-cd 커맨드 후:**
+
+```bash
+cd ios && bundle install
+bundle exec fastlane match init  # 최초 1회
+# GitHub Secrets 설정 (아래 CI/CD 섹션 참조)
 ```
 
 ---
@@ -126,6 +149,60 @@ easy_setup:
 |------|------|------|
 | `bundle_id` | 앱의 고유 식별자 (Android applicationId / iOS PRODUCT_BUNDLE_IDENTIFIER) | `com.example.app.dev` |
 | `name` | 사용자에게 표시되는 앱 이름 (Android app_name / iOS APP_DISPLAY_NAME) | `MyApp Dev` |
+
+---
+
+## CI/CD 설정 (ci-cd 커맨드)
+
+`easy_setup ci-cd` 명령으로 iOS CI/CD에 필요한 Fastlane 파일과 GitHub Actions 워크플로우를 자동 생성합니다.
+
+### YAML 설정 (`ci_cd` 섹션)
+
+```yaml
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.app.dev
+      name: MyApp Dev
+    prod:
+      bundle_id: com.example.app
+      name: MyApp
+
+  ci_cd:
+    # CI/CD 대상 flavor (생략 시 위의 flavors 전체 사용)
+    flavors:
+      prod:
+        bundle_id: com.example.app
+
+    ios:
+      storage: https://github.com/user/app-certification.git
+      team_id: XXXXXXXXXX
+      itc_team_id: YYYYYYYYYY
+      api_key:
+        id: KEY_ID
+        issuer_id: ISSUER_ID
+        key_path: fastlane/AuthKey.p8
+        duration: 1200        # optional (기본 1200)
+        in_house: false        # optional (기본 false)
+```
+
+### 생성되는 파일
+
+| 파일 | 설명 |
+|------|------|
+| `ios/Gemfile` | Fastlane Ruby 의존성 |
+| `ios/fastlane/Matchfile` | Match 인증서/프로파일 설정 |
+| `ios/fastlane/Appfile` | 앱 식별 정보 (team_id, itc_team_id) |
+| `ios/fastlane/Fastfile` | 빌드 + TestFlight 배포 레인 |
+| `.github/workflows/ios-deploy.yml` | GitHub Actions 워크플로우 |
+
+### 필요한 GitHub Secrets
+
+| Secret 이름 | 설명 |
+|-------------|------|
+| `MATCH_PASSWORD` | Match 인증서 저장소 암호화 비밀번호 |
+| `MATCH_GIT_BASIC_AUTHORIZATION` | GitHub 인증서 repo 접근 토큰 (`echo -n "username:PAT" \| base64`) |
+| `APP_STORE_CONNECT_API_KEY_BASE64` | .p8 키 파일 내용 (`base64 -i AuthKey.p8`) |
 
 ---
 
@@ -184,26 +261,35 @@ Kotlin DSL(`.kts`)도 자동으로 인식하여 올바른 문법으로 생성합
 ```
 easy_setup/
 ├── bin/
-│   └── easy_setup.dart                    # CLI 진입점 (실행 파일)
+│   └── easy_setup.dart                    # CLI 진입점 (서브커맨드 라우팅)
 ├── lib/
 │   ├── easy_setup.dart                    # 라이브러리 공개 API (re-export)
 │   └── src/
 │       ├── exceptions.dart                # SetupException 정의
 │       ├── models/
-│       │   └── flavor_config.dart         # FlavorConfig, EasySetupConfig 모델
+│       │   ├── flavor_config.dart         # FlavorConfig, EasySetupConfig 모델
+│       │   └── ci_cd_config.dart          # CiCdConfig, CiCdIosConfig 등
 │       ├── utils/
 │       │   ├── project_finder.dart        # Flutter 프로젝트 경로 탐색
 │       │   └── uuid_generator.dart        # Xcode UUID 생성 (24자리 hex)
 │       ├── commands/
-│       │   └── flavor_command.dart        # 전체 파이프라인 오케스트레이션
+│       │   ├── flavor_command.dart        # flavor 파이프라인 오케스트레이션
+│       │   └── ci_cd_command.dart         # CI/CD 파이프라인 오케스트레이션
 │       ├── android/
 │       │   └── build_gradle_modifier.dart # build.gradle flavor 설정
-│       └── ios/
-│           ├── xcconfig_generator.dart    # xcconfig 파일 생성
-│           ├── pbxproj_modifier.dart      # project.pbxproj 수정 (가장 복잡)
-│           ├── scheme_generator.dart      # .xcscheme 생성
-│           ├── info_plist_modifier.dart   # Info.plist 수정
-│           └── podfile_modifier.dart      # Podfile 수정
+│       ├── ios/
+│       │   ├── xcconfig_generator.dart    # xcconfig 파일 생성
+│       │   ├── pbxproj_modifier.dart      # project.pbxproj 수정 (가장 복잡)
+│       │   ├── scheme_generator.dart      # .xcscheme 생성
+│       │   ├── info_plist_modifier.dart   # Info.plist 수정
+│       │   └── podfile_modifier.dart      # Podfile 수정
+│       ├── fastlane/
+│       │   ├── gemfile_generator.dart     # ios/Gemfile 생성
+│       │   ├── matchfile_generator.dart   # ios/fastlane/Matchfile 생성
+│       │   ├── appfile_generator.dart     # ios/fastlane/Appfile 생성
+│       │   └── fastfile_generator.dart    # ios/fastlane/Fastfile 생성
+│       └── github/
+│           └── workflow_generator.dart    # .github/workflows/*.yml 생성
 └── pubspec.yaml
 ```
 
@@ -213,11 +299,16 @@ easy_setup/
 
 ### `bin/easy_setup.dart` — CLI 진입점
 - `args` 패키지를 사용하여 `--help`, `--dry-run`, `--project-root` 옵션을 파싱합니다.
-- 파싱 결과를 `FlavorCommand.run()`에 전달하여 전체 설정 파이프라인을 시작합니다.
+- 서브커맨드 라우팅: `flavor` (기본), `ci-cd`.
+- 서브커맨드 생략 시 `flavor`로 동작하여 하위 호환성을 보장합니다.
 
-### `FlavorCommand` — 오케스트레이터
-- 전체 설정 과정을 8단계로 나누어 순차적으로 실행합니다.
+### `FlavorCommand` — flavor 오케스트레이터
+- flavor 설정 과정을 8단계로 나누어 순차적으로 실행합니다.
 - 프로젝트 루트 자동 탐지 → YAML 로드 → Android → iOS (xcconfig → pbxproj → scheme → plist → Podfile).
+
+### `CiCdCommand` — CI/CD 오케스트레이터
+- CI/CD 파이프라인 설정을 순차적으로 실행합니다.
+- YAML 로드 → flavor 해석 → Fastlane 4파일 → GitHub Actions 워크플로우 → 안내 출력.
 
 ### `FlavorConfig` / `EasySetupConfig` — 설정 모델
 - `easy_setup.yaml`을 파싱하여 `Map<String, FlavorConfig>`로 변환합니다.

@@ -4,9 +4,11 @@
 /// 접근할 수 있는 공개 심볼(symbol)들을 re-export합니다.
 library;
 
+export 'src/commands/ci_cd_command.dart';
 export 'src/commands/flavor_command.dart';
 export 'src/exceptions.dart';
 export 'src/firebase/firebase_copier.dart';
+export 'src/models/ci_cd_config.dart';
 export 'src/models/flavor_config.dart';
 export 'src/utils/project_finder.dart';
 export 'src/utils/uuid_generator.dart';

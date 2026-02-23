@@ -1,0 +1,60 @@
+import 'dart:io';
+
+import 'package:easy_setup/src/fastlane/appfile_generator.dart';
+import 'package:easy_setup/src/models/ci_cd_config.dart';
+import 'package:path/path.dart' as p;
+import 'package:test/test.dart';
+
+void main() {
+  late Directory tempDir;
+
+  setUp(() {
+    tempDir = Directory.systemTemp.createTempSync('appfile_test_');
+  });
+
+  tearDown(() {
+    tempDir.deleteSync(recursive: true);
+  });
+
+  const ios = CiCdIosConfig(
+    storage: 'https://github.com/user/certs.git',
+    teamId: 'TEAM123',
+    itcTeamId: 'ITC456',
+    apiKey: ApiKeyConfig(
+      id: 'KEY',
+      issuerId: 'ISSUER',
+      keyPath: 'fastlane/AuthKey.p8',
+    ),
+  );
+
+  group('AppfileGenerator', () {
+    test('creates ios/fastlane/Appfile with correct content', () {
+      AppfileGenerator.generate(tempDir.path, ios);
+
+      final file = File(p.join(tempDir.path, 'ios', 'fastlane', 'Appfile'));
+      expect(file.existsSync(), isTrue);
+      final content = file.readAsStringSync();
+      expect(content, contains('team_id("TEAM123")'));
+      expect(content, contains('itc_team_id("ITC456")'));
+    });
+
+    test('is idempotent', () {
+      AppfileGenerator.generate(tempDir.path, ios);
+
+      final file = File(p.join(tempDir.path, 'ios', 'fastlane', 'Appfile'));
+      file.writeAsStringSync('CUSTOM');
+
+      AppfileGenerator.generate(tempDir.path, ios);
+      expect(file.readAsStringSync(), 'CUSTOM');
+    });
+
+    test('does not create file in dry-run mode', () {
+      AppfileGenerator.generate(tempDir.path, ios, dryRun: true);
+
+      expect(
+        File(p.join(tempDir.path, 'ios', 'fastlane', 'Appfile')).existsSync(),
+        isFalse,
+      );
+    });
+  });
+}
