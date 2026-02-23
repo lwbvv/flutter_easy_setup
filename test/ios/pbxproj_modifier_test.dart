@@ -6,10 +6,8 @@ import 'package:test/test.dart';
 
 /// Minimal project.pbxproj fixture with the essential structure.
 ///
-/// Section order is arranged so that XCConfigurationList entries appear
-/// before PBXNativeTarget, matching the lookup order that
-/// _extractConfigsFromList expects (it uses indexOf to find the first
-/// occurrence of the config list UUID).
+/// Sections follow the standard alphabetical order used by real Xcode
+/// projects (PBXNativeTarget before XCBuildConfiguration/XCConfigurationList).
 ///
 /// UUIDs used:
 ///   Debug.xcconfig file ref   : 9740EEB21CF90195004384FC
@@ -46,6 +44,23 @@ const _minimalPbxproj = '// !\$*UTF8*\$!\n'
     '\t\t\tsourceTree = "<group>";\n'
     '\t\t};\n'
     '/* End PBXGroup section */\n'
+    '\n'
+    '/* Begin PBXNativeTarget section */\n'
+    '\t\t97C146ED1CF9000F007C117D /* Runner */ = {\n'
+    '\t\t\tisa = PBXNativeTarget;\n'
+    '\t\t\tbuildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;\n'
+    '\t\t\tbuildPhases = (\n'
+    '\t\t\t);\n'
+    '\t\t\tbuildRules = (\n'
+    '\t\t\t);\n'
+    '\t\t\tdependencies = (\n'
+    '\t\t\t);\n'
+    '\t\t\tname = Runner;\n'
+    '\t\t\tproductName = Runner;\n'
+    '\t\t\tproductReference = 97C146EE1CF9000F007C117D /* Runner.app */;\n'
+    '\t\t\tproductType = "com.apple.product-type.application";\n'
+    '\t\t};\n'
+    '/* End PBXNativeTarget section */\n'
     '\n'
     '/* Begin XCBuildConfiguration section */\n'
     '\t\t97C147031CF9000F007C117D /* Debug */ = {\n'
@@ -120,23 +135,6 @@ const _minimalPbxproj = '// !\$*UTF8*\$!\n'
     '\t\t\tdefaultConfigurationName = Release;\n'
     '\t\t};\n'
     '/* End XCConfigurationList section */\n'
-    '\n'
-    '/* Begin PBXNativeTarget section */\n'
-    '\t\t97C146ED1CF9000F007C117D /* Runner */ = {\n'
-    '\t\t\tisa = PBXNativeTarget;\n'
-    '\t\t\tbuildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;\n'
-    '\t\t\tbuildPhases = (\n'
-    '\t\t\t);\n'
-    '\t\t\tbuildRules = (\n'
-    '\t\t\t);\n'
-    '\t\t\tdependencies = (\n'
-    '\t\t\t);\n'
-    '\t\t\tname = Runner;\n'
-    '\t\t\tproductName = Runner;\n'
-    '\t\t\tproductReference = 97C146EE1CF9000F007C117D /* Runner.app */;\n'
-    '\t\t\tproductType = "com.apple.product-type.application";\n'
-    '\t\t};\n'
-    '/* End PBXNativeTarget section */\n'
     '\t};\n'
     '\trootObject = 97C146E61CF9000F007C117D /* Project object */;\n'
     '}\n';

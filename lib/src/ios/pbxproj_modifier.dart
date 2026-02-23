@@ -219,10 +219,14 @@ class PbxprojModifier {
     String content,
     String listUuid,
   ) {
-    final listStart = content.indexOf('$listUuid /*');
-    if (listStart == -1) return {};
-    final braceStart = content.indexOf('{', listStart);
-    if (braceStart == -1) return {};
+    // 정의 라인(`UUID /* ... */ = {`)을 찾음. 참조 라인(`property = UUID /* ... */;`)과 구분하기 위해
+    // `*/ = {` 패턴을 포함하는 매치만 사용
+    final defMatch = RegExp(
+      RegExp.escape(listUuid) + r' /\*[^*]*\*/ = \{',
+    ).firstMatch(content);
+    if (defMatch == null) return {};
+    final listStart = defMatch.start;
+    final braceStart = defMatch.end - 1; // 매치 끝의 '{' 위치
     final blockEnd = _findBlockEnd(content, braceStart);
     if (blockEnd == -1) return {};
 
@@ -563,10 +567,13 @@ class PbxprojModifier {
     Map<String, _FlavorUuids> flavorUuids, {
     required bool isRunner,
   }) {
-    final listStart = content.indexOf('$listUuid /*');
-    if (listStart == -1) return content;
-    final braceStart = content.indexOf('{', listStart);
-    if (braceStart == -1) return content;
+    // 정의 라인(`UUID /* ... */ = {`)을 찾음
+    final defMatch = RegExp(
+      RegExp.escape(listUuid) + r' /\*[^*]*\*/ = \{',
+    ).firstMatch(content);
+    if (defMatch == null) return content;
+    final listStart = defMatch.start;
+    final braceStart = defMatch.end - 1;
     final blockEnd = _findBlockEnd(content, braceStart);
     if (blockEnd == -1) return content;
 
