@@ -4,19 +4,19 @@ import 'package:path/path.dart' as p;
 
 import '../models/ci_cd_config.dart';
 
-/// ios/fastlane/Fastfile을 생성하는 클래스입니다.
+/// Fastfile을 생성하는 클래스입니다.
 class FastfileGenerator {
-  /// [projectRoot]의 ios/fastlane/Fastfile을 생성합니다.
+  /// [outputDir]에 Fastfile을 생성합니다.
   ///
   /// [ios]: CI/CD iOS 설정 (api_key 등)
   /// [flavorNames]: 사용 가능한 flavor 이름 목록
   static void generate(
-    String projectRoot,
+    String outputDir,
     CiCdIosConfig ios,
     List<String> flavorNames, {
     bool dryRun = false,
   }) {
-    final path = p.join(projectRoot, 'ios', 'fastlane', 'Fastfile');
+    final path = p.join(outputDir, 'Fastfile');
 
     final apiKey = ios.apiKey;
     final defaultFlavor = flavorNames.contains('prod')

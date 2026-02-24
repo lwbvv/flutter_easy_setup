@@ -16,10 +16,10 @@ void main() {
   });
 
   group('GemfileGenerator', () {
-    test('creates ios/Gemfile with correct content', () {
+    test('creates Gemfile in output directory with correct content', () {
       GemfileGenerator.generate(tempDir.path);
 
-      final file = File(p.join(tempDir.path, 'ios', 'Gemfile'));
+      final file = File(p.join(tempDir.path, 'Gemfile'));
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
       expect(content, contains('source "https://rubygems.org"'));
@@ -29,7 +29,7 @@ void main() {
     test('is idempotent — does not overwrite existing file', () {
       GemfileGenerator.generate(tempDir.path);
 
-      final file = File(p.join(tempDir.path, 'ios', 'Gemfile'));
+      final file = File(p.join(tempDir.path, 'Gemfile'));
       file.writeAsStringSync('CUSTOM');
 
       GemfileGenerator.generate(tempDir.path);
@@ -40,9 +40,17 @@ void main() {
       GemfileGenerator.generate(tempDir.path, dryRun: true);
 
       expect(
-        File(p.join(tempDir.path, 'ios', 'Gemfile')).existsSync(),
+        File(p.join(tempDir.path, 'Gemfile')).existsSync(),
         isFalse,
       );
+    });
+
+    test('creates parent directories if they do not exist', () {
+      final nestedDir = p.join(tempDir.path, 'fastlane', 'ios');
+
+      GemfileGenerator.generate(nestedDir);
+
+      expect(File(p.join(nestedDir, 'Gemfile')).existsSync(), isTrue);
     });
   });
 }

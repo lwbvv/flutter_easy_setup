@@ -40,6 +40,10 @@ easy_setup:
         key_path: fastlane/AuthKey.p8
 ''';
 
+  /// fastlane/ios/ 디렉터리 아래 파일 경로를 반환하는 헬퍼
+  String fastlanePath(String filename) =>
+      p.join(tempDir.path, 'fastlane', 'ios', filename);
+
   group('CiCdCommand', () {
     test('generates all CI/CD files', () {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
@@ -47,22 +51,10 @@ easy_setup:
 
       CiCdCommand.run(projectRoot: tempDir.path);
 
-      expect(
-        File(p.join(tempDir.path, 'ios', 'Gemfile')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(tempDir.path, 'ios', 'fastlane', 'Matchfile')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(tempDir.path, 'ios', 'fastlane', 'Appfile')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(tempDir.path, 'ios', 'fastlane', 'Fastfile')).existsSync(),
-        isTrue,
-      );
+      expect(File(fastlanePath('Gemfile')).existsSync(), isTrue);
+      expect(File(fastlanePath('Matchfile')).existsSync(), isTrue);
+      expect(File(fastlanePath('Appfile')).existsSync(), isTrue);
+      expect(File(fastlanePath('Fastfile')).existsSync(), isTrue);
       expect(
         File(p.join(tempDir.path, '.github', 'workflows', 'ios-deploy.yml'))
             .existsSync(),
@@ -76,9 +68,7 @@ easy_setup:
 
       CiCdCommand.run(projectRoot: tempDir.path);
 
-      final content = File(
-        p.join(tempDir.path, 'ios', 'fastlane', 'Matchfile'),
-      ).readAsStringSync();
+      final content = File(fastlanePath('Matchfile')).readAsStringSync();
       expect(content, contains('"com.example.app.dev"'));
       expect(content, contains('"com.example.app"'));
     });
@@ -114,9 +104,7 @@ easy_setup:
 
       CiCdCommand.run(projectRoot: tempDir.path);
 
-      final matchfile = File(
-        p.join(tempDir.path, 'ios', 'fastlane', 'Matchfile'),
-      ).readAsStringSync();
+      final matchfile = File(fastlanePath('Matchfile')).readAsStringSync();
       // Only prod bundle_id should be present
       expect(matchfile, contains('"com.example.app"'));
       expect(matchfile, isNot(contains('com.example.app.dev')));
@@ -150,9 +138,7 @@ easy_setup:
 
       CiCdCommand.run(projectRoot: tempDir.path);
 
-      final matchfile = File(
-        p.join(tempDir.path, 'ios', 'fastlane', 'Matchfile'),
-      ).readAsStringSync();
+      final matchfile = File(fastlanePath('Matchfile')).readAsStringSync();
       expect(matchfile, contains('"com.example.app"'));
     });
 
@@ -162,14 +148,8 @@ easy_setup:
 
       CiCdCommand.run(projectRoot: tempDir.path, dryRun: true);
 
-      expect(
-        File(p.join(tempDir.path, 'ios', 'Gemfile')).existsSync(),
-        isFalse,
-      );
-      expect(
-        File(p.join(tempDir.path, 'ios', 'fastlane', 'Matchfile')).existsSync(),
-        isFalse,
-      );
+      expect(File(fastlanePath('Gemfile')).existsSync(), isFalse);
+      expect(File(fastlanePath('Matchfile')).existsSync(), isFalse);
     });
 
     test('throws SetupException when ci_cd section is missing', () {
@@ -200,7 +180,7 @@ easy_setup:
       CiCdCommand.run(projectRoot: tempDir.path);
 
       // Overwrite one file
-      final gemfile = File(p.join(tempDir.path, 'ios', 'Gemfile'));
+      final gemfile = File(fastlanePath('Gemfile'));
       gemfile.writeAsStringSync('CUSTOM');
 
       // Second run should not overwrite

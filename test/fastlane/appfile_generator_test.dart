@@ -28,10 +28,10 @@ void main() {
   );
 
   group('AppfileGenerator', () {
-    test('creates ios/fastlane/Appfile with correct content', () {
+    test('creates Appfile in output directory with correct content', () {
       AppfileGenerator.generate(tempDir.path, ios);
 
-      final file = File(p.join(tempDir.path, 'ios', 'fastlane', 'Appfile'));
+      final file = File(p.join(tempDir.path, 'Appfile'));
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
       expect(content, contains('team_id("TEAM123")'));
@@ -41,7 +41,7 @@ void main() {
     test('is idempotent', () {
       AppfileGenerator.generate(tempDir.path, ios);
 
-      final file = File(p.join(tempDir.path, 'ios', 'fastlane', 'Appfile'));
+      final file = File(p.join(tempDir.path, 'Appfile'));
       file.writeAsStringSync('CUSTOM');
 
       AppfileGenerator.generate(tempDir.path, ios);
@@ -52,7 +52,7 @@ void main() {
       AppfileGenerator.generate(tempDir.path, ios, dryRun: true);
 
       expect(
-        File(p.join(tempDir.path, 'ios', 'fastlane', 'Appfile')).existsSync(),
+        File(p.join(tempDir.path, 'Appfile')).existsSync(),
         isFalse,
       );
     });

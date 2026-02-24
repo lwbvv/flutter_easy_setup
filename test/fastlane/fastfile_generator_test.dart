@@ -30,10 +30,10 @@ void main() {
   );
 
   group('FastfileGenerator', () {
-    test('creates ios/fastlane/Fastfile with correct content', () {
+    test('creates Fastfile in output directory with correct content', () {
       FastfileGenerator.generate(tempDir.path, ios, ['dev', 'prod']);
 
-      final file = File(p.join(tempDir.path, 'ios', 'fastlane', 'Fastfile'));
+      final file = File(p.join(tempDir.path, 'Fastfile'));
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
       expect(content, contains('default_platform(:ios)'));
@@ -50,7 +50,7 @@ void main() {
     test('defaults to prod flavor when available', () {
       FastfileGenerator.generate(tempDir.path, ios, ['dev', 'prod']);
 
-      final content = File(p.join(tempDir.path, 'ios', 'fastlane', 'Fastfile'))
+      final content = File(p.join(tempDir.path, 'Fastfile'))
           .readAsStringSync();
       expect(content, contains('options[:flavor] || "prod"'));
     });
@@ -58,7 +58,7 @@ void main() {
     test('defaults to first flavor when prod is not available', () {
       FastfileGenerator.generate(tempDir.path, ios, ['staging', 'dev']);
 
-      final content = File(p.join(tempDir.path, 'ios', 'fastlane', 'Fastfile'))
+      final content = File(p.join(tempDir.path, 'Fastfile'))
           .readAsStringSync();
       expect(content, contains('options[:flavor] || "staging"'));
     });
@@ -66,7 +66,7 @@ void main() {
     test('is idempotent', () {
       FastfileGenerator.generate(tempDir.path, ios, ['prod']);
 
-      final file = File(p.join(tempDir.path, 'ios', 'fastlane', 'Fastfile'));
+      final file = File(p.join(tempDir.path, 'Fastfile'));
       file.writeAsStringSync('CUSTOM');
 
       FastfileGenerator.generate(tempDir.path, ios, ['prod']);
@@ -77,7 +77,7 @@ void main() {
       FastfileGenerator.generate(tempDir.path, ios, ['prod'], dryRun: true);
 
       expect(
-        File(p.join(tempDir.path, 'ios', 'fastlane', 'Fastfile')).existsSync(),
+        File(p.join(tempDir.path, 'Fastfile')).existsSync(),
         isFalse,
       );
     });

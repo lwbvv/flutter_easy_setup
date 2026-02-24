@@ -118,7 +118,7 @@ flutter run --flavor dev -t lib/main.dart
 **ci-cd 커맨드 후:**
 
 ```bash
-cd ios && bundle install
+cd fastlane/ios && bundle install
 bundle exec fastlane match init  # 최초 1회
 # GitHub Secrets 설정 (아래 CI/CD 섹션 참조)
 ```
@@ -190,10 +190,10 @@ easy_setup:
 
 | 파일 | 설명 |
 |------|------|
-| `ios/Gemfile` | Fastlane Ruby 의존성 |
-| `ios/fastlane/Matchfile` | Match 인증서/프로파일 설정 |
-| `ios/fastlane/Appfile` | 앱 식별 정보 (team_id, itc_team_id) |
-| `ios/fastlane/Fastfile` | 빌드 + TestFlight 배포 레인 |
+| `fastlane/ios/Gemfile` | Fastlane Ruby 의존성 |
+| `fastlane/ios/Matchfile` | Match 인증서/프로파일 설정 |
+| `fastlane/ios/Appfile` | 앱 식별 정보 (team_id, itc_team_id) |
+| `fastlane/ios/Fastfile` | 빌드 + TestFlight 배포 레인 |
 | `.github/workflows/ios-deploy.yml` | GitHub Actions 워크플로우 |
 
 ### 필요한 GitHub Secrets
@@ -284,10 +284,10 @@ easy_setup/
 │       │   ├── info_plist_modifier.dart   # Info.plist 수정
 │       │   └── podfile_modifier.dart      # Podfile 수정
 │       ├── fastlane/
-│       │   ├── gemfile_generator.dart     # ios/Gemfile 생성
-│       │   ├── matchfile_generator.dart   # ios/fastlane/Matchfile 생성
-│       │   ├── appfile_generator.dart     # ios/fastlane/Appfile 생성
-│       │   └── fastfile_generator.dart    # ios/fastlane/Fastfile 생성
+│       │   ├── gemfile_generator.dart     # Gemfile 생성 (outputDir 주입)
+│       │   ├── matchfile_generator.dart   # Matchfile 생성 (outputDir 주입)
+│       │   ├── appfile_generator.dart     # Appfile 생성 (outputDir 주입)
+│       │   └── fastfile_generator.dart    # Fastfile 생성 (outputDir 주입)
 │       └── github/
 │           └── workflow_generator.dart    # .github/workflows/*.yml 생성
 └── pubspec.yaml
@@ -309,6 +309,7 @@ easy_setup/
 ### `CiCdCommand` — CI/CD 오케스트레이터
 - CI/CD 파이프라인 설정을 순차적으로 실행합니다.
 - YAML 로드 → flavor 해석 → Fastlane 4파일 → GitHub Actions 워크플로우 → 안내 출력.
+- `fastlaneDir`(`fastlane/ios/`) 경로를 구성하여 각 Fastlane generator에 주입합니다.
 
 ### `FlavorConfig` / `EasySetupConfig` — 설정 모델
 - `easy_setup.yaml`을 파싱하여 `Map<String, FlavorConfig>`로 변환합니다.

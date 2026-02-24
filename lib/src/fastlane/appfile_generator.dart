@@ -4,17 +4,17 @@ import 'package:path/path.dart' as p;
 
 import '../models/ci_cd_config.dart';
 
-/// ios/fastlane/Appfile을 생성하는 클래스입니다.
+/// Appfile을 생성하는 클래스입니다.
 class AppfileGenerator {
-  /// [projectRoot]의 ios/fastlane/Appfile을 생성합니다.
+  /// [outputDir]에 Appfile을 생성합니다.
   ///
   /// [ios]: CI/CD iOS 설정 (team_id, itc_team_id)
   static void generate(
-    String projectRoot,
+    String outputDir,
     CiCdIosConfig ios, {
     bool dryRun = false,
   }) {
-    final path = p.join(projectRoot, 'ios', 'fastlane', 'Appfile');
+    final path = p.join(outputDir, 'Appfile');
 
     final content = 'team_id("${ios.teamId}")\n'
         'itc_team_id("${ios.itcTeamId}")\n';

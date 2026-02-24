@@ -1,11 +1,25 @@
 easy_setup:
   flavors:
     dev:
-      bundle_id: studio.etch.setup-test.dev
-      name: MyApp Dev
-    staging:
-      bundle_id: studio.etch.setup-test.staging
-      name: MyApp Staging
+      bundle_id: studio.etch.test.dev
+      name: Test Dev
     prod:
-      bundle_id: studio.etch.setup-test
-      name: MyApp
+      bundle_id: studio.etch.test
+      name: Test
+
+  ci_cd:
+    # CI/CD 대상 flavor (생략 시 위의 flavors 전체 사용)
+#    flavors:
+#      prod:
+#        bundle_id: com.example.app
+
+    ios:
+      storage: https://github.com/user/app-certification.git
+      team_id: X4FVW7699W
+      itc_team_id: "122208545"
+      api_key:
+        id: T35GJ9RUFW
+        issuer_id: 05568f8d-9cb0-430d-91c5-4b46f07838a5
+        key_path: fastlane/AuthKey.p8
+        duration: 1200        # optional (기본 1200)
+        in_house: false        # optional (기본 false)

@@ -28,14 +28,14 @@ void main() {
   );
 
   group('MatchfileGenerator', () {
-    test('creates ios/fastlane/Matchfile with correct content', () {
+    test('creates Matchfile in output directory with correct content', () {
       MatchfileGenerator.generate(
         tempDir.path,
         ios,
         ['com.app.dev', 'com.app'],
       );
 
-      final file = File(p.join(tempDir.path, 'ios', 'fastlane', 'Matchfile'));
+      final file = File(p.join(tempDir.path, 'Matchfile'));
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
       expect(content, contains('git_url("https://github.com/user/certs.git")'));
@@ -44,13 +44,13 @@ void main() {
       expect(content, contains('"com.app.dev"'));
       expect(content, contains('"com.app"'));
       expect(content, contains('team_id("TEAM123")'));
-      expect(content, contains('api_key_path("fastlane/api_key.json")'));
+      expect(content, contains('api_key_path("api_key.json")'));
     });
 
     test('is idempotent', () {
       MatchfileGenerator.generate(tempDir.path, ios, ['com.app']);
 
-      final file = File(p.join(tempDir.path, 'ios', 'fastlane', 'Matchfile'));
+      final file = File(p.join(tempDir.path, 'Matchfile'));
       file.writeAsStringSync('CUSTOM');
 
       MatchfileGenerator.generate(tempDir.path, ios, ['com.app']);
@@ -61,7 +61,7 @@ void main() {
       MatchfileGenerator.generate(tempDir.path, ios, ['com.app'], dryRun: true);
 
       expect(
-        File(p.join(tempDir.path, 'ios', 'fastlane', 'Matchfile')).existsSync(),
+        File(p.join(tempDir.path, 'Matchfile')).existsSync(),
         isFalse,
       );
     });
