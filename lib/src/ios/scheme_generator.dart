@@ -33,14 +33,8 @@ class SchemeGenerator {
     final dir = Directory(schemesDir);
     dir.createSync(recursive: true);
 
-    // 멱등성 가드: 이미 존재하면 건너뜀
-    if (File(outPath).existsSync()) {
-      print('  Scheme already exists: $outPath, skipping.');
-      return;
-    }
-
     File(outPath).writeAsStringSync(_buildSchemeXml(flavor, runnerTargetUuid));
-    print('  Created scheme: $outPath');
+    print('  Wrote scheme: $outPath');
   }
 
   /// flavor에 맞는 .xcscheme XML 전체를 생성합니다.

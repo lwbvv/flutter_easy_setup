@@ -267,7 +267,7 @@ void main() {
       expect(uuid, '97C146ED1CF9000F007C117D');
     });
 
-    test('is idempotent — skips when already configured', () {
+    test('overwrites existing flavor configs on second run', () {
       final file = File('${tempDir.path}/project.pbxproj');
       file.writeAsStringSync(_minimalPbxproj);
 
@@ -277,8 +277,14 @@ void main() {
       final uuid = PbxprojModifier.modify(file.path, flavors);
       final afterSecond = file.readAsStringSync();
 
-      expect(afterSecond, afterFirst);
-      // UUID should still be returned even when skipping
+      // UUID는 매번 새로 생성되므로 정확한 일치 대신 구조적 동일성 검증
+      expect(afterSecond, contains('Debug-dev'));
+      expect(afterSecond, contains('Release-dev'));
+      expect(afterSecond, contains('Debug-prod'));
+      expect(afterSecond, contains('Release-prod'));
+      // 중복이 없는지 확인
+      expect('Debug-dev'.allMatches(afterFirst).length,
+             'Debug-dev'.allMatches(afterSecond).length);
       expect(uuid, '97C146ED1CF9000F007C117D');
     });
 

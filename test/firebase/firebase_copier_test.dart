@@ -46,7 +46,7 @@ void main() {
       expect(dest.existsSync(), isFalse);
     });
 
-    test('is idempotent — skips when destination already exists', () {
+    test('overwrites when destination already exists', () {
       // Create source file
       final sourceDir = Directory(p.join(tempDir.path, 'config', 'dev'));
       sourceDir.createSync(recursive: true);
@@ -55,13 +55,14 @@ void main() {
 
       FirebaseCopier.copyAndroidConfig(tempDir.path, 'dev', 'config/dev/google-services.json');
 
-      // Modify dest to verify it's not overwritten
+      // Modify dest
       final dest = File(p.join(tempDir.path, 'android', 'app', 'src', 'dev', 'google-services.json'));
       dest.writeAsStringSync('MODIFIED');
 
+      // Second run should overwrite with source content
       FirebaseCopier.copyAndroidConfig(tempDir.path, 'dev', 'config/dev/google-services.json');
 
-      expect(dest.readAsStringSync(), 'MODIFIED');
+      expect(dest.readAsStringSync(), '{"project_id":"dev"}');
     });
 
     test('does not copy in dry-run mode', () {
@@ -132,7 +133,7 @@ void main() {
       expect(dest.existsSync(), isFalse);
     });
 
-    test('is idempotent — skips when destination already exists', () {
+    test('overwrites when destination already exists', () {
       final sourceDir = Directory(p.join(tempDir.path, 'config', 'dev'));
       sourceDir.createSync(recursive: true);
       File(p.join(sourceDir.path, 'GoogleService-Info.plist'))
@@ -145,9 +146,10 @@ void main() {
       ));
       dest.writeAsStringSync('MODIFIED');
 
+      // Second run should overwrite with source content
       FirebaseCopier.copyIosConfig(tempDir.path, 'dev', 'config/dev/GoogleService-Info.plist');
 
-      expect(dest.readAsStringSync(), 'MODIFIED');
+      expect(dest.readAsStringSync(), '<plist>dev</plist>');
     });
 
     test('does not copy in dry-run mode', () {

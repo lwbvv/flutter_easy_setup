@@ -68,26 +68,19 @@ class XcconfigGenerator {
     return sb.toString();
   }
 
-  /// 개별 xcconfig 파일을 작성합니다.
-  ///
-  /// 이미 파일이 존재하면 덮어쓰지 않고 건너뜁니다 (멱등성 보장).
+  /// 개별 xcconfig 파일을 작성합니다 (기존 파일이 있으면 덮어씁니다).
   static void _writeXcconfig(
     String path,
     String content, {
     required bool dryRun,
   }) {
     if (dryRun) {
-      print('  [dry-run] Would create: $path');
+      print('  [dry-run] Would write: $path');
       return;
     }
     final file = File(path);
-    if (file.existsSync()) {
-      print('  Already exists: $path, skipping.');
-      return;
-    }
-    // 디렉터리가 없으면 재귀적으로 생성
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(content);
-    print('  Created: $path');
+    print('  Wrote: $path');
   }
 }

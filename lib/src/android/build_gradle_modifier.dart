@@ -11,7 +11,7 @@ class BuildGradleModifier {
   /// build.gradle 파일을 읽고 flavor 설정을 삽입합니다.
   ///
   /// - 파일이 없으면 건너뜁니다 (Android 프로젝트가 아닐 수 있음).
-  /// - 이미 flavorDimensions가 있으면 중복 삽입을 방지합니다 (멱등성 보장).
+  /// - 이미 flavorDimensions가 있으면 기존 설정을 제거하고 새로 생성합니다.
   /// - buildTypes 블록의 닫는 중괄호를 찾아 그 뒤에 flavor 설정을 삽입합니다.
   static void modify(
     String gradlePath,
@@ -27,10 +27,9 @@ class BuildGradleModifier {
     var content = file.readAsStringSync();
     final isKts = gradlePath.endsWith('.kts');
 
-    // 멱등성 가드: 이미 설정되어 있으면 건너뜀
+    // 기존 flavor 설정이 있으면 제거 후 재생성
     if (content.contains('flavorDimensions')) {
-      print('  Android build.gradle already has flavorDimensions, skipping.');
-      return;
+      content = _stripExistingFlavorConfig(content);
     }
 
     // buildTypes { ... } 블록의 위치를 찾음
@@ -95,6 +94,51 @@ class BuildGradleModifier {
       }
     }
     return -1;
+  }
+
+  /// 기존 flavor 관련 블록(signingConfigs, flavorDimensions, productFlavors)을 제거합니다.
+  static String _stripExistingFlavorConfig(String content) {
+    // 1. productFlavors { ... } 블록 제거
+    final pfMatch = RegExp(r'\bproductFlavors\s*\{').firstMatch(content);
+    if (pfMatch != null) {
+      final openBrace = content.indexOf('{', pfMatch.start);
+      final blockEnd = _findBlockEnd(content, openBrace);
+      if (blockEnd != -1) {
+        var start = pfMatch.start;
+        while (start > 0 && content[start - 1] != '\n') {
+          start--;
+        }
+        var end = blockEnd + 1;
+        if (end < content.length && content[end] == '\n') end++;
+        content = content.substring(0, start) + content.substring(end);
+      }
+    }
+
+    // 2. flavorDimensions 줄 제거
+    content = content.replaceAll(RegExp(r'[ \t]*flavorDimensions[^\n]*\n'), '');
+
+    // 3. signingConfigs { ... } 블록 제거
+    final scMatch = RegExp(r'\bsigningConfigs\s*\{').firstMatch(content);
+    if (scMatch != null) {
+      final openBrace = content.indexOf('{', scMatch.start);
+      final blockEnd = _findBlockEnd(content, openBrace);
+      if (blockEnd != -1) {
+        var start = scMatch.start;
+        while (start > 0 && content[start - 1] != '\n') {
+          start--;
+        }
+        var end = blockEnd + 1;
+        if (end < content.length && content[end] == '\n') end++;
+        content = content.substring(0, start) + content.substring(end);
+      }
+    }
+
+    // 연속 빈 줄 정리
+    content = content.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    // 닫는 중괄호 앞의 불필요한 빈 줄 제거
+    content = content.replaceAll(RegExp(r'\n{2,}(?=[ \t]*})'), '\n');
+
+    return content;
   }
 
   /// signing이 있는 flavor들에 대해 signingConfigs 블록을 생성합니다.

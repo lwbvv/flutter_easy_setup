@@ -60,7 +60,6 @@
 - [ ] Info.plist 추가 변수 — 커스텀 URL 스킴, 딥링크 등
   - `CFBundleURLSchemes`
   - `CFBundleShortVersionString` / `CFBundleVersion`
-- [ ] Launch screen — flavor별 LaunchScreen.storyboard 또는 이미지
 - [ ] 커스텀 xcconfig 변수 — 사용자 정의 빌드 설정 (API URL 등)
   - `GCC_PREPROCESSOR_DEFINITIONS` (Obj-C 매크로)
   - 커스텀 `USER_DEFINED` 변수

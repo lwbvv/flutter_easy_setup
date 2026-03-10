@@ -63,14 +63,15 @@ void main() {
       expect(content, contains('options[:flavor] || "staging"'));
     });
 
-    test('is idempotent', () {
+    test('overwrites existing file with correct content', () {
       FastfileGenerator.generate(tempDir.path, ios, ['prod']);
-
       final file = File(p.join(tempDir.path, 'Fastfile'));
+      final afterFirst = file.readAsStringSync();
+
       file.writeAsStringSync('CUSTOM');
 
       FastfileGenerator.generate(tempDir.path, ios, ['prod']);
-      expect(file.readAsStringSync(), 'CUSTOM');
+      expect(file.readAsStringSync(), afterFirst);
     });
 
     test('does not create file in dry-run mode', () {

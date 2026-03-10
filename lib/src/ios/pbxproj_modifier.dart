@@ -35,14 +35,8 @@ class PbxprojModifier {
 
     var content = file.readAsStringSync();
 
-    // 멱등성 가드: 첫 번째 flavor의 설정이 이미 존재하면 건너뜀
-    final firstFlavor = flavors.keys.first;
-    if (content.contains('Debug-$firstFlavor')) {
-      print(
-        '  iOS pbxproj already configured for flavor "$firstFlavor", skipping.',
-      );
-      return _extractRunnerTargetUuid(content);
-    }
+    // 기존 flavor 설정이 있으면 제거 후 재생성
+    content = _stripExistingFlavorConfigs(content);
 
     // ---- 기존 정보 추출 ----
 
@@ -285,6 +279,55 @@ class PbxprojModifier {
   }
 
   // ─────────────────────────── 내용 수정 메서드 ───────────────────────────
+
+  /// 기존 flavor별 빌드 구성을 모두 제거합니다.
+  ///
+  /// PBXFileReference, PBXGroup children, XCBuildConfiguration,
+  /// XCConfigurationList에서 flavor 관련 항목을 제거합니다.
+  static String _stripExistingFlavorConfigs(String content) {
+    // 1. PBXFileReference: flavor xcconfig 파일 참조 제거
+    content = content.replaceAll(
+      RegExp(
+        r'\t\t[0-9A-F]{24} /\* (?:Debug|Release|Profile)-\w+\.xcconfig \*/ = \{isa = PBXFileReference;[^\n]+\n',
+      ),
+      '',
+    );
+
+    // 2. PBXGroup children: flavor xcconfig 파일 참조 제거
+    content = content.replaceAll(
+      RegExp(
+        r'\t\t\t\t[0-9A-F]{24} /\* (?:Debug|Release|Profile)-\w+\.xcconfig \*/,\n',
+      ),
+      '',
+    );
+
+    // 3. XCBuildConfiguration: flavor 빌드 구성 블록 제거 (brace-counting 사용)
+    while (true) {
+      final match = RegExp(
+        r'\t\t[0-9A-F]{24} /\* (?:Debug|Release|Profile)-\w+ \*/ = \{',
+      ).firstMatch(content);
+      if (match == null) break;
+
+      final braceStart = match.end - 1;
+      final blockEnd = _findBlockEnd(content, braceStart);
+      if (blockEnd == -1) break;
+
+      var end = blockEnd + 1;
+      if (end < content.length && content[end] == ';') end++;
+      if (end < content.length && content[end] == '\n') end++;
+      content = content.substring(0, match.start) + content.substring(end);
+    }
+
+    // 4. XCConfigurationList: flavor 빌드 구성 참조 제거
+    content = content.replaceAll(
+      RegExp(
+        r'\t\t\t\t[0-9A-F]{24} /\* (?:Debug|Release|Profile)-\w+ \*/,\n',
+      ),
+      '',
+    );
+
+    return content;
+  }
 
   /// PBXFileReference 섹션 끝에 flavor xcconfig 파일 참조를 삽입합니다.
   ///

@@ -51,16 +51,17 @@ void main() {
       expect(content, contains('APP_DISPLAY_NAME=MyApp Dev'));
     });
 
-    test('is idempotent — does not overwrite existing files', () {
+    test('overwrites existing files with correct content', () {
       XcconfigGenerator.generate(tempDir.path, 'dev', config);
+      final afterFirst = File(p.join(tempDir.path, 'Debug-dev.xcconfig')).readAsStringSync();
 
-      // Overwrite with custom content to verify it's not replaced
-      final debugFile = File(p.join(tempDir.path, 'Debug-dev.xcconfig'));
-      debugFile.writeAsStringSync('CUSTOM CONTENT');
+      // Overwrite with custom content
+      File(p.join(tempDir.path, 'Debug-dev.xcconfig')).writeAsStringSync('CUSTOM');
 
       XcconfigGenerator.generate(tempDir.path, 'dev', config);
+      final afterSecond = File(p.join(tempDir.path, 'Debug-dev.xcconfig')).readAsStringSync();
 
-      expect(debugFile.readAsStringSync(), 'CUSTOM CONTENT');
+      expect(afterSecond, afterFirst);
     });
 
     test('does not create files in dry-run mode', () {

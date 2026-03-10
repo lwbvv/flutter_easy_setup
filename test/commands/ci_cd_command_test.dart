@@ -173,19 +173,20 @@ easy_setup:
       );
     });
 
-    test('is idempotent — second run skips existing files', () {
+    test('overwrites existing files on second run', () {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlWithCiCd);
 
       CiCdCommand.run(projectRoot: tempDir.path);
+      final gemfile = File(fastlanePath('Gemfile'));
+      final afterFirst = gemfile.readAsStringSync();
 
       // Overwrite one file
-      final gemfile = File(fastlanePath('Gemfile'));
       gemfile.writeAsStringSync('CUSTOM');
 
-      // Second run should not overwrite
+      // Second run should overwrite with correct content
       CiCdCommand.run(projectRoot: tempDir.path);
-      expect(gemfile.readAsStringSync(), 'CUSTOM');
+      expect(gemfile.readAsStringSync(), afterFirst);
     });
   });
 }

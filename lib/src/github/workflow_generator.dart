@@ -82,16 +82,12 @@ class WorkflowGenerator {
 
   static void _writeFile(String path, String content, {required bool dryRun}) {
     if (dryRun) {
-      print('  [dry-run] Would create: $path');
+      print('  [dry-run] Would write: $path');
       return;
     }
     final file = File(path);
-    if (file.existsSync()) {
-      print('  Already exists: $path, skipping.');
-      return;
-    }
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(content);
-    print('  Created: $path');
+    print('  Wrote: $path');
   }
 }

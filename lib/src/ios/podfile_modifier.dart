@@ -36,12 +36,11 @@ class PodfileModifier {
 
     var content = file.readAsStringSync();
 
-    // 멱등성 가드: 첫 번째 flavor의 매핑이 이미 존재하면 건너뜀
-    final firstFlavor = flavors.keys.first;
-    if (content.contains("'Debug-$firstFlavor'")) {
-      print('  Podfile already configured for flavor "$firstFlavor", skipping.');
-      return;
-    }
+    // 기존 flavor 매핑이 있으면 제거 후 재생성
+    content = content.replaceAll(
+      RegExp(r"  '(?:Debug|Profile|Release)-[^']+' => :(?:debug|release),\n"),
+      '',
+    );
 
     // 삽입 위치 마커: Flutter가 기본으로 생성하는 빌드 모드 매핑의 마지막 줄
     const marker = "'Release' => :release,";

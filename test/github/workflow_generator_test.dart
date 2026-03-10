@@ -52,15 +52,16 @@ void main() {
       expect(content, contains('default: "staging"'));
     });
 
-    test('is idempotent', () {
+    test('overwrites existing file with correct content', () {
       WorkflowGenerator.generate(tempDir.path, ['prod']);
-
       final file = File(
           p.join(tempDir.path, '.github', 'workflows', 'ios-deploy.yml'));
+      final afterFirst = file.readAsStringSync();
+
       file.writeAsStringSync('CUSTOM');
 
       WorkflowGenerator.generate(tempDir.path, ['prod']);
-      expect(file.readAsStringSync(), 'CUSTOM');
+      expect(file.readAsStringSync(), afterFirst);
     });
 
     test('does not create file in dry-run mode', () {

@@ -38,14 +38,15 @@ void main() {
       expect(content, contains('itc_team_id("ITC456")'));
     });
 
-    test('is idempotent', () {
+    test('overwrites existing file with correct content', () {
       AppfileGenerator.generate(tempDir.path, ios);
-
       final file = File(p.join(tempDir.path, 'Appfile'));
+      final afterFirst = file.readAsStringSync();
+
       file.writeAsStringSync('CUSTOM');
 
       AppfileGenerator.generate(tempDir.path, ios);
-      expect(file.readAsStringSync(), 'CUSTOM');
+      expect(file.readAsStringSync(), afterFirst);
     });
 
     test('does not create file in dry-run mode', () {

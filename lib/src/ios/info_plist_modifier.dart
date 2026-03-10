@@ -23,12 +23,6 @@ class InfoPlistModifier {
 
     var content = file.readAsStringSync();
 
-    // 멱등성 가드: 이미 $(APP_DISPLAY_NAME) 변수를 사용 중이면 건너뜀
-    if (content.contains(r'$(APP_DISPLAY_NAME)')) {
-      print(r'  Info.plist already uses $(APP_DISPLAY_NAME), skipping.');
-      return;
-    }
-
     // CFBundleDisplayName 키의 값을 $(APP_DISPLAY_NAME)으로 교체
     final pattern = RegExp(
       r'(<key>CFBundleDisplayName</key>\s*<string>)[^<]*(</string>)',

@@ -51,15 +51,16 @@ void main() {
       expect(content, contains('</Scheme>'));
     });
 
-    test('is idempotent — does not overwrite existing scheme', () {
+    test('overwrites existing scheme with correct content', () {
       SchemeGenerator.generate(tempDir.path, 'dev', runnerUuid);
+      final afterFirst = File(p.join(tempDir.path, 'dev.xcscheme')).readAsStringSync();
 
-      final file = File(p.join(tempDir.path, 'dev.xcscheme'));
-      file.writeAsStringSync('CUSTOM SCHEME');
+      File(p.join(tempDir.path, 'dev.xcscheme')).writeAsStringSync('CUSTOM');
 
       SchemeGenerator.generate(tempDir.path, 'dev', runnerUuid);
+      final afterSecond = File(p.join(tempDir.path, 'dev.xcscheme')).readAsStringSync();
 
-      expect(file.readAsStringSync(), 'CUSTOM SCHEME');
+      expect(afterSecond, afterFirst);
     });
 
     test('does not create file in dry-run mode', () {

@@ -47,14 +47,15 @@ void main() {
       expect(content, contains('api_key_path("api_key.json")'));
     });
 
-    test('is idempotent', () {
+    test('overwrites existing file with correct content', () {
       MatchfileGenerator.generate(tempDir.path, ios, ['com.app']);
-
       final file = File(p.join(tempDir.path, 'Matchfile'));
+      final afterFirst = file.readAsStringSync();
+
       file.writeAsStringSync('CUSTOM');
 
       MatchfileGenerator.generate(tempDir.path, ios, ['com.app']);
-      expect(file.readAsStringSync(), 'CUSTOM');
+      expect(file.readAsStringSync(), afterFirst);
     });
 
     test('does not create file in dry-run mode', () {

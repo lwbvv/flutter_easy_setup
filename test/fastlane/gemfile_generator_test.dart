@@ -26,14 +26,15 @@ void main() {
       expect(content, contains('gem "fastlane"'));
     });
 
-    test('is idempotent — does not overwrite existing file', () {
+    test('overwrites existing file with correct content', () {
       GemfileGenerator.generate(tempDir.path);
-
       final file = File(p.join(tempDir.path, 'Gemfile'));
+      final afterFirst = file.readAsStringSync();
+
       file.writeAsStringSync('CUSTOM');
 
       GemfileGenerator.generate(tempDir.path);
-      expect(file.readAsStringSync(), 'CUSTOM');
+      expect(file.readAsStringSync(), afterFirst);
     });
 
     test('does not create file in dry-run mode', () {

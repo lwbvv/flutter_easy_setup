@@ -27,11 +27,6 @@ class FirebaseCopier {
     final destPath = p.join(projectRoot, 'android', 'app', 'src', flavor, 'google-services.json');
     final dest = File(destPath);
 
-    if (dest.existsSync()) {
-      print('  Already exists: $destPath, skipping.');
-      return;
-    }
-
     if (dryRun) {
       print('  [dry-run] Would copy ${source.path} → $destPath');
       return;
@@ -61,11 +56,6 @@ class FirebaseCopier {
 
     final destPath = p.join(projectRoot, 'ios', 'Runner', 'Firebase', flavor, 'GoogleService-Info.plist');
     final dest = File(destPath);
-
-    if (dest.existsSync()) {
-      print('  Already exists: $destPath, skipping.');
-      return;
-    }
 
     if (dryRun) {
       print('  [dry-run] Would copy ${source.path} → $destPath');
