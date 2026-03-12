@@ -219,37 +219,66 @@ easy_setup:
 
 ---
 
-## Bundle ID / 앱 등록 (register 커맨드)
+## Bundle ID 등록 및 앱 생성 (register 커맨드)
 
-`easy_setup register` 명령으로 `easy_setup.yaml`의 flavor별 `bundle_id`를 바탕으로 Apple Developer Bundle ID와 App Store Connect 앱을 자동 등록합니다.
-
-내부적으로 **Fastlane의 `produce`** 명령을 사용하며, 이미 존재하는 Bundle ID나 앱은 자동으로 건너뜁니다.
+`easy_setup register` 명령으로 `easy_setup.yaml`의 flavor별 `bundle_id`를 바탕으로 Apple Developer Bundle ID를 등록하고, `fastlane produce`를 호출하여 App Store Connect 앱을 자동 생성합니다.
 
 ### 사전 요구사항
 
-- **Fastlane 설치**: `brew install fastlane` 또는 `gem install fastlane`
 - **App Store Connect API Key** (.p8 파일): `easy_setup.yaml`의 `ci_cd.ios.api_key`에 설정
+- **Apple ID 정보** (다음 중 하나):
+  - `easy_setup.yaml`의 `ci_cd.ios.apple_id` + `apple_id_password`
+  - 또는 환경변수 `FASTLANE_USER` + `FASTLANE_PASSWORD`
 
 ### 동작 방식
 
-1. `easy_setup.yaml`에서 대상 flavor와 API Key 정보를 로드합니다.
-2. 각 flavor에 대해 `fastlane produce`를 실행합니다:
-   - Apple Developer Portal에 Bundle ID 등록
-   - App Store Connect에 앱 생성
-3. 이미 존재하면 자동으로 건너뜁니다 (`produce` 내장 기능).
+1. API Key로 Bundle ID를 App Store Connect에 등록합니다.
+2. 등록된 Bundle ID가 있으면 건너뜁니다.
+3. `fastlane produce`를 호출하여 앱을 생성합니다.
+4. 앱이 이미 존재하면 건너뜁니다.
+
+### YAML 설정
+
+```yaml
+easy_setup:
+  ci_cd:
+    ios:
+      storage: https://github.com/user/certs.git
+      team_id: XXXXXXXXXX
+      itc_team_id: YYYYYYYYYY
+      api_key:
+        id: KEY_ID
+        issuer_id: ISSUER_ID
+        key_path: fastlane/AuthKey.p8
+      # 선택사항: Apple ID (생략 시 환경변수 사용)
+      apple_id: user@example.com
+      apple_id_password: app-specific-password
+```
 
 ### 대상 flavor 결정
 
 - `ci_cd.flavors`가 정의되어 있으면 해당 flavor만 대상으로 합니다.
 - `ci_cd.flavors`가 없으면 `easy_setup.flavors` 전체를 대상으로 합니다.
 
+### 실행
+
 ```bash
-# 미리보기 (실제 등록하지 않음)
+# 미리보기
 easy_setup register --dry-run
 
-# 실행
+# 환경변수 사용
+export FASTLANE_USER=user@example.com
+export FASTLANE_PASSWORD=app-specific-password
+easy_setup register
+
+# YAML에 Apple ID 지정
 easy_setup register
 ```
+
+### 주의사항
+
+- `apple_id_password`는 일반 비밀번호가 아닌 **Apple App-Specific Password** (2FA 활성화 시)를 사용해야 합니다.
+- 환경변수를 사용할 경우 보안을 위해 GitHub Secrets 등에서 관리하세요.
 
 ---
 

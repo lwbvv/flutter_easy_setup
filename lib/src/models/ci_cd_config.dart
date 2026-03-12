@@ -75,12 +75,16 @@ class CiCdIosConfig {
   final String teamId;
   final String itcTeamId;
   final ApiKeyConfig apiKey;
+  final String? appleId;
+  final String? appleIdPassword;
 
   const CiCdIosConfig({
     required this.storage,
     required this.teamId,
     required this.itcTeamId,
     required this.apiKey,
+    this.appleId,
+    this.appleIdPassword,
   });
 
   factory CiCdIosConfig.fromYaml(Map yaml) {
@@ -98,6 +102,8 @@ class CiCdIosConfig {
       teamId: teamId as String,
       itcTeamId: itcTeamId as String,
       apiKey: ApiKeyConfig.fromYaml(apiKeyMap as Map),
+      appleId: yaml['apple_id'] as String?,
+      appleIdPassword: yaml['apple_id_password'] as String?,
     );
   }
 }

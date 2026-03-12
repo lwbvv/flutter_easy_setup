@@ -45,47 +45,6 @@ class AppStoreConnectClient {
     return response['data']['id'] as String;
   }
 
-  /// 특정 Bundle ID를 가진 앱이 이미 존재하는지 확인합니다.
-  Future<bool> appExists(String bundleId) async {
-    final response = await _get(
-      '/apps?filter[bundleId]=$bundleId&fields[apps]=bundleId',
-    );
-    final data = response['data'] as List;
-    return data.isNotEmpty;
-  }
-
-  /// App Store Connect에 앱을 생성합니다.
-  ///
-  /// [bundleIdResourceId]: Bundle ID 리소스 ID (findBundleId/createBundleId에서 반환된 값)
-  /// [name]: 앱 이름 (App Store에 표시됨)
-  /// [sku]: 앱 고유 식별자 (사용자에게 표시되지 않음)
-  /// [primaryLocale]: 기본 언어 (기본: en-US)
-  Future<void> createApp({
-    required String bundleIdResourceId,
-    required String name,
-    required String sku,
-    String primaryLocale = 'en-US',
-  }) async {
-    await _post('/apps', {
-      'data': {
-        'type': 'apps',
-        'attributes': {
-          'name': name,
-          'primaryLocale': primaryLocale,
-          'sku': sku,
-        },
-        'relationships': {
-          'bundleId': {
-            'data': {
-              'type': 'bundleIds',
-              'id': bundleIdResourceId,
-            },
-          },
-        },
-      },
-    });
-  }
-
   // ── HTTP 헬퍼 ──────────────────────────────────────────────
 
   Future<Map<String, dynamic>> _get(String path) async {
