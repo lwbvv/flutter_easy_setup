@@ -11,5 +11,6 @@ export 'src/exceptions.dart';
 export 'src/firebase/firebase_copier.dart';
 export 'src/models/ci_cd_config.dart';
 export 'src/models/flavor_config.dart';
+export 'src/utils/fastlane_runner.dart';
 export 'src/utils/project_finder.dart';
 export 'src/utils/uuid_generator.dart';

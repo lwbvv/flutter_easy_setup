@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 
 import '../exceptions.dart';
 import '../models/flavor_config.dart';
+import '../utils/fastlane_runner.dart';
 import '../utils/project_finder.dart';
 
 /// Apple Developer Bundle ID 등록 및 App Store Connect 앱 생성을 자동화하는 명령 클래스입니다.
@@ -46,27 +47,32 @@ class RegisterCommand {
     final resolvedFlavors = _resolveFlavors(config);
     print('Target flavors: ${resolvedFlavors.keys.join(', ')}');
 
+    // 5. 의존성 검증 + Gemfile 준비 (dry-run에서도 실행)
+    final ios = ciCd.ios;
+    final apiKey = ios.apiKey;
+    final keyFilepath = p.join(root, apiKey.keyPath);
+    _ensureApiKeyExists(keyFilepath);
+
+    await FastlaneRunner.setup(root, dryRun: dryRun);
+
     if (dryRun) {
       print('\n[dry-run mode] No actions will be taken.\n');
+      print('  API Key:  $keyFilepath');
+      print('');
       for (final entry in resolvedFlavors.entries) {
         final info = entry.value;
-        print('  Would run: fastlane produce '
+        print('  Would run: bundle exec fastlane produce '
             '--app_identifier ${info.bundleId} '
             '--app_name "${info.name}"');
       }
       return;
     }
 
-    // 5. Fastlane 설치 확인
-    await _ensureFastlaneInstalled();
-
     // 6. API Key JSON 파일 생성 (Fastlane 인증용)
-    final ios = ciCd.ios;
-    final apiKey = ios.apiKey;
     final apiKeyJsonFile = await _createApiKeyJson(
       keyId: apiKey.id,
       issuerId: apiKey.issuerId,
-      keyFilepath: p.join(root, apiKey.keyPath),
+      keyFilepath: keyFilepath,
       duration: apiKey.duration,
       inHouse: apiKey.inHouse,
     );
@@ -79,11 +85,12 @@ class RegisterCommand {
         final info = entry.value;
 
         print('\n[$flavor]');
-        print('  Running: fastlane produce '
+        print('  Running: bundle exec fastlane produce '
             '--app_identifier ${info.bundleId} '
             '--app_name "${info.name}"');
 
         await _runProduce(
+          projectRoot: root,
           appIdentifier: info.bundleId,
           appName: info.name,
           sku: info.bundleId,
@@ -104,14 +111,12 @@ class RegisterCommand {
     }
   }
 
-  /// Fastlane이 설치되어 있는지 확인합니다.
-  static Future<void> _ensureFastlaneInstalled() async {
-    final result = await Process.run('which', ['fastlane']);
-    if (result.exitCode != 0) {
+  /// API Key .p8 파일이 존재하는지 확인합니다.
+  static void _ensureApiKeyExists(String keyFilepath) {
+    if (!File(keyFilepath).existsSync()) {
       throw SetupException(
-        'Fastlane is not installed.\n'
-        'Install it with: brew install fastlane\n'
-        'Or: gem install fastlane',
+        'API Key file not found: $keyFilepath\n'
+        'Place your App Store Connect .p8 key file at this path.',
       );
     }
   }
@@ -124,13 +129,6 @@ class RegisterCommand {
     required int duration,
     required bool inHouse,
   }) async {
-    if (!File(keyFilepath).existsSync()) {
-      throw SetupException(
-        'API Key file not found: $keyFilepath\n'
-        'Place your App Store Connect .p8 key file at this path.',
-      );
-    }
-
     final json = {
       'key_id': keyId,
       'issuer_id': issuerId,
@@ -147,8 +145,9 @@ class RegisterCommand {
     return tempFile;
   }
 
-  /// `fastlane produce`를 실행합니다.
+  /// `bundle exec fastlane produce`를 실행합니다.
   static Future<void> _runProduce({
+    required String projectRoot,
     required String appIdentifier,
     required String appName,
     required String sku,
@@ -156,7 +155,7 @@ class RegisterCommand {
     required String itcTeamId,
     required String apiKeyPath,
   }) async {
-    final result = await Process.run('fastlane', [
+    final result = await FastlaneRunner.run(projectRoot, [
       'produce',
       '--app_identifier', appIdentifier,
       '--app_name', appName,

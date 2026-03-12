@@ -53,9 +53,16 @@ easy_setup:
         key_path: fastlane/AuthKey.p8
 ''';
 
+  /// 테스트용 dummy .p8 파일을 생성합니다.
+  void createDummyApiKey(String root) {
+    final keyDir = Directory(p.join(root, 'fastlane'));
+    keyDir.createSync(recursive: true);
+    File(p.join(keyDir.path, 'AuthKey.p8'))
+        .writeAsStringSync('-----BEGIN PRIVATE KEY-----\nDUMMY\n-----END PRIVATE KEY-----');
+  }
+
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('register_test_');
-    // pubspec.yaml (Flutter 프로젝트로 인식되기 위해 필요)
     File(p.join(tempDir.path, 'pubspec.yaml'))
         .writeAsStringSync('name: test_app\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\n  flutter: ">=3.0.0"\ndependencies:\n  flutter:\n    sdk: flutter\n');
   });
@@ -75,40 +82,47 @@ easy_setup:
       );
     });
 
-    test('dry-run prints what would be done without running fastlane', () async {
+    test('throws when API key file not found', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlWithCiCd);
 
-      // dry-run should succeed without API key file or fastlane installed
+      // API key 검증은 fastlane 설치 전에 실행되므로 항상 테스트 가능
+      expect(
+        () => RegisterCommand.run(projectRoot: tempDir.path, dryRun: true),
+        throwsA(isA<SetupException>().having(
+          (e) => e.message,
+          'message',
+          contains('API Key file not found'),
+        )),
+      );
+    });
+
+    test('dry-run creates Gemfile and prints actions', () async {
+      File(p.join(tempDir.path, 'easy_setup.yaml'))
+          .writeAsStringSync(yamlWithCiCd);
+      createDummyApiKey(tempDir.path);
+
       await RegisterCommand.run(projectRoot: tempDir.path, dryRun: true);
+
+      // dry-run에서는 Gemfile을 실제로 생성하지 않음
+      expect(File(p.join(tempDir.path, 'Gemfile')).existsSync(), isFalse);
     });
 
     test('resolves all flavors when ci_cd.flavors is not specified', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlWithCiCd);
+      createDummyApiKey(tempDir.path);
 
-      // dry-run으로 flavor 해석만 검증 (fastlane 호출 없음)
+      // dry-run으로 flavor 해석만 검증
       await RegisterCommand.run(projectRoot: tempDir.path, dryRun: true);
-      // 에러 없이 완료되면 성공 (dev, prod 모두 해석됨)
     });
 
     test('resolves only ci_cd.flavors when specified', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlWithCiCdFlavors);
+      createDummyApiKey(tempDir.path);
 
-      // dry-run으로 flavor 해석만 검증 — prod만 대상
       await RegisterCommand.run(projectRoot: tempDir.path, dryRun: true);
-    });
-
-    test('throws when API key file not found (non dry-run)', () async {
-      File(p.join(tempDir.path, 'easy_setup.yaml'))
-          .writeAsStringSync(yamlWithCiCd);
-
-      // API 키 파일이 없으면 SetupException
-      expect(
-        () => RegisterCommand.run(projectRoot: tempDir.path),
-        throwsA(isA<SetupException>()),
-      );
     });
   });
 }

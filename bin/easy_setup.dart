@@ -77,7 +77,7 @@ Future<void> main(List<String> arguments) async {
       case 'flavor':
         FlavorCommand.run(dryRun: dryRun, projectRoot: projectRoot);
       case 'ci-cd':
-        CiCdCommand.run(dryRun: dryRun, projectRoot: projectRoot);
+        await CiCdCommand.run(dryRun: dryRun, projectRoot: projectRoot);
       case 'register':
         await RegisterCommand.run(dryRun: dryRun, projectRoot: projectRoot);
     }

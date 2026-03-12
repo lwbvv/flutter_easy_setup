@@ -45,11 +45,11 @@ easy_setup:
       p.join(tempDir.path, 'fastlane', 'ios', filename);
 
   group('CiCdCommand', () {
-    test('generates all CI/CD files', () {
+    test('generates all CI/CD files', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlWithCiCd);
 
-      CiCdCommand.run(projectRoot: tempDir.path);
+      await CiCdCommand.run(projectRoot: tempDir.path);
 
       expect(File(fastlanePath('Gemfile')).existsSync(), isTrue);
       expect(File(fastlanePath('Matchfile')).existsSync(), isTrue);
@@ -62,18 +62,18 @@ easy_setup:
       );
     });
 
-    test('Matchfile contains correct bundle IDs', () {
+    test('Matchfile contains correct bundle IDs', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlWithCiCd);
 
-      CiCdCommand.run(projectRoot: tempDir.path);
+      await CiCdCommand.run(projectRoot: tempDir.path);
 
       final content = File(fastlanePath('Matchfile')).readAsStringSync();
       expect(content, contains('"com.example.app.dev"'));
       expect(content, contains('"com.example.app"'));
     });
 
-    test('uses ci_cd.flavors override when specified', () {
+    test('uses ci_cd.flavors override when specified', () async {
       final yaml = '''
 easy_setup:
   flavors:
@@ -102,7 +102,7 @@ easy_setup:
 ''';
       File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync(yaml);
 
-      CiCdCommand.run(projectRoot: tempDir.path);
+      await CiCdCommand.run(projectRoot: tempDir.path);
 
       final matchfile = File(fastlanePath('Matchfile')).readAsStringSync();
       // Only prod bundle_id should be present
@@ -111,7 +111,7 @@ easy_setup:
       expect(matchfile, isNot(contains('com.example.app.staging')));
     });
 
-    test('ci_cd.flavors falls back to easy_setup.flavors bundle_id', () {
+    test('ci_cd.flavors falls back to easy_setup.flavors bundle_id', () async {
       final yaml = '''
 easy_setup:
   flavors:
@@ -136,17 +136,17 @@ easy_setup:
 ''';
       File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync(yaml);
 
-      CiCdCommand.run(projectRoot: tempDir.path);
+      await CiCdCommand.run(projectRoot: tempDir.path);
 
       final matchfile = File(fastlanePath('Matchfile')).readAsStringSync();
       expect(matchfile, contains('"com.example.app"'));
     });
 
-    test('dry-run does not create any files', () {
+    test('dry-run does not create any files', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlWithCiCd);
 
-      CiCdCommand.run(projectRoot: tempDir.path, dryRun: true);
+      await CiCdCommand.run(projectRoot: tempDir.path, dryRun: true);
 
       expect(File(fastlanePath('Gemfile')).existsSync(), isFalse);
       expect(File(fastlanePath('Matchfile')).existsSync(), isFalse);
@@ -173,11 +173,11 @@ easy_setup:
       );
     });
 
-    test('overwrites existing files on second run', () {
+    test('overwrites existing files on second run', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlWithCiCd);
 
-      CiCdCommand.run(projectRoot: tempDir.path);
+      await CiCdCommand.run(projectRoot: tempDir.path);
       final gemfile = File(fastlanePath('Gemfile'));
       final afterFirst = gemfile.readAsStringSync();
 
@@ -185,7 +185,7 @@ easy_setup:
       gemfile.writeAsStringSync('CUSTOM');
 
       // Second run should overwrite with correct content
-      CiCdCommand.run(projectRoot: tempDir.path);
+      await CiCdCommand.run(projectRoot: tempDir.path);
       expect(gemfile.readAsStringSync(), afterFirst);
     });
   });

@@ -7,6 +7,7 @@ import '../fastlane/gemfile_generator.dart';
 import '../fastlane/matchfile_generator.dart';
 import '../github/workflow_generator.dart';
 import '../models/flavor_config.dart';
+import '../utils/fastlane_runner.dart';
 import '../utils/project_finder.dart';
 
 /// CI/CD 파이프라인 설정의 전체 파이프라인을 오케스트레이션하는 명령 클래스입니다.
@@ -15,14 +16,15 @@ import '../utils/project_finder.dart';
 ///   1. Flutter 프로젝트 루트 탐지
 ///   2. easy_setup.yaml 로드 및 ci_cd 섹션 파싱
 ///   3. CI/CD 대상 flavor 및 bundle_id 해석
-///   4. fastlane/ios/Gemfile 생성
-///   5. fastlane/ios/Matchfile 생성
-///   6. fastlane/ios/Appfile 생성
-///   7. fastlane/ios/Fastfile 생성
-///   8. .github/workflows/ios-deploy.yml 생성
+///   4. 프로젝트 루트 Gemfile 확인/생성 + bundle install
+///   5. fastlane/ios/Gemfile 생성
+///   6. fastlane/ios/Matchfile 생성
+///   7. fastlane/ios/Appfile 생성
+///   8. fastlane/ios/Fastfile 생성
+///   9. .github/workflows/ios-deploy.yml 생성
 class CiCdCommand {
   /// CI/CD 설정 파이프라인을 실행합니다.
-  static void run({bool dryRun = false, String? projectRoot}) {
+  static Future<void> run({bool dryRun = false, String? projectRoot}) async {
     // 1. Flutter 프로젝트 루트 확인
     final root = projectRoot ?? ProjectFinder.findFlutterRoot();
     if (root == null) {
@@ -94,7 +96,10 @@ class CiCdCommand {
     print('CI/CD flavors: ${flavorNames.join(', ')}');
     if (dryRun) print('\n[dry-run mode] No files will be written.');
 
-    // 5. Fastlane 파일 생성 — fastlane/ios/ 디렉터리에 모든 파일 생성
+    // 5. 프로젝트 루트 Gemfile 확인/생성 + bundle install
+    await FastlaneRunner.setup(root, dryRun: dryRun);
+
+    // 6. Fastlane 파일 생성 — fastlane/ios/ 디렉터리에 모든 파일 생성
     print('\n--- Fastlane ---');
     final fastlaneDir = p.join(root, 'fastlane', 'ios');
     GemfileGenerator.generate(fastlaneDir, dryRun: dryRun);
@@ -104,11 +109,11 @@ class CiCdCommand {
     FastfileGenerator.generate(fastlaneDir, ciCd.ios, flavorNames,
         dryRun: dryRun);
 
-    // 6. GitHub Actions 워크플로우 생성
+    // 7. GitHub Actions 워크플로우 생성
     print('\n--- GitHub Actions ---');
     WorkflowGenerator.generate(root, flavorNames, dryRun: dryRun);
 
-    // 7. 완료 안내
+    // 8. 완료 안내
     _printSummary(dryRun: dryRun);
   }
 
@@ -116,6 +121,7 @@ class CiCdCommand {
     print('\n${dryRun ? "Preview" : "CI/CD setup"} complete!');
     if (!dryRun) {
       print('\nGenerated files:');
+      print('  - Gemfile (project root)');
       print('  - fastlane/ios/Gemfile');
       print('  - fastlane/ios/Matchfile');
       print('  - fastlane/ios/Appfile');
