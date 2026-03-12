@@ -118,5 +118,5 @@ void _printUsage(ArgParser parser) {
   print('        api_key:');
   print('          id: KEY_ID');
   print('          issuer_id: ISSUER_ID');
-  print('          key_path: fastlane/AuthKey.p8');
+  print('          key_path: ci_cd/ios/fastlane/AuthKey.p8');
 }

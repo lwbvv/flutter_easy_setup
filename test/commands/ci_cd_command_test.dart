@@ -37,12 +37,12 @@ easy_setup:
       api_key:
         id: KEY_ID
         issuer_id: ISSUER_ID
-        key_path: fastlane/AuthKey.p8
+        key_path: ci_cd/ios/fastlane/AuthKey.p8
 ''';
 
-  /// fastlane/ios/ 디렉터리 아래 파일 경로를 반환하는 헬퍼
+  /// ci_cd/ios/fastlane/ 디렉터리 아래 파일 경로를 반환하는 헬퍼
   String fastlanePath(String filename) =>
-      p.join(tempDir.path, 'fastlane', 'ios', filename);
+      p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane', filename);
 
   group('CiCdCommand', () {
     test('generates all CI/CD files', () async {
@@ -98,7 +98,7 @@ easy_setup:
       api_key:
         id: KEY_ID
         issuer_id: ISSUER_ID
-        key_path: fastlane/AuthKey.p8
+        key_path: ci_cd/ios/fastlane/AuthKey.p8
 ''';
       File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync(yaml);
 
@@ -132,7 +132,7 @@ easy_setup:
       api_key:
         id: KEY_ID
         issuer_id: ISSUER_ID
-        key_path: fastlane/AuthKey.p8
+        key_path: ci_cd/ios/fastlane/AuthKey.p8
 ''';
       File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync(yaml);
 

@@ -26,7 +26,7 @@ easy_setup:
       api_key:
         id: KEY_ID
         issuer_id: ISSUER_ID
-        key_path: fastlane/AuthKey.p8
+        key_path: ci_cd/ios/fastlane/AuthKey.p8
 ''';
 
   const yamlWithCiCdFlavors = '''
@@ -51,7 +51,7 @@ easy_setup:
       api_key:
         id: KEY_ID
         issuer_id: ISSUER_ID
-        key_path: fastlane/AuthKey.p8
+        key_path: ci_cd/ios/fastlane/AuthKey.p8
 ''';
 
   setUp(() {
@@ -84,7 +84,7 @@ easy_setup:
 
       // Fastfile should still be generated
       expect(
-        File(p.join(tempDir.path, 'fastlane', 'ios', 'Fastfile')).existsSync(),
+        File(p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane', 'Fastfile')).existsSync(),
         isTrue,
       );
     });
@@ -118,7 +118,7 @@ easy_setup:
 
       await CiCdCommand.run(projectRoot: tempDir.path);
 
-      final fastfile = File(p.join(tempDir.path, 'fastlane', 'ios', 'Fastfile'))
+      final fastfile = File(p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane', 'Fastfile'))
           .readAsStringSync();
       expect(fastfile, contains('lane :register do'));
       expect(fastfile, contains('produce('));
@@ -143,13 +143,13 @@ easy_setup:
       api_key:
         id: KEY_ID
         issuer_id: ISSUER_ID
-        key_path: fastlane/AuthKey.p8
+        key_path: ci_cd/ios/fastlane/AuthKey.p8
 ''';
       File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync(yaml);
 
       await CiCdCommand.run(projectRoot: tempDir.path);
 
-      final fastfile = File(p.join(tempDir.path, 'fastlane', 'ios', 'Fastfile'))
+      final fastfile = File(p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane', 'Fastfile'))
           .readAsStringSync();
       expect(fastfile, contains('username: "user@example.com"'));
     });

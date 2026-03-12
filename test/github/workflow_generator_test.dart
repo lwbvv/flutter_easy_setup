@@ -32,13 +32,13 @@ void main() {
       expect(content, contains('actions/checkout@v4'));
       expect(content, contains('subosito/flutter-action@v2'));
       expect(content, contains('ruby/setup-ruby@v1'));
-      expect(content, contains('working-directory: fastlane/ios'));
+      expect(content, contains('working-directory: ci_cd/ios/fastlane'));
       expect(content, contains('flutter pub get'));
       expect(content, contains('APP_STORE_CONNECT_API_KEY_BASE64'));
-      expect(content, contains('fastlane/ios/AuthKey.p8'));
+      expect(content, contains('ci_cd/ios/fastlane/AuthKey.p8'));
       expect(content, contains('MATCH_PASSWORD'));
       expect(content, contains('MATCH_GIT_BASIC_AUTHORIZATION'));
-      expect(content, contains('cd fastlane/ios'));
+      expect(content, contains('cd ci_cd/ios/fastlane'));
       expect(content, contains('bundle exec fastlane certificates'));
       expect(content, contains('bundle exec fastlane beta'));
     });

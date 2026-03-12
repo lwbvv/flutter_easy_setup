@@ -21,7 +21,7 @@ import '../utils/project_finder.dart';
 ///   2. easy_setup.yaml 로드 및 ci_cd 섹션 파싱
 ///   3. CI/CD 대상 flavor 및 bundle_id 해석
 ///   4. 프로젝트 루트 Gemfile 확인/생성 + bundle install
-///   5. fastlane/ios/ Fastlane 파일 생성 (Gemfile, Matchfile, Appfile, Fastfile)
+///   5. ci_cd/ios/fastlane/ Fastlane 파일 생성 (Gemfile, Matchfile, Appfile, Fastfile)
 ///   6. API Key로 Bundle ID 등록
 ///   7. Fastfile에 register lane 추가
 ///   8. .github/workflows/ios-deploy.yml 생성
@@ -59,7 +59,7 @@ class CiCdCommand {
         '      api_key:\n'
         '        id: KEY_ID\n'
         '        issuer_id: ISSUER_ID\n'
-        '        key_path: fastlane/AuthKey.p8',
+        '        key_path: ci_cd/ios/fastlane/AuthKey.p8',
       );
     }
 
@@ -75,9 +75,9 @@ class CiCdCommand {
     // 5. 프로젝트 루트 Gemfile 확인/생성 + bundle install
     await FastlaneRunner.setup(root, dryRun: dryRun);
 
-    // 6. Fastlane 파일 생성 — fastlane/ios/ 디렉터리에 모든 파일 생성
+    // 6. Fastlane 파일 생성 — ci_cd/ios/fastlane/ 디렉터리에 모든 파일 생성
     print('\n--- Fastlane ---');
-    final fastlaneDir = p.join(root, 'fastlane', 'ios');
+    final fastlaneDir = p.join(root, 'ci_cd', 'ios', 'fastlane');
     GemfileGenerator.generate(fastlaneDir, dryRun: dryRun);
     MatchfileGenerator.generate(fastlaneDir, ciCd.ios, bundleIds,
         dryRun: dryRun);
@@ -198,21 +198,21 @@ class CiCdCommand {
     if (!dryRun) {
       print('\nGenerated files:');
       print('  - Gemfile (project root)');
-      print('  - fastlane/ios/Gemfile');
-      print('  - fastlane/ios/Matchfile');
-      print('  - fastlane/ios/Appfile');
-      print('  - fastlane/ios/Fastfile (with register lane)');
+      print('  - ci_cd/ios/fastlane/Gemfile');
+      print('  - ci_cd/ios/fastlane/Matchfile');
+      print('  - ci_cd/ios/fastlane/Appfile');
+      print('  - ci_cd/ios/fastlane/Fastfile (with register lane)');
       print('  - .github/workflows/ios-deploy.yml');
       print('\nRequired GitHub Secrets:');
       print('  MATCH_PASSWORD              — Match encryption password');
       print('  MATCH_GIT_BASIC_AUTHORIZATION — base64(username:PAT)');
       print('  APP_STORE_CONNECT_API_KEY_BASE64 — base64 of .p8 key file');
       print('\nNext steps:');
-      print('  1. cd fastlane/ios && bundle install');
+      print('  1. cd ci_cd/ios/fastlane && bundle install');
       print('  2. bundle exec fastlane match init  (first time only)');
       print('  3. Configure GitHub Secrets in your repository settings');
       if (hasApiKey) {
-        print('  4. cd fastlane/ios && bundle exec fastlane register');
+        print('  4. cd ci_cd/ios/fastlane && bundle exec fastlane register');
         print('     (to create apps on App Store Connect — requires 2FA)');
       }
     }

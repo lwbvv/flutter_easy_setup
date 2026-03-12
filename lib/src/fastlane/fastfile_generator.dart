@@ -61,7 +61,7 @@ class FastfileGenerator {
         '\n'
         '    certificates\n'
         '\n'
-        '    sh("cd ../.. && flutter build ipa --flavor #{flavor} --release")\n'
+        '    sh("cd ../../.. && flutter build ipa --flavor #{flavor} --release")\n'
         '\n'
         '    upload_to_testflight(\n'
         '      api_key: api_key,\n'
