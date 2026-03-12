@@ -101,6 +101,10 @@ class FastfileGenerator {
       if (ios.appleId != null) {
         laneCode.writeln('      username: "${ios.appleId}",');
       }
+      laneCode.writeln('      enable_services: {');
+      laneCode.writeln('      enable_services: {');
+      laneCode.writeln('        game_center: "off"     # 게임센터는 디폴트가 on이라 비활성화 시켜줘야 됨');
+      laneCode.writeln('      },');
       laneCode.writeln('    )');
       laneCode.writeln('');
     }
