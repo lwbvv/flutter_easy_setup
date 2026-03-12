@@ -8,7 +8,7 @@ export 'src/app_store/app_store_connect_client.dart';
 export 'src/app_store/jwt_generator.dart';
 export 'src/commands/ci_cd_command.dart';
 export 'src/commands/flavor_command.dart';
-export 'src/commands/register_command.dart';
+
 export 'src/exceptions.dart';
 export 'src/firebase/firebase_copier.dart';
 export 'src/models/ci_cd_config.dart';

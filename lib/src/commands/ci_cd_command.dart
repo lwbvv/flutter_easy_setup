@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:path/path.dart' as p;
 
+import '../app_store/app_store_connect_client.dart';
+import '../app_store/jwt_generator.dart';
 import '../exceptions.dart';
 import '../fastlane/appfile_generator.dart';
 import '../fastlane/fastfile_generator.dart';
@@ -17,11 +21,10 @@ import '../utils/project_finder.dart';
 ///   2. easy_setup.yaml 로드 및 ci_cd 섹션 파싱
 ///   3. CI/CD 대상 flavor 및 bundle_id 해석
 ///   4. 프로젝트 루트 Gemfile 확인/생성 + bundle install
-///   5. fastlane/ios/Gemfile 생성
-///   6. fastlane/ios/Matchfile 생성
-///   7. fastlane/ios/Appfile 생성
-///   8. fastlane/ios/Fastfile 생성
-///   9. .github/workflows/ios-deploy.yml 생성
+///   5. fastlane/ios/ Fastlane 파일 생성 (Gemfile, Matchfile, Appfile, Fastfile)
+///   6. API Key로 Bundle ID 등록
+///   7. Fastfile에 register lane 추가
+///   8. .github/workflows/ios-deploy.yml 생성
 class CiCdCommand {
   /// CI/CD 설정 파이프라인을 실행합니다.
   static Future<void> run({bool dryRun = false, String? projectRoot}) async {
@@ -60,38 +63,11 @@ class CiCdCommand {
       );
     }
 
-    // 4. CI/CD 대상 flavor & bundle_id 해석
-    final Map<String, String> resolvedFlavors;
-    if (ciCd.flavors != null && ciCd.flavors!.isNotEmpty) {
-      // ci_cd.flavors가 명시된 경우: 해당 키만 대상
-      resolvedFlavors = {};
-      for (final entry in ciCd.flavors!.entries) {
-        final flavorName = entry.key;
-        final ciCdFlavor = entry.value;
-        if (ciCdFlavor.bundleId != null) {
-          resolvedFlavors[flavorName] = ciCdFlavor.bundleId!;
-        } else if (config.flavors.containsKey(flavorName)) {
-          resolvedFlavors[flavorName] = config.flavors[flavorName]!.bundleId;
-        } else {
-          throw SetupException(
-            'Flavor "$flavorName" in ci_cd.flavors not found in easy_setup.flavors '
-            'and no bundle_id override provided.',
-          );
-        }
-      }
-    } else {
-      // ci_cd.flavors 미지정: easy_setup.flavors 전체 사용
-      if (config.flavors.isEmpty) {
-        throw SetupException('No flavors defined in easy_setup.yaml');
-      }
-      resolvedFlavors = {
-        for (final entry in config.flavors.entries)
-          entry.key: entry.value.bundleId,
-      };
-    }
-
+    // 4. CI/CD 대상 flavor & bundle_id & name 해석
+    final resolvedFlavors = _resolveFlavors(config);
     final flavorNames = resolvedFlavors.keys.toList();
-    final bundleIds = resolvedFlavors.values.toList();
+    final bundleIds =
+        resolvedFlavors.values.map((f) => f.bundleId).toList();
 
     print('CI/CD flavors: ${flavorNames.join(', ')}');
     if (dryRun) print('\n[dry-run mode] No files will be written.');
@@ -109,15 +85,115 @@ class CiCdCommand {
     FastfileGenerator.generate(fastlaneDir, ciCd.ios, flavorNames,
         dryRun: dryRun);
 
-    // 7. GitHub Actions 워크플로우 생성
+    // 7. Bundle ID 등록 + register lane 추가
+    final ios = ciCd.ios;
+    final apiKey = ios.apiKey;
+    final keyFilepath = p.join(root, apiKey.keyPath);
+    final hasApiKey = File(keyFilepath).existsSync();
+
+    if (hasApiKey && !dryRun) {
+      // API Key로 Bundle ID 자동 등록
+      print('\n--- Bundle ID Registration ---');
+      print('Generating JWT token...');
+      final jwt = JwtGenerator.generate(
+        keyId: apiKey.id,
+        issuerId: apiKey.issuerId,
+        privateKeyPath: keyFilepath,
+        duration: apiKey.duration,
+      );
+
+      final client = AppStoreConnectClient(jwt);
+
+      for (final entry in resolvedFlavors.entries) {
+        final flavor = entry.key;
+        final info = entry.value;
+
+        print('\n[$flavor]');
+        final existing = await client.findBundleId(info.bundleId);
+        if (existing != null) {
+          print('  Bundle ID already exists: ${info.bundleId}');
+        } else {
+          print('  Registering Bundle ID: ${info.bundleId}');
+          await client.createBundleId(info.bundleId, info.name);
+          print('  Registered Bundle ID: ${info.bundleId}');
+        }
+      }
+    } else if (!hasApiKey) {
+      print('\n--- Bundle ID Registration ---');
+      print('  Skipped: API Key file not found at $keyFilepath');
+      print('  Place your .p8 key file there to enable auto-registration.');
+    }
+
+    // 8. Fastfile에 register lane 추가
+    if (!dryRun) {
+      print('\n--- Register Lane ---');
+      final fastfilePath = p.join(fastlaneDir, 'Fastfile');
+      final flavorRecords = resolvedFlavors.map(
+        (key, info) => MapEntry(
+          key,
+          (bundleId: info.bundleId, name: info.name),
+        ),
+      );
+      FastfileGenerator.addRegisterLane(
+        fastfilePath: fastfilePath,
+        ios: ios,
+        flavors: flavorRecords,
+      );
+    }
+
+    // 9. GitHub Actions 워크플로우 생성
     print('\n--- GitHub Actions ---');
     WorkflowGenerator.generate(root, flavorNames, dryRun: dryRun);
 
-    // 8. 완료 안내
-    _printSummary(dryRun: dryRun);
+    // 10. 완료 안내
+    _printSummary(dryRun: dryRun, hasApiKey: hasApiKey);
   }
 
-  static void _printSummary({required bool dryRun}) {
+  /// CI/CD 대상 flavor의 bundleId + name을 해석합니다.
+  static Map<String, _FlavorInfo> _resolveFlavors(EasySetupConfig config) {
+    final ciCd = config.ciCd!;
+    final result = <String, _FlavorInfo>{};
+
+    if (ciCd.flavors != null && ciCd.flavors!.isNotEmpty) {
+      for (final entry in ciCd.flavors!.entries) {
+        final flavorName = entry.key;
+        final ciCdFlavor = entry.value;
+
+        final bundleId = ciCdFlavor.bundleId ??
+            config.flavors[flavorName]?.bundleId;
+        final name = config.flavors[flavorName]?.name;
+
+        if (bundleId == null) {
+          throw SetupException(
+            'Flavor "$flavorName" in ci_cd.flavors not found in easy_setup.flavors '
+            'and no bundle_id override provided.',
+          );
+        }
+        if (name == null) {
+          throw SetupException(
+            'Flavor "$flavorName": could not resolve app name.\n'
+            'Ensure the flavor is defined in easy_setup.flavors with a name.',
+          );
+        }
+
+        result[flavorName] = _FlavorInfo(bundleId: bundleId, name: name);
+      }
+    } else {
+      if (config.flavors.isEmpty) {
+        throw SetupException('No flavors defined in easy_setup.yaml');
+      }
+      for (final entry in config.flavors.entries) {
+        result[entry.key] = _FlavorInfo(
+          bundleId: entry.value.bundleId,
+          name: entry.value.name,
+        );
+      }
+    }
+
+    return result;
+  }
+
+  static void _printSummary({required bool dryRun, required bool hasApiKey}) {
     print('\n${dryRun ? "Preview" : "CI/CD setup"} complete!');
     if (!dryRun) {
       print('\nGenerated files:');
@@ -125,7 +201,7 @@ class CiCdCommand {
       print('  - fastlane/ios/Gemfile');
       print('  - fastlane/ios/Matchfile');
       print('  - fastlane/ios/Appfile');
-      print('  - fastlane/ios/Fastfile');
+      print('  - fastlane/ios/Fastfile (with register lane)');
       print('  - .github/workflows/ios-deploy.yml');
       print('\nRequired GitHub Secrets:');
       print('  MATCH_PASSWORD              — Match encryption password');
@@ -135,6 +211,18 @@ class CiCdCommand {
       print('  1. cd fastlane/ios && bundle install');
       print('  2. bundle exec fastlane match init  (first time only)');
       print('  3. Configure GitHub Secrets in your repository settings');
+      if (hasApiKey) {
+        print('  4. cd fastlane/ios && bundle exec fastlane register');
+        print('     (to create apps on App Store Connect — requires 2FA)');
+      }
     }
   }
+}
+
+/// 단일 flavor의 bundleId + name을 담는 내부 클래스입니다.
+class _FlavorInfo {
+  final String bundleId;
+  final String name;
+
+  const _FlavorInfo({required this.bundleId, required this.name});
 }

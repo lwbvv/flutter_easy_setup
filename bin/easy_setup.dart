@@ -4,8 +4,7 @@
 //
 // Commands:
 //   flavor    Flutter flavor 환경 설정 (Android + iOS)  [default]
-//   ci-cd     CI/CD 파이프라인 설정 생성 (Fastlane + GitHub Actions)
-//   register  Apple Developer Bundle ID 등록 + App Store Connect 앱 생성
+//   ci-cd     CI/CD 파이프라인 설정 생성 (Fastlane + GitHub Actions + Bundle ID 등록)
 //
 // Global Options:
 //   -h, --help          도움말 표시
@@ -16,7 +15,6 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:easy_setup/src/commands/ci_cd_command.dart';
 import 'package:easy_setup/src/commands/flavor_command.dart';
-import 'package:easy_setup/src/commands/register_command.dart';
 import 'package:easy_setup/src/exceptions.dart';
 
 Future<void> main(List<String> arguments) async {
@@ -46,7 +44,7 @@ Future<void> main(List<String> arguments) async {
 
   if (arguments.isNotEmpty && !arguments.first.startsWith('-')) {
     final first = arguments.first;
-    if (first == 'flavor' || first == 'ci-cd' || first == 'register') {
+    if (first == 'flavor' || first == 'ci-cd') {
       command = first;
       commandArgs = arguments.sublist(1);
     }
@@ -78,8 +76,6 @@ Future<void> main(List<String> arguments) async {
         FlavorCommand.run(dryRun: dryRun, projectRoot: projectRoot);
       case 'ci-cd':
         await CiCdCommand.run(dryRun: dryRun, projectRoot: projectRoot);
-      case 'register':
-        await RegisterCommand.run(dryRun: dryRun, projectRoot: projectRoot);
     }
   } on SetupException catch (e) {
     stderr.writeln('\n✗ ${e.message}');
@@ -97,8 +93,8 @@ void _printUsage(ArgParser parser) {
   print('Usage: easy_setup <command> [options]\n');
   print('Commands:');
   print('  flavor    Configure Flutter flavors for Android & iOS (default)');
-  print('  ci-cd     Generate CI/CD pipeline files (Fastlane + GitHub Actions)');
-  print('  register  Register Bundle IDs & create apps on App Store Connect\n');
+  print('  ci-cd     Generate CI/CD pipeline files, register Bundle IDs,');
+  print('            and create register lane (Fastlane + GitHub Actions)\n');
   print(parser.usage);
   print('');
   print('Reads easy_setup.yaml in the Flutter project root.');

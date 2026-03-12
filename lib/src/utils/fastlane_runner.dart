@@ -87,14 +87,19 @@ class FastlaneRunner {
   }
 
   /// `bundle exec fastlane`으로 명령을 실행합니다.
+  ///
+  /// [environment]로 추가 환경변수를 전달할 수 있습니다.
   static Future<ProcessResult> run(
     String projectRoot,
-    List<String> args,
-  ) async {
+    List<String> args, {
+    Map<String, String>? environment,
+  }) async {
     return Process.run(
       'bundle',
       ['exec', 'fastlane', ...args],
       workingDirectory: projectRoot,
+      environment: environment,
+      includeParentEnvironment: true,
     );
   }
 }

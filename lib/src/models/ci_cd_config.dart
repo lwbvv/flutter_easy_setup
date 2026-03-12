@@ -97,13 +97,14 @@ class CiCdIosConfig {
         'ci_cd.ios requires "storage", "team_id", "itc_team_id", and "api_key" fields.',
       );
     }
+    final apiKeyYaml = apiKeyMap as Map;
     return CiCdIosConfig(
       storage: storage as String,
       teamId: teamId as String,
       itcTeamId: itcTeamId as String,
-      apiKey: ApiKeyConfig.fromYaml(apiKeyMap as Map),
-      appleId: yaml['apple_id'] as String?,
-      appleIdPassword: yaml['apple_id_password'] as String?,
+      apiKey: ApiKeyConfig.fromYaml(apiKeyYaml),
+      appleId: (yaml['apple_id'] ?? apiKeyYaml['apple_id']) as String?,
+      appleIdPassword: (yaml['apple_id_password'] ?? apiKeyYaml['apple_id_password']) as String?,
     );
   }
 }
