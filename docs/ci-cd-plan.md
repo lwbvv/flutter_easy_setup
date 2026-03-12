@@ -33,8 +33,11 @@ easy_setup:
     flavors:
       staging:
         bundle_id: com.example.app.staging
+        name: "테스트앱 스테이징"
+        
       prod:
         bundle_id: com.example.app
+        name: "테스트앱"
 
     # ── iOS 설정 (required) ─────────────────────────────────────
     ios:

@@ -13,6 +13,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 - [사용법](#사용법)
 - [설정 파일 (easy_setup.yaml)](#설정-파일-easy_setupyaml)
 - [CI/CD 설정 (ci-cd 커맨드)](#cicd-설정-ci-cd-커맨드)
+- [Bundle ID / 앱 등록 (register 커맨드)](#bundle-id--앱-등록-register-커맨드)
 - [자동으로 수정되는 파일](#자동으로-수정되는-파일)
 - [프로젝트 구조](#프로젝트-구조)
 - [모듈별 설명](#모듈별-설명)
@@ -33,6 +34,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 | **iOS** | `Podfile`에 빌드 모드 매핑 추가 |
 | **CI/CD** | Fastlane 파일 자동 생성 (Gemfile, Matchfile, Appfile, Fastfile) |
 | **CI/CD** | GitHub Actions 워크플로우 자동 생성 (ios-deploy.yml) |
+| **Register** | Apple Developer Bundle ID 등록 + App Store Connect 앱 생성 (`fastlane produce`) |
 
 ---
 
@@ -74,6 +76,9 @@ easy_setup flavor
 
 # CI/CD 파이프라인 설정
 easy_setup ci-cd
+
+# Apple Developer Bundle ID + App Store Connect 앱 등록
+easy_setup register
 ```
 
 ### CLI 옵션
@@ -84,6 +89,7 @@ Usage: easy_setup <command> [options]
 Commands:
   flavor    Flutter flavor 환경 설정 (Android + iOS)  [default]
   ci-cd     CI/CD 파이프라인 설정 생성 (Fastlane + GitHub Actions)
+  register  Apple Developer Bundle ID 등록 + App Store Connect 앱 생성
 
 Options:
   -h, --help            도움말 표시
@@ -99,6 +105,9 @@ easy_setup --dry-run
 
 # CI/CD 설정 미리보기
 easy_setup ci-cd --dry-run
+
+# register 미리보기
+easy_setup register --dry-run
 
 # 특정 프로젝트 경로 지정
 easy_setup -p /path/to/flutter/project
@@ -122,6 +131,10 @@ cd fastlane/ios && bundle install
 bundle exec fastlane match init  # 최초 1회
 # GitHub Secrets 설정 (아래 CI/CD 섹션 참조)
 ```
+
+**register 커맨드 후:**
+- Bundle ID와 앱이 Apple Developer / App Store Connect에 등록됩니다.
+- 이미 존재하는 Bundle ID나 앱은 자동으로 건너뜁니다.
 
 ---
 
@@ -206,6 +219,40 @@ easy_setup:
 
 ---
 
+## Bundle ID / 앱 등록 (register 커맨드)
+
+`easy_setup register` 명령으로 `easy_setup.yaml`의 flavor별 `bundle_id`를 바탕으로 Apple Developer Bundle ID와 App Store Connect 앱을 자동 등록합니다.
+
+내부적으로 **Fastlane의 `produce`** 명령을 사용하며, 이미 존재하는 Bundle ID나 앱은 자동으로 건너뜁니다.
+
+### 사전 요구사항
+
+- **Fastlane 설치**: `brew install fastlane` 또는 `gem install fastlane`
+- **App Store Connect API Key** (.p8 파일): `easy_setup.yaml`의 `ci_cd.ios.api_key`에 설정
+
+### 동작 방식
+
+1. `easy_setup.yaml`에서 대상 flavor와 API Key 정보를 로드합니다.
+2. 각 flavor에 대해 `fastlane produce`를 실행합니다:
+   - Apple Developer Portal에 Bundle ID 등록
+   - App Store Connect에 앱 생성
+3. 이미 존재하면 자동으로 건너뜁니다 (`produce` 내장 기능).
+
+### 대상 flavor 결정
+
+- `ci_cd.flavors`가 정의되어 있으면 해당 flavor만 대상으로 합니다.
+- `ci_cd.flavors`가 없으면 `easy_setup.flavors` 전체를 대상으로 합니다.
+
+```bash
+# 미리보기 (실제 등록하지 않음)
+easy_setup register --dry-run
+
+# 실행
+easy_setup register
+```
+
+---
+
 ## 자동으로 수정되는 파일
 
 ### Android
@@ -274,7 +321,8 @@ easy_setup/
 │       │   └── uuid_generator.dart        # Xcode UUID 생성 (24자리 hex)
 │       ├── commands/
 │       │   ├── flavor_command.dart        # flavor 파이프라인 오케스트레이션
-│       │   └── ci_cd_command.dart         # CI/CD 파이프라인 오케스트레이션
+│       │   ├── ci_cd_command.dart         # CI/CD 파이프라인 오케스트레이션
+│       │   └── register_command.dart      # Bundle ID + 앱 등록 (fastlane produce)
 │       ├── android/
 │       │   └── build_gradle_modifier.dart # build.gradle flavor 설정
 │       ├── ios/
@@ -299,7 +347,7 @@ easy_setup/
 
 ### `bin/easy_setup.dart` — CLI 진입점
 - `args` 패키지를 사용하여 `--help`, `--dry-run`, `--project-root` 옵션을 파싱합니다.
-- 서브커맨드 라우팅: `flavor` (기본), `ci-cd`.
+- 서브커맨드 라우팅: `flavor` (기본), `ci-cd`, `register`.
 - 서브커맨드 생략 시 `flavor`로 동작하여 하위 호환성을 보장합니다.
 
 ### `FlavorCommand` — flavor 오케스트레이터
@@ -310,6 +358,11 @@ easy_setup/
 - CI/CD 파이프라인 설정을 순차적으로 실행합니다.
 - YAML 로드 → flavor 해석 → Fastlane 4파일 → GitHub Actions 워크플로우 → 안내 출력.
 - `fastlaneDir`(`fastlane/ios/`) 경로를 구성하여 각 Fastlane generator에 주입합니다.
+
+### `RegisterCommand` — Bundle ID / 앱 등록
+- `fastlane produce`를 subprocess로 실행하여 Bundle ID 등록 + App Store Connect 앱 생성을 자동화합니다.
+- Fastlane 인증을 위한 임시 API Key JSON 파일을 생성하고, 완료 후 자동 정리합니다.
+- `ci_cd.flavors` 우선 → `easy_setup.flavors` 폴백으로 대상 flavor를 결정합니다.
 
 ### `FlavorConfig` / `EasySetupConfig` — 설정 모델
 - `easy_setup.yaml`을 파싱하여 `Map<String, FlavorConfig>`로 변환합니다.
@@ -380,5 +433,17 @@ easy_setup/
 - `ios/Runner.xcodeproj/project.pbxproj` 파일이 존재하는지 확인하세요.
 
 ### 이미 설정된 경우
-- 멱등성 가드에 의해 이미 설정된 항목은 자동으로 건너뜁니다.
-- 처음부터 다시 설정하려면, git으로 변경 사항을 되돌린 후 다시 실행하세요.
+- `flavor` / `ci-cd`: 덮어쓰기 방식 — 기존 설정을 제거하고 새로 생성합니다.
+- `register`: `fastlane produce`가 이미 존재하는 Bundle ID/앱을 자동으로 건너뜁니다.
+
+### `register` 관련
+
+**"Fastlane is not installed"**
+- `brew install fastlane` 또는 `gem install fastlane`로 설치하세요.
+
+**"API Key file not found"**
+- `easy_setup.yaml`의 `ci_cd.ios.api_key.key_path`에 지정된 경로에 .p8 파일이 있는지 확인하세요.
+
+**"fastlane produce failed"**
+- API Key가 유효한지, App Store Connect에서 올바른 권한이 부여되었는지 확인하세요.
+- `easy_setup register --dry-run`으로 대상 flavor를 먼저 확인하세요.

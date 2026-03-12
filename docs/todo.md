@@ -66,15 +66,13 @@
 - [ ] ATS (App Transport Security) 설정 — flavor별 네트워크 보안 정책
 
 #### 우선순위 낮음 (기능 개발 요청이 들어오면 개발)
-- [ ] `TARGETED_DEVICE_FAMILY` — flavor별 디바이스 지원 (iPhone/iPad)
-- [ ] `IPHONEOS_DEPLOYMENT_TARGET` — flavor별 최소 iOS 버전
 - [ ] `SWIFT_ACTIVE_COMPILATION_CONDITIONS` — Swift 컴파일 조건
 - [ ] `OTHER_LDFLAGS` — flavor별 링커 플래그
 
 ---
 
 ## Flutter 레벨
-
+``
 ### 추가 가능 항목
 - [ ] `--flavor` + `--dart-define` 자동 조합 — 빌드 커맨드 생성
 - [ ] `lib/` flavor별 진입점 — `main_dev.dart`, `main_prod.dart` 자동 생성
