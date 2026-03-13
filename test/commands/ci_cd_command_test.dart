@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:easy_setup/src/commands/ci_cd_command.dart';
-import 'package:easy_setup/src/exceptions.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
@@ -19,7 +18,7 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  const yamlWithCiCd = '''
+  const yamlWithoutCiCd = '''
 easy_setup:
   flavors:
     dev:
@@ -28,16 +27,6 @@ easy_setup:
     prod:
       bundle_id: com.example.app
       name: MyApp
-
-  ci_cd:
-    ios:
-      storage: https://github.com/user/certs.git
-      team_id: TEAM123
-      itc_team_id: ITC456
-      api_key:
-        id: KEY_ID
-        issuer_id: ISSUER_ID
-        key_path: ci_cd/ios/fastlane/AuthKey.p8
 ''';
 
   /// ci_cd/ios/fastlane/ 디렉터리 아래 파일 경로를 반환하는 헬퍼
@@ -47,7 +36,7 @@ easy_setup:
   group('CiCdCommand', () {
     test('generates all CI/CD files', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
-          .writeAsStringSync(yamlWithCiCd);
+          .writeAsStringSync(yamlWithoutCiCd);
 
       await CiCdCommand.run(projectRoot: tempDir.path);
 
@@ -64,7 +53,7 @@ easy_setup:
 
     test('Matchfile contains correct bundle IDs', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
-          .writeAsStringSync(yamlWithCiCd);
+          .writeAsStringSync(yamlWithoutCiCd);
 
       await CiCdCommand.run(projectRoot: tempDir.path);
 
@@ -73,78 +62,9 @@ easy_setup:
       expect(content, contains('"com.example.app"'));
     });
 
-    test('uses ci_cd.flavors override when specified', () async {
-      final yaml = '''
-easy_setup:
-  flavors:
-    dev:
-      bundle_id: com.example.app.dev
-      name: MyApp Dev
-    staging:
-      bundle_id: com.example.app.staging
-      name: MyApp Staging
-    prod:
-      bundle_id: com.example.app
-      name: MyApp
-
-  ci_cd:
-    flavors:
-      prod:
-        bundle_id: com.example.app
-    ios:
-      storage: https://github.com/user/certs.git
-      team_id: TEAM123
-      itc_team_id: ITC456
-      api_key:
-        id: KEY_ID
-        issuer_id: ISSUER_ID
-        key_path: ci_cd/ios/fastlane/AuthKey.p8
-''';
-      File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync(yaml);
-
-      await CiCdCommand.run(projectRoot: tempDir.path);
-
-      final matchfile = File(fastlanePath('Matchfile')).readAsStringSync();
-      // Only prod bundle_id should be present
-      expect(matchfile, contains('"com.example.app"'));
-      expect(matchfile, isNot(contains('com.example.app.dev')));
-      expect(matchfile, isNot(contains('com.example.app.staging')));
-    });
-
-    test('ci_cd.flavors falls back to easy_setup.flavors bundle_id', () async {
-      final yaml = '''
-easy_setup:
-  flavors:
-    dev:
-      bundle_id: com.example.app.dev
-      name: MyApp Dev
-    prod:
-      bundle_id: com.example.app
-      name: MyApp
-
-  ci_cd:
-    flavors:
-      prod: {}
-    ios:
-      storage: https://github.com/user/certs.git
-      team_id: TEAM123
-      itc_team_id: ITC456
-      api_key:
-        id: KEY_ID
-        issuer_id: ISSUER_ID
-        key_path: ci_cd/ios/fastlane/AuthKey.p8
-''';
-      File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync(yaml);
-
-      await CiCdCommand.run(projectRoot: tempDir.path);
-
-      final matchfile = File(fastlanePath('Matchfile')).readAsStringSync();
-      expect(matchfile, contains('"com.example.app"'));
-    });
-
     test('dry-run does not create any files', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
-          .writeAsStringSync(yamlWithCiCd);
+          .writeAsStringSync(yamlWithoutCiCd);
 
       await CiCdCommand.run(projectRoot: tempDir.path, dryRun: true);
 
@@ -152,30 +72,9 @@ easy_setup:
       expect(File(fastlanePath('Matchfile')).existsSync(), isFalse);
     });
 
-    test('throws SetupException when ci_cd section is missing', () {
-      File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync('''
-easy_setup:
-  flavors:
-    dev:
-      bundle_id: com.example.app.dev
-      name: MyApp Dev
-''');
-
-      expect(
-        () => CiCdCommand.run(projectRoot: tempDir.path),
-        throwsA(
-          isA<SetupException>().having(
-            (e) => e.message,
-            'message',
-            contains('No "ci_cd" section'),
-          ),
-        ),
-      );
-    });
-
     test('overwrites existing files on second run', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
-          .writeAsStringSync(yamlWithCiCd);
+          .writeAsStringSync(yamlWithoutCiCd);
 
       await CiCdCommand.run(projectRoot: tempDir.path);
       final gemfile = File(fastlanePath('Gemfile'));

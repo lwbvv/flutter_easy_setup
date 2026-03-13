@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 import '../exceptions.dart';
-import 'ci_cd_config.dart';
+import 'ci_cd_config.dart' show LocaleMetadataConfig;
 
 /// Android signing 설정을 담는 모델 클래스입니다.
 class SigningConfig {
@@ -108,11 +108,12 @@ class FlavorConfig {
 /// easy_setup.yaml 파일 전체를 파싱한 결과를 담는 클래스입니다.
 ///
 /// [flavors]: flavor 이름(dev, prod 등)을 키로, [FlavorConfig]를 값으로 하는 맵
+/// [metadata]: 선택사항 — App Store Connect 메타데이터 (locale별)
 class EasySetupConfig {
   final Map<String, FlavorConfig> flavors;
-  final CiCdConfig? ciCd;
+  final Map<String, LocaleMetadataConfig>? metadata;
 
-  const EasySetupConfig({required this.flavors, this.ciCd});
+  const EasySetupConfig({required this.flavors, this.metadata});
 
   /// [path]에 위치한 easy_setup.yaml 파일을 읽고 파싱합니다.
   ///
@@ -150,9 +151,18 @@ class EasySetupConfig {
       for (final entry in flavorsMap.entries) {
         flavors[entry.key as String] = FlavorConfig.fromYaml(entry.value as Map);
       }
-      final ciCdMap = easySetup['ci_cd'];
-      final ciCd = ciCdMap != null ? CiCdConfig.fromYaml(ciCdMap as Map) : null;
-      return EasySetupConfig(flavors: flavors, ciCd: ciCd);
+
+      Map<String, LocaleMetadataConfig>? metadata;
+      final metadataMap = easySetup['metadata'];
+      if (metadataMap != null) {
+        metadata = <String, LocaleMetadataConfig>{};
+        for (final entry in (metadataMap as Map).entries) {
+          metadata[entry.key as String] =
+              LocaleMetadataConfig.fromYaml(entry.value as Map);
+        }
+      }
+
+      return EasySetupConfig(flavors: flavors, metadata: metadata);
     } catch (e) {
       if (e is SetupException) rethrow;
       throw SetupException('Failed to parse easy_setup.yaml: $e');

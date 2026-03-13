@@ -2,22 +2,17 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../models/ci_cd_config.dart';
-
 /// Appfile을 생성하는 클래스입니다.
 class AppfileGenerator {
   /// [outputDir]에 Appfile을 생성합니다.
-  ///
-  /// [ios]: CI/CD iOS 설정 (team_id, itc_team_id)
   static void generate(
-    String outputDir,
-    CiCdIosConfig ios, {
+    String outputDir, {
     bool dryRun = false,
   }) {
     final path = p.join(outputDir, 'Appfile');
 
-    final content = 'team_id("${ios.teamId}")\n'
-        'itc_team_id("${ios.itcTeamId}")\n';
+    final content = 'team_id("YOUR_TEAM_ID")         # TODO: Apple Developer Team ID\n'
+        'itc_team_id("YOUR_ITC_TEAM_ID") # TODO: App Store Connect Team ID\n';
 
     _writeFile(path, content, dryRun: dryRun);
   }

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../exceptions.dart';
-import '../models/ci_cd_config.dart';
 
 /// Fastfile 생성 및 lane 관리를 담당하는 클래스입니다.
 ///
@@ -13,17 +12,14 @@ import '../models/ci_cd_config.dart';
 class FastfileGenerator {
   /// [outputDir]에 Fastfile을 생성합니다 (기본 골격 + 내장 lane).
   ///
-  /// [ios]: CI/CD iOS 설정 (api_key 등)
   /// [flavorNames]: 사용 가능한 flavor 이름 목록
   static void generate(
     String outputDir,
-    CiCdIosConfig ios,
     List<String> flavorNames, {
     bool dryRun = false,
   }) {
     final path = p.join(outputDir, 'Fastfile');
 
-    final apiKey = ios.apiKey;
     final defaultFlavor = flavorNames.contains('prod')
         ? 'prod'
         : flavorNames.first;
@@ -34,11 +30,11 @@ class FastfileGenerator {
         '  # ── API Key 설정 ──────────────────────────────────\n'
         '  def api_key\n'
         '    app_store_connect_api_key(\n'
-        '      key_id: "${apiKey.id}",\n'
-        '      issuer_id: "${apiKey.issuerId}",\n'
-        '      key_filepath: "${apiKey.keyPath}",\n'
-        '      duration: ${apiKey.duration},\n'
-        '      in_house: ${apiKey.inHouse},\n'
+        '      key_id: "YOUR_KEY_ID",        # TODO: App Store Connect API Key ID\n'
+        '      issuer_id: "YOUR_ISSUER_ID",  # TODO: App Store Connect Issuer ID\n'
+        '      key_filepath: "AuthKey.p8",   # TODO: .p8 키 파일 경로\n'
+        '      duration: 1200,\n'
+        '      in_house: false,\n'
         '    )\n'
         '  end\n'
         '\n'
@@ -76,11 +72,9 @@ class FastfileGenerator {
   /// Fastfile에 register lane을 추가합니다 (idempotent).
   ///
   /// [fastfilePath]: Fastfile 경로
-  /// [ios]: CI/CD iOS 설정
   /// [flavors]: flavor별 bundleId + name 맵 ({flavorName: {bundleId, name}})
   static void addRegisterLane({
     required String fastfilePath,
-    required CiCdIosConfig ios,
     required Map<String, ({String bundleId, String name})> flavors,
     bool dryRun = false,
   }) {
@@ -96,13 +90,11 @@ class FastfileGenerator {
       laneCode.writeln('      app_identifier: "${info.bundleId}",');
       laneCode.writeln('      app_name: "${info.name}",');
       laneCode.writeln('      sku: "${info.bundleId}",');
-      laneCode.writeln('      team_id: "${ios.teamId}",');
-      laneCode.writeln('      itc_team_id: "${ios.itcTeamId}",');
-      if (ios.appleId != null) {
-        laneCode.writeln('      username: "${ios.appleId}",');
-      }
+      laneCode.writeln('      team_id: "YOUR_TEAM_ID",            # TODO: Apple Developer Team ID');
+      laneCode.writeln('      itc_team_id: "YOUR_ITC_TEAM_ID",    # TODO: App Store Connect Team ID');
+      laneCode.writeln('      # username: "your@email.com",       # TODO: Apple ID (필요 시 주석 해제)');
       laneCode.writeln('      enable_services: {');
-      laneCode.writeln('        game_center: "off"     # 게임센터는 디폴트가 on이라 비활성화 시켜줘야 됨');
+      laneCode.writeln('        game_center: "off"');
       laneCode.writeln('      },');
       laneCode.writeln('    )');
       laneCode.writeln('');

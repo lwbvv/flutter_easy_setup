@@ -2,24 +2,21 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../models/ci_cd_config.dart';
-
 /// Matchfile을 생성하는 클래스입니다.
 class MatchfileGenerator {
   /// [outputDir]에 Matchfile을 생성합니다.
   ///
-  /// [ios]: CI/CD iOS 설정 (storage, team_id)
   /// [bundleIds]: Match에 등록할 bundle ID 목록
   static void generate(
     String outputDir,
-    CiCdIosConfig ios,
     List<String> bundleIds, {
     bool dryRun = false,
   }) {
     final path = p.join(outputDir, 'Matchfile');
 
     final ids = bundleIds.map((id) => '  "$id",').join('\n');
-    final content = 'git_url("${ios.storage}")\n'
+    final content = 'git_url("YOUR_CERTS_REPO_URL") # TODO: 인증서 저장 Git 저장소 URL\n'
+        '                               # 예: https://github.com/your-org/certs.git\n'
         'storage_mode("git")\n'
         '\n'
         'type("appstore")\n'
@@ -28,7 +25,7 @@ class MatchfileGenerator {
         '$ids\n'
         '])\n'
         '\n'
-        'team_id("${ios.teamId}")\n'
+        'team_id("YOUR_TEAM_ID")        # TODO: Apple Developer Team ID\n'
         '\n'
         'api_key_path("api_key.json")\n';
 
