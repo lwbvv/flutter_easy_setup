@@ -43,25 +43,31 @@ easy_setup:
   });
 
   group('CiCdCommand - Register Lane and Metadata', () {
-    test('generates register lane in Fastfile with TODO placeholders', () async {
+    test('generates register lane referencing ENV and .env file', () async {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync(yamlMinimal);
 
       await CiCdCommand.run(projectRoot: tempDir.path);
 
+      // .env file should be created
+      final dotenv = File(p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane', '.env'));
+      expect(dotenv.existsSync(), isTrue);
+      final envContent = dotenv.readAsStringSync();
+      expect(envContent, contains('TEAM_ID='));
+      expect(envContent, contains('ITC_TEAM_ID='));
+
       final fastfile = File(p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane', 'Fastfile'))
           .readAsStringSync();
       // Check for register lane
       expect(fastfile, contains('lane :register do'));
-      // Check that app identifiers are filled in
+      // Check that app identifiers are filled in from flavors
       expect(fastfile, contains('app_identifier: "com.example.app.dev"'));
       expect(fastfile, contains('app_identifier: "com.example.app"'));
       expect(fastfile, contains('app_name: "MyApp Dev"'));
       expect(fastfile, contains('app_name: "MyApp"'));
-      // Check for TODO placeholders instead of real values
-      expect(fastfile, contains('team_id: "YOUR_TEAM_ID"'));
-      expect(fastfile, contains('itc_team_id: "YOUR_ITC_TEAM_ID"'));
-      expect(fastfile, contains('TODO'));
+      // Check ENV references instead of hardcoded values
+      expect(fastfile, contains('team_id: ENV["TEAM_ID"]'));
+      expect(fastfile, contains('itc_team_id: ENV["ITC_TEAM_ID"]'));
       // username should be commented out
       expect(fastfile, contains('# username: "your@email.com"'));
     });

@@ -15,8 +15,7 @@ class MatchfileGenerator {
     final path = p.join(outputDir, 'Matchfile');
 
     final ids = bundleIds.map((id) => '  "$id",').join('\n');
-    final content = 'git_url("YOUR_CERTS_REPO_URL") # TODO: 인증서 저장 Git 저장소 URL\n'
-        '                               # 예: https://github.com/your-org/certs.git\n'
+    final content = 'git_url(ENV["CERTS_REPO_URL"])\n'
         'storage_mode("git")\n'
         '\n'
         'type("appstore")\n'
@@ -25,7 +24,7 @@ class MatchfileGenerator {
         '$ids\n'
         '])\n'
         '\n'
-        'team_id("YOUR_TEAM_ID")        # TODO: Apple Developer Team ID\n'
+        'team_id(ENV["TEAM_ID"])\n'
         '\n'
         'api_key_path("api_key.json")\n';
 

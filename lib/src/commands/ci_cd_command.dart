@@ -2,6 +2,7 @@ import 'package:path/path.dart' as p;
 
 import '../exceptions.dart';
 import '../fastlane/appfile_generator.dart';
+import '../fastlane/dotenv_generator.dart';
 import '../fastlane/fastfile_generator.dart';
 import '../fastlane/gemfile_generator.dart';
 import '../fastlane/matchfile_generator.dart';
@@ -17,8 +18,8 @@ import '../utils/project_finder.dart';
 ///   1. Flutter 프로젝트 루트 탐지
 ///   2. easy_setup.yaml 로드
 ///   3. CI/CD 대상 flavor 및 bundle_id 해석 (easy_setup.flavors에서)
-///   4. 프로젝트 루트 Gemfile 확인/생성 + bundle install
-///   5. ci_cd/ios/fastlane/ Fastlane 파일 생성 (Gemfile, Matchfile, Appfile, Fastfile)
+///   4. ci_cd/ios/fastlane/ Fastlane 파일 생성 (.env, Gemfile, Matchfile, Appfile, Fastfile)
+///   5. bundle install (fastlane 디렉터리)
 ///   6. Fastfile에 register lane 추가
 ///   7. metadata 파일 생성 + update_metadata lane 추가 (선택사항)
 ///   8. .github/workflows/ios-deploy.yml 생성
@@ -49,16 +50,17 @@ class CiCdCommand {
     print('CI/CD flavors: ${flavorNames.join(', ')}');
     if (dryRun) print('\n[dry-run mode] No files will be written.');
 
-    // 4. 프로젝트 루트 Gemfile 확인/생성 + bundle install
-    await FastlaneRunner.setup(root, dryRun: dryRun);
-
-    // 5. Fastlane 파일 생성 — ci_cd/ios/fastlane/ 디렉터리에 모든 파일 생성
+    // 4. Fastlane 파일 생성 — ci_cd/ios/fastlane/ 디렉터리에 모든 파일 생성
     print('\n--- Fastlane ---');
     final fastlaneDir = p.join(root, 'ci_cd', 'ios', 'fastlane');
+    DotenvGenerator.generate(fastlaneDir, dryRun: dryRun);
     GemfileGenerator.generate(fastlaneDir, dryRun: dryRun);
     MatchfileGenerator.generate(fastlaneDir, bundleIds, dryRun: dryRun);
     AppfileGenerator.generate(fastlaneDir, dryRun: dryRun);
     FastfileGenerator.generate(fastlaneDir, flavorNames, dryRun: dryRun);
+
+    // 5. bundle install (fastlane 디렉터리)
+    await FastlaneRunner.bundleInstall(fastlaneDir, dryRun: dryRun);
 
     // 6. Fastfile에 register lane 추가
     if (!dryRun) {
@@ -121,7 +123,7 @@ class CiCdCommand {
     print('\n${dryRun ? "Preview" : "CI/CD setup"} complete!');
     if (!dryRun) {
       print('\nGenerated files:');
-      print('  - Gemfile (project root)');
+      print('  - ci_cd/ios/fastlane/.env');
       print('  - ci_cd/ios/fastlane/Gemfile');
       print('  - ci_cd/ios/fastlane/Matchfile');
       print('  - ci_cd/ios/fastlane/Appfile');
@@ -131,14 +133,8 @@ class CiCdCommand {
       }
       print('  - .github/workflows/ios-deploy.yml');
       print('\nConfiguration needed:');
-      print('  1. Edit ci_cd/ios/fastlane/Appfile');
-      print('     - Set YOUR_TEAM_ID and YOUR_ITC_TEAM_ID');
-      print('  2. Edit ci_cd/ios/fastlane/Matchfile');
-      print('     - Set YOUR_CERTS_REPO_URL (git repo for signing certs)');
-      print('     - Set YOUR_TEAM_ID');
-      print('  3. Edit ci_cd/ios/fastlane/Fastfile');
-      print('     - Set API Key ID, Issuer ID, and .p8 file path in api_key definition');
-      print('     - Update team IDs and apple_id in register lane if using it');
+      print('  1. Edit ci_cd/ios/fastlane/.env');
+      print('     - TEAM_ID, ITC_TEAM_ID, API_KEY_ID, API_KEY_ISSUER_ID, CERTS_REPO_URL');
       print('\nRequired GitHub Secrets:');
       print('  MATCH_PASSWORD              — Match encryption password');
       print('  MATCH_GIT_BASIC_AUTHORIZATION — base64(username:PAT)');

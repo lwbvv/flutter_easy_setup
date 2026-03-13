@@ -11,8 +11,8 @@ class AppfileGenerator {
   }) {
     final path = p.join(outputDir, 'Appfile');
 
-    final content = 'team_id("YOUR_TEAM_ID")         # TODO: Apple Developer Team ID\n'
-        'itc_team_id("YOUR_ITC_TEAM_ID") # TODO: App Store Connect Team ID\n';
+    final content = 'team_id(ENV["TEAM_ID"])\n'
+        'itc_team_id(ENV["ITC_TEAM_ID"])\n';
 
     _writeFile(path, content, dryRun: dryRun);
   }

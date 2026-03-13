@@ -16,7 +16,7 @@ void main() {
   });
 
   group('MatchfileGenerator', () {
-    test('creates Matchfile with TODO placeholders and bundle IDs', () {
+    test('creates Matchfile referencing ENV variables and bundle IDs', () {
       MatchfileGenerator.generate(
         tempDir.path,
         ['com.app.dev', 'com.app'],
@@ -25,8 +25,8 @@ void main() {
       final file = File(p.join(tempDir.path, 'Matchfile'));
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
-      expect(content, contains('YOUR_CERTS_REPO_URL'));
-      expect(content, contains('TODO'));
+      expect(content, contains('ENV["CERTS_REPO_URL"]'));
+      expect(content, contains('ENV["TEAM_ID"]'));
       expect(content, contains('storage_mode("git")'));
       expect(content, contains('type("appstore")'));
       expect(content, contains('"com.app.dev"'));

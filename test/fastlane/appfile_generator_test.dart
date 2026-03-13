@@ -16,15 +16,14 @@ void main() {
   });
 
   group('AppfileGenerator', () {
-    test('creates Appfile with TODO placeholders', () {
+    test('creates Appfile referencing ENV variables', () {
       AppfileGenerator.generate(tempDir.path);
 
       final file = File(p.join(tempDir.path, 'Appfile'));
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
-      expect(content, contains('YOUR_TEAM_ID'));
-      expect(content, contains('YOUR_ITC_TEAM_ID'));
-      expect(content, contains('TODO'));
+      expect(content, contains('ENV["TEAM_ID"]'));
+      expect(content, contains('ENV["ITC_TEAM_ID"]'));
     });
 
     test('overwrites existing file with correct content', () {

@@ -40,6 +40,7 @@ easy_setup:
 
       await CiCdCommand.run(projectRoot: tempDir.path);
 
+      expect(File(fastlanePath('.env')).existsSync(), isTrue);
       expect(File(fastlanePath('Gemfile')).existsSync(), isTrue);
       expect(File(fastlanePath('Matchfile')).existsSync(), isTrue);
       expect(File(fastlanePath('Appfile')).existsSync(), isTrue);
