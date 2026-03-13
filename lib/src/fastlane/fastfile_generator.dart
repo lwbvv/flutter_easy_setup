@@ -102,7 +102,6 @@ class FastfileGenerator {
         laneCode.writeln('      username: "${ios.appleId}",');
       }
       laneCode.writeln('      enable_services: {');
-      laneCode.writeln('      enable_services: {');
       laneCode.writeln('        game_center: "off"     # 게임센터는 디폴트가 on이라 비활성화 시켜줘야 됨');
       laneCode.writeln('      },');
       laneCode.writeln('    )');
@@ -116,6 +115,36 @@ class FastfileGenerator {
       fastfilePath: fastfilePath,
       marker: '  # ── Bundle ID + App 등록',
       laneKeyword: 'lane :register do',
+      laneCode: laneCode.toString(),
+      dryRun: dryRun,
+    );
+  }
+
+  /// Fastfile에 update_metadata lane을 추가합니다 (idempotent).
+  ///
+  /// `deliver`를 사용하여 App Store Connect 메타데이터를 업로드합니다.
+  static void addMetadataLane({
+    required String fastfilePath,
+    bool dryRun = false,
+  }) {
+    final laneCode = StringBuffer();
+    laneCode.writeln('  # ── 메타데이터 업로드 ─────────────────────────');
+    laneCode.writeln(
+        '  desc "Upload metadata to App Store Connect"');
+    laneCode.writeln('  lane :update_metadata do');
+    laneCode.writeln('    deliver(');
+    laneCode.writeln('      api_key: api_key,');
+    laneCode.writeln('      skip_binary_upload: true,');
+    laneCode.writeln('      skip_screenshots: true,');
+    laneCode.writeln('      force: true,');
+    laneCode.writeln('      precheck_include_in_app_purchases: false,');
+    laneCode.writeln('    )');
+    laneCode.write('  end');
+
+    addLane(
+      fastfilePath: fastfilePath,
+      marker: '  # ── 메타데이터 업로드',
+      laneKeyword: 'lane :update_metadata do',
       laneCode: laneCode.toString(),
       dryRun: dryRun,
     );

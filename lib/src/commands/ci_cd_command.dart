@@ -9,6 +9,7 @@ import '../fastlane/appfile_generator.dart';
 import '../fastlane/fastfile_generator.dart';
 import '../fastlane/gemfile_generator.dart';
 import '../fastlane/matchfile_generator.dart';
+import '../fastlane/metadata_generator.dart';
 import '../github/workflow_generator.dart';
 import '../models/flavor_config.dart';
 import '../utils/fastlane_runner.dart';
@@ -24,7 +25,8 @@ import '../utils/project_finder.dart';
 ///   5. ci_cd/ios/fastlane/ Fastlane 파일 생성 (Gemfile, Matchfile, Appfile, Fastfile)
 ///   6. API Key로 Bundle ID 등록
 ///   7. Fastfile에 register lane 추가
-///   8. .github/workflows/ios-deploy.yml 생성
+///   8. metadata 파일 생성 + update_metadata lane 추가
+///   9. .github/workflows/ios-deploy.yml 생성
 class CiCdCommand {
   /// CI/CD 설정 파이프라인을 실행합니다.
   static Future<void> run({bool dryRun = false, String? projectRoot}) async {
@@ -141,12 +143,27 @@ class CiCdCommand {
       );
     }
 
-    // 9. GitHub Actions 워크플로우 생성
+    // 9. metadata 파일 생성 + update_metadata lane 추가
+    if (ciCd.metadata != null && ciCd.metadata!.isNotEmpty) {
+      print('\n--- Metadata ---');
+      MetadataGenerator.generate(fastlaneDir, ciCd.metadata!, dryRun: dryRun);
+
+      if (!dryRun) {
+        final fastfilePath = p.join(fastlaneDir, 'Fastfile');
+        FastfileGenerator.addMetadataLane(
+          fastfilePath: fastfilePath,
+        );
+      }
+    }
+
+    // 10. GitHub Actions 워크플로우 생성
     print('\n--- GitHub Actions ---');
     WorkflowGenerator.generate(root, flavorNames, dryRun: dryRun);
 
-    // 10. 완료 안내
-    _printSummary(dryRun: dryRun, hasApiKey: hasApiKey);
+    // 11. 완료 안내
+    final hasMetadata = ciCd.metadata != null && ciCd.metadata!.isNotEmpty;
+    _printSummary(
+        dryRun: dryRun, hasApiKey: hasApiKey, hasMetadata: hasMetadata);
   }
 
   /// CI/CD 대상 flavor의 bundleId + name을 해석합니다.
@@ -193,7 +210,11 @@ class CiCdCommand {
     return result;
   }
 
-  static void _printSummary({required bool dryRun, required bool hasApiKey}) {
+  static void _printSummary({
+    required bool dryRun,
+    required bool hasApiKey,
+    required bool hasMetadata,
+  }) {
     print('\n${dryRun ? "Preview" : "CI/CD setup"} complete!');
     if (!dryRun) {
       print('\nGenerated files:');
@@ -202,6 +223,9 @@ class CiCdCommand {
       print('  - ci_cd/ios/fastlane/Matchfile');
       print('  - ci_cd/ios/fastlane/Appfile');
       print('  - ci_cd/ios/fastlane/Fastfile (with register lane)');
+      if (hasMetadata) {
+        print('  - ci_cd/ios/fastlane/metadata/{locale}/*.txt');
+      }
       print('  - .github/workflows/ios-deploy.yml');
       print('\nRequired GitHub Secrets:');
       print('  MATCH_PASSWORD              — Match encryption password');
@@ -211,9 +235,16 @@ class CiCdCommand {
       print('  1. cd ci_cd/ios/fastlane && bundle install');
       print('  2. bundle exec fastlane match init  (first time only)');
       print('  3. Configure GitHub Secrets in your repository settings');
+      var step = 4;
       if (hasApiKey) {
-        print('  4. cd ci_cd/ios/fastlane && bundle exec fastlane register');
+        print('  $step. cd ci_cd/ios/fastlane && bundle exec fastlane register');
         print('     (to create apps on App Store Connect — requires 2FA)');
+        step++;
+      }
+      if (hasMetadata) {
+        print(
+            '  $step. cd ci_cd/ios/fastlane && bundle exec fastlane update_metadata');
+        print('     (to upload metadata to App Store Connect)');
       }
     }
   }

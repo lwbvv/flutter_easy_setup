@@ -126,6 +126,77 @@ easy_setup:
       expect(fastfile, contains('com.example.app'));
     });
 
+    test('generates metadata files and update_metadata lane', () async {
+      final yaml = '''
+easy_setup:
+  flavors:
+    prod:
+      bundle_id: com.example.app
+      name: MyApp
+
+  ci_cd:
+    ios:
+      storage: https://github.com/user/certs.git
+      team_id: XXXXXXXXXX
+      itc_team_id: YYYYYYYYYY
+      api_key:
+        id: KEY_ID
+        issuer_id: ISSUER_ID
+        key_path: ci_cd/ios/fastlane/AuthKey.p8
+
+    metadata:
+      ko:
+        promotional_text: "한국어 프로모션"
+        description: "앱 설명"
+      en-US:
+        promotional_text: "English promo"
+''';
+      File(p.join(tempDir.path, 'easy_setup.yaml')).writeAsStringSync(yaml);
+
+      await CiCdCommand.run(projectRoot: tempDir.path);
+
+      // metadata 파일 확인
+      final koPromo = File(p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane',
+          'metadata', 'ko', 'promotional_text.txt'));
+      expect(koPromo.existsSync(), isTrue);
+      expect(koPromo.readAsStringSync(), '한국어 프로모션\n');
+
+      final koDesc = File(p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane',
+          'metadata', 'ko', 'description.txt'));
+      expect(koDesc.existsSync(), isTrue);
+      expect(koDesc.readAsStringSync(), '앱 설명\n');
+
+      final enPromo = File(p.join(tempDir.path, 'ci_cd', 'ios', 'fastlane',
+          'metadata', 'en-US', 'promotional_text.txt'));
+      expect(enPromo.existsSync(), isTrue);
+      expect(enPromo.readAsStringSync(), 'English promo\n');
+
+      // update_metadata lane 확인
+      final fastfile = File(p.join(
+              tempDir.path, 'ci_cd', 'ios', 'fastlane', 'Fastfile'))
+          .readAsStringSync();
+      expect(fastfile, contains('lane :update_metadata do'));
+      expect(fastfile, contains('deliver('));
+      expect(fastfile, contains('skip_binary_upload: true'));
+    });
+
+    test('no metadata section skips metadata generation', () async {
+      File(p.join(tempDir.path, 'easy_setup.yaml'))
+          .writeAsStringSync(yamlWithCiCd);
+
+      await CiCdCommand.run(projectRoot: tempDir.path);
+
+      final fastfile = File(p.join(
+              tempDir.path, 'ci_cd', 'ios', 'fastlane', 'Fastfile'))
+          .readAsStringSync();
+      expect(fastfile, isNot(contains('lane :update_metadata do')));
+      expect(
+          Directory(p.join(
+                  tempDir.path, 'ci_cd', 'ios', 'fastlane', 'metadata'))
+              .existsSync(),
+          isFalse);
+    });
+
     test('register lane includes apple_id as username when present', () async {
       final yaml = '''
 easy_setup:
