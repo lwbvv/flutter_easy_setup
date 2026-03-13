@@ -27,6 +27,7 @@ void main() {
       final content = file.readAsStringSync();
       expect(content, contains('ENV["CERTS_REPO_URL"]'));
       expect(content, contains('ENV["TEAM_ID"]'));
+      expect(content, contains('ENV["APPLE_ID"]'));
       expect(content, contains('storage_mode("git")'));
       expect(content, contains('type("appstore")'));
       expect(content, contains('"com.app.dev"'));

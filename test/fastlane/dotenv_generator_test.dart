@@ -27,6 +27,7 @@ void main() {
       expect(content, contains('API_KEY_ID='));
       expect(content, contains('API_KEY_ISSUER_ID='));
       expect(content, contains('CERTS_REPO_URL='));
+      expect(content, contains('APPLE_ID='));
     });
 
     test('does not overwrite existing .env', () {

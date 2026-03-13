@@ -33,7 +33,10 @@ class DotenvGenerator {
         'API_KEY_ISSUER_ID=YOUR_ISSUER_ID\n'
         '\n'
         '# 인증서 저장 Git 저장소 URL (예: https://github.com/your-org/certs.git)\n'
-        'CERTS_REPO_URL=YOUR_CERTS_REPO_URL\n';
+        'CERTS_REPO_URL=YOUR_CERTS_REPO_URL\n'
+        '\n'
+        '# Apple ID (예: your@email.com)\n'
+        'APPLE_ID=YOUR_APPLE_ID\n';
 
     _writeFile(path, content, dryRun: dryRun);
   }
