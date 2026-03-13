@@ -93,7 +93,7 @@ class FastfileGenerator {
       laneCode.writeln('      team_id: "YOUR_TEAM_ID",            # TODO: Apple Developer Team ID');
       laneCode.writeln('      itc_team_id: "YOUR_ITC_TEAM_ID",    # TODO: App Store Connect Team ID');
       laneCode.writeln('      # username: "your@email.com",       # TODO: Apple ID (필요 시 주석 해제)');
-      laneCode.writeln('      enable_services: {');
+      laneCode.writeln('      enable_services: {                  # 게임센터는 디폴트가 on이라 비활성화 시켜줘야 됨');
       laneCode.writeln('        game_center: "off"');
       laneCode.writeln('      },');
       laneCode.writeln('    )');
