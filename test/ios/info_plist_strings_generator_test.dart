@@ -36,19 +36,17 @@ void main() {
       expect(content, contains('"CFBundleDisplayName" = "테스트 앱";'));
     });
 
-    test('generates InfoPlist.strings with global permissions', () {
+    test('generates Base.lproj with base permission', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
-        globalLocalized: {
-          'en': const GlobalLocalizedConfig(permission: {
-            'NSCameraUsageDescription': 'Camera access is required',
-            'NSPhotoLibraryUsageDescription': 'Photo library access is required',
-          }),
+        permission: {
+          'NSCameraUsageDescription': 'Camera access is required',
+          'NSPhotoLibraryUsageDescription': 'Photo library access is required',
         },
       );
 
-      final stringsPath =
-          p.join(projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
+      final stringsPath = p.join(
+          projectRoot, 'ios', 'Runner', 'Base.lproj', 'InfoPlist.strings');
       expect(File(stringsPath).existsSync(), isTrue);
 
       final content = File(stringsPath).readAsStringSync();
@@ -60,16 +58,42 @@ void main() {
               '"NSPhotoLibraryUsageDescription" = "Photo library access is required";'));
     });
 
-    test('merges flavor app_name and global permissions for same locale', () {
+    test('generates locale-specific permission files', () {
+      InfoPlistStringsGenerator.generate(
+        projectRoot,
+        localizedPermission: {
+          'ko': {
+            'NSCameraUsageDescription': '카메라 접근이 필요합니다',
+          },
+          'en': {
+            'NSCameraUsageDescription': 'Camera access is required',
+          },
+        },
+      );
+
+      final koContent = File(p.join(
+              projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(koContent,
+          contains('"NSCameraUsageDescription" = "카메라 접근이 필요합니다";'));
+
+      final enContent = File(p.join(
+              projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(enContent,
+          contains('"NSCameraUsageDescription" = "Camera access is required";'));
+    });
+
+    test('merges flavor app_name and localized permission for same locale', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
         flavorLocalized: {
           'ko': const FlavorLocalizedConfig(appName: '테스트'),
         },
-        globalLocalized: {
-          'ko': const GlobalLocalizedConfig(permission: {
+        localizedPermission: {
+          'ko': {
             'NSCameraUsageDescription': '카메라 접근이 필요합니다',
-          }),
+          },
         },
       );
 
@@ -153,7 +177,7 @@ void main() {
       expect(Directory(lprojDir).existsSync(), isFalse);
     });
 
-    test('does nothing when both parameters are null', () {
+    test('does nothing when all parameters are null', () {
       InfoPlistStringsGenerator.generate(projectRoot);
 
       // 아무 .lproj 디렉터리도 생성되지 않아야 함
@@ -165,25 +189,27 @@ void main() {
       expect(lprojDirs, isEmpty);
     });
 
-    test('handles global-only localized config (no flavor localized)', () {
+    test('generates base + localized permission together', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
-        globalLocalized: {
-          'en': const GlobalLocalizedConfig(permission: {
-            'NSCameraUsageDescription': 'Camera access needed',
-          }),
-          'ko': const GlobalLocalizedConfig(permission: {
+        permission: {
+          'NSCameraUsageDescription': 'Camera access needed',
+        },
+        localizedPermission: {
+          'ko': {
             'NSCameraUsageDescription': '카메라 접근 필요',
-          }),
+          },
         },
       );
 
-      final enContent = File(p.join(
-              projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings'))
+      // Base.lproj
+      final baseContent = File(p.join(
+              projectRoot, 'ios', 'Runner', 'Base.lproj', 'InfoPlist.strings'))
           .readAsStringSync();
-      expect(enContent,
+      expect(baseContent,
           contains('"NSCameraUsageDescription" = "Camera access needed";'));
 
+      // ko.lproj
       final koContent = File(p.join(
               projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings'))
           .readAsStringSync();

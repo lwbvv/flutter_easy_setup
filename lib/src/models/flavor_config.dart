@@ -77,27 +77,6 @@ class FlavorLocalizedConfig {
   }
 }
 
-/// 전역 locale 설정을 담는 모델 클래스입니다.
-///
-/// [permission]: iOS 권한 설명 문자열 맵 (NSCameraUsageDescription 등)
-class GlobalLocalizedConfig {
-  final Map<String, String>? permission;
-
-  const GlobalLocalizedConfig({this.permission});
-
-  factory GlobalLocalizedConfig.fromYaml(Map yaml) {
-    Map<String, String>? permission;
-    final permMap = yaml['permission'];
-    if (permMap != null) {
-      permission = <String, String>{};
-      for (final entry in (permMap as Map).entries) {
-        permission[entry.key as String] = entry.value as String;
-      }
-    }
-    return GlobalLocalizedConfig(permission: permission);
-  }
-}
-
 /// 단일 flavor의 설정값을 담는 모델 클래스입니다.
 ///
 /// [bundleId]: 앱의 고유 식별자 (예: com.example.app.dev)
@@ -160,16 +139,22 @@ class FlavorConfig {
 /// easy_setup.yaml 파일 전체를 파싱한 결과를 담는 클래스입니다.
 ///
 /// [flavors]: flavor 이름(dev, prod 등)을 키로, [FlavorConfig]를 값으로 하는 맵
-/// [localized]: 선택사항 — 전역 locale 설정 (permission 등)
+/// [localizations]: 선택사항 — Xcode knownRegions에 등록할 언어 목록
+/// [permission]: 선택사항 — 기본 iOS 권한 설명 (Base.lproj용)
+/// [localizedPermission]: 선택사항 — locale별 iOS 권한 설명
 /// [metadata]: 선택사항 — App Store Connect 메타데이터 (locale별)
 class EasySetupConfig {
   final Map<String, FlavorConfig> flavors;
-  final Map<String, GlobalLocalizedConfig>? localized;
+  final List<String>? localizations;
+  final Map<String, String>? permission;
+  final Map<String, Map<String, String>>? localizedPermission;
   final Map<String, LocaleMetadataConfig>? metadata;
 
   const EasySetupConfig({
     required this.flavors,
-    this.localized,
+    this.localizations,
+    this.permission,
+    this.localizedPermission,
     this.metadata,
   });
 
@@ -210,13 +195,34 @@ class EasySetupConfig {
         flavors[entry.key as String] = FlavorConfig.fromYaml(entry.value as Map);
       }
 
-      Map<String, GlobalLocalizedConfig>? localized;
-      final localizedMap = easySetup['localized'];
-      if (localizedMap != null) {
-        localized = <String, GlobalLocalizedConfig>{};
-        for (final entry in (localizedMap as Map).entries) {
-          localized[entry.key as String] =
-              GlobalLocalizedConfig.fromYaml(entry.value as Map);
+      // localizations 리스트 파싱
+      List<String>? localizations;
+      final locList = easySetup['localizations'];
+      if (locList != null) {
+        localizations = (locList as List).map((e) => e as String).toList();
+      }
+
+      // 기본 permission 맵 파싱
+      Map<String, String>? permission;
+      final permMap = easySetup['permission'];
+      if (permMap != null) {
+        permission = <String, String>{};
+        for (final entry in (permMap as Map).entries) {
+          permission[entry.key as String] = entry.value as String;
+        }
+      }
+
+      // locale별 permission 맵 파싱
+      Map<String, Map<String, String>>? localizedPermission;
+      final locPermMap = easySetup['localized_permission'];
+      if (locPermMap != null) {
+        localizedPermission = <String, Map<String, String>>{};
+        for (final entry in (locPermMap as Map).entries) {
+          final localePerms = <String, String>{};
+          for (final permEntry in (entry.value as Map).entries) {
+            localePerms[permEntry.key as String] = permEntry.value as String;
+          }
+          localizedPermission[entry.key as String] = localePerms;
         }
       }
 
@@ -232,7 +238,9 @@ class EasySetupConfig {
 
       return EasySetupConfig(
         flavors: flavors,
-        localized: localized,
+        localizations: localizations,
+        permission: permission,
+        localizedPermission: localizedPermission,
         metadata: metadata,
       );
     } catch (e) {

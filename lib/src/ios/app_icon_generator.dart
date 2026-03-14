@@ -52,9 +52,6 @@ class AppIconGenerator {
     _ContentsEntry('Icon-App-83.5x83.5@2x.png', '83.5x83.5', '2x', 'ipad'),
     _ContentsEntry(
         'Icon-App-1024x1024@1x.png', '1024x1024', '1x', 'ios-marketing'),
-    _ContentsEntry(
-        'Icon-App-1024x1024@1x.png', '1024x1024', '1x', 'ios-marketing',
-        subtype: 'dark'),
   ];
 
   /// [assetCatalogDir]에 AppIcon-{flavor}.appiconset/을 생성합니다.

@@ -223,6 +223,50 @@ class PbxprojModifier {
     return runnerTargetUuid;
   }
 
+  /// project.pbxproj의 knownRegions를 업데이트합니다.
+  ///
+  /// [localizations] 목록의 언어 + Base를 knownRegions에 설정합니다.
+  static void modifyKnownRegions(
+    String pbxprojPath,
+    List<String> localizations, {
+    bool dryRun = false,
+  }) {
+    final file = File(pbxprojPath);
+    if (!file.existsSync()) {
+      throw SetupException('project.pbxproj not found: $pbxprojPath');
+    }
+
+    var content = file.readAsStringSync();
+
+    // knownRegions = ( ... ); 블록을 찾아서 교체
+    final regionPattern = RegExp(
+      r'knownRegions = \(\n([\s\S]*?)\t\t\t\);',
+    );
+    final match = regionPattern.firstMatch(content);
+    if (match == null) {
+      print('  Warning: knownRegions not found in project.pbxproj');
+      return;
+    }
+
+    // 새 knownRegions 목록 생성 (중복 제거, Base 포함)
+    final regions = <String>{'Base', ...localizations};
+    final sb = StringBuffer();
+    sb.writeln('knownRegions = (');
+    for (final region in regions) {
+      sb.writeln('\t\t\t\t$region,');
+    }
+    sb.write('\t\t\t);');
+
+    content = content.replaceFirst(regionPattern, sb.toString());
+
+    if (dryRun) {
+      print('  [dry-run] Would update knownRegions: ${regions.join(', ')}');
+    } else {
+      file.writeAsStringSync(content);
+      print('  Updated knownRegions: ${regions.join(', ')}');
+    }
+  }
+
   /// pbxproj 파일에서 Runner 타겟의 모든 빌드 구성(이름 + bundle ID)을 추출합니다.
   ///
   /// flavor 설정 후 생성된 Debug-dev, Release-prod 등의 구성을 포함합니다.

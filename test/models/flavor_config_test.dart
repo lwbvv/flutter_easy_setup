@@ -235,27 +235,6 @@ void main() {
     });
   });
 
-  group('GlobalLocalizedConfig.fromYaml', () {
-    test('parses permission map', () {
-      final config = GlobalLocalizedConfig.fromYaml({
-        'permission': {
-          'NSCameraUsageDescription': 'Camera access needed',
-          'NSPhotoLibraryUsageDescription': 'Photo library access needed',
-        },
-      });
-      expect(config.permission, isNotNull);
-      expect(config.permission!['NSCameraUsageDescription'],
-          'Camera access needed');
-      expect(config.permission!['NSPhotoLibraryUsageDescription'],
-          'Photo library access needed');
-    });
-
-    test('all fields are optional', () {
-      final config = GlobalLocalizedConfig.fromYaml({});
-      expect(config.permission, isNull);
-    });
-  });
-
   group('EasySetupConfig.fromFile', () {
     late Directory tempDir;
 
@@ -362,6 +341,7 @@ easy_setup:
       final yamlFile = File('${tempDir.path}/easy_setup.yaml');
       yamlFile.writeAsStringSync('''
 easy_setup:
+  localizations: [ko, en, ja]
   flavors:
     dev:
       bundle_id: com.example.app.dev
@@ -382,10 +362,11 @@ easy_setup:
       ios:
         team_id: "ABCDEF1234"
 
-  localized:
+  permission:
+    NSCameraUsageDescription: "Camera access is required"
+  localized_permission:
     ko:
-      permission:
-        NSCameraUsageDescription: "카메라 접근이 필요합니다"
+      NSCameraUsageDescription: "카메라 접근이 필요합니다"
 ''');
 
       final config = EasySetupConfig.fromFile(yamlFile.path);
@@ -399,9 +380,15 @@ easy_setup:
       expect(dev.signing!.keystore, 'keys/dev.keystore');
       expect(dev.firebase!.android, 'config/dev/google-services.json');
       expect(dev.ios!.teamId, 'ABCDEF1234');
-      // 전역 localized
-      expect(config.localized, isNotNull);
-      expect(config.localized!['ko']!.permission!['NSCameraUsageDescription'],
+      // localizations
+      expect(config.localizations, ['ko', 'en', 'ja']);
+      // 기본 permission
+      expect(config.permission, isNotNull);
+      expect(config.permission!['NSCameraUsageDescription'],
+          'Camera access is required');
+      // locale별 permission
+      expect(config.localizedPermission, isNotNull);
+      expect(config.localizedPermission!['ko']!['NSCameraUsageDescription'],
           '카메라 접근이 필요합니다');
     });
   });

@@ -119,7 +119,7 @@ void main() {
       }
     });
 
-    test('Contents.json has 19 entries', () {
+    test('Contents.json has 18 entries', () {
       AppIconGenerator.generate(
         projectRoot,
         assetCatalogDir,
@@ -134,7 +134,7 @@ void main() {
           jsonDecode(contentsFile.readAsStringSync()) as Map<String, dynamic>;
 
       final images = contents['images'] as List;
-      expect(images.length, 19);
+      expect(images.length, 18);
 
       // 각 엔트리에 필수 필드가 있는지 확인
       for (final image in images) {

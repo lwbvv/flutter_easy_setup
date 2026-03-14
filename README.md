@@ -165,10 +165,11 @@ easy_setup:
         ko:
           app_name: 마이앱
 
-  permission:
-     NSCameraUsageDescription: "Camera access is required"
-     NSPhotoLibraryUsageDescription: "Photo library access is required"
-  localized_permission:                                     # 선택사항: 전역 localization (권한 등)
+  localizations: [ko, en, zh-HK]                          # 선택사항: Xcode knownRegions 설정
+  permission:                                              # 선택사항: 기본 iOS 권한 설명 (Base.lproj)
+    NSCameraUsageDescription: "Camera access is required"
+    NSPhotoLibraryUsageDescription: "Photo library access is required"
+  localized_permission:                                    # 선택사항: locale별 iOS 권한 설명
     ko:
       NSCameraUsageDescription: "카메라 접근이 필요합니다"
     en:
@@ -194,9 +195,18 @@ easy_setup:
 
 ## Localization
 
-Localization 설정은 두 레벨로 나뉩니다:
+Localization 설정은 세 부분으로 나뉩니다:
 
-### 1. Flavor별 `localized` — 앱 아이콘, 앱 이름
+### 1. `localizations` — Xcode knownRegions
+
+`localizations` 목록을 설정하면 Xcode의 `knownRegions`에 해당 언어가 등록됩니다:
+
+```yaml
+easy_setup:
+  localizations: [ko, en, zh-HK]
+```
+
+### 2. Flavor별 `localized` — 앱 아이콘, 앱 이름
 
 각 flavor 아래에 `localized` 섹션을 추가하여 locale별 앱 아이콘과 앱 이름을 설정합니다:
 
@@ -220,30 +230,32 @@ easy_setup:
 | `app_icon` | locale별 앱 아이콘 소스 이미지 경로 (1024x1024 PNG). `.lproj/` 서브디렉터리에 생성됨 |
 | `app_name` | locale별 앱 표시 이름. `InfoPlist.strings`의 `CFBundleDisplayName`으로 생성됨 |
 
-### 2. 전역 `localized` — 권한 설명 (permission)
+### 3. `permission` / `localized_permission` — iOS 권한 설명
 
-`easy_setup` 레벨에 `localized` 섹션을 추가하여 모든 flavor에 공통으로 적용되는 iOS 권한 설명을 설정합니다:
+`easy_setup` 레벨에 권한 설명을 설정합니다. `permission`은 기본값(`Base.lproj`), `localized_permission`은 locale별 값입니다:
 
 ```yaml
 easy_setup:
-  localized:
+  permission:
+    NSCameraUsageDescription: "Camera access is required"
+    NSPhotoLibraryUsageDescription: "Photo library access is required"
+  localized_permission:
     ko:
-      permission:
-        NSCameraUsageDescription: "카메라 접근이 필요합니다"
-        NSPhotoLibraryUsageDescription: "사진 접근이 필요합니다"
+      NSCameraUsageDescription: "카메라 접근이 필요합니다"
+      NSPhotoLibraryUsageDescription: "사진 접근이 필요합니다"
     en:
-      permission:
-        NSCameraUsageDescription: "Camera access is required"
-        NSPhotoLibraryUsageDescription: "Photo library access is required"
+      NSCameraUsageDescription: "Camera access is required"
+      NSPhotoLibraryUsageDescription: "Photo library access is required"
 ```
 
 | 필드 | 설명 |
 |------|------|
-| `permission` | iOS 권한 설명 문자열 맵. `InfoPlist.strings`에 해당 키-값 쌍으로 생성됨 |
+| `permission` | 기본 iOS 권한 설명. `Base.lproj/InfoPlist.strings`에 생성됨 |
+| `localized_permission` | locale별 iOS 권한 설명. 각 `{locale}.lproj/InfoPlist.strings`에 생성됨 |
 
 ### 생성되는 파일
 
-flavor별 `app_name`과 전역 `permission`이 병합되어 locale별 `InfoPlist.strings` 파일이 생성됩니다:
+flavor별 `app_name`과 `localized_permission`이 병합되어 locale별 `InfoPlist.strings` 파일이 생성됩니다:
 
 ```
 ios/Runner/ko.lproj/InfoPlist.strings
@@ -548,7 +560,7 @@ easy_setup/
 │   └── src/
 │       ├── exceptions.dart                # SetupException 정의
 │       ├── models/
-│       │   ├── flavor_config.dart         # FlavorConfig, EasySetupConfig, FlavorLocalizedConfig, GlobalLocalizedConfig
+│       │   ├── flavor_config.dart         # FlavorConfig, EasySetupConfig, FlavorLocalizedConfig
 │       │   └── ci_cd_config.dart          # CiCdConfig, CiCdIosConfig 등
 │       ├── utils/
 │       │   ├── project_finder.dart        # Flutter 프로젝트 경로 탐색
@@ -629,7 +641,9 @@ easy_setup/
 ### `FlavorConfig` / `EasySetupConfig` — 설정 모델
 - `easy_setup.yaml`을 파싱하여 `Map<String, FlavorConfig>`로 변환합니다.
 - `FlavorConfig.localized`: flavor별 locale 설정 (`FlavorLocalizedConfig` — app_icon, app_name).
-- `EasySetupConfig.localized`: 전역 locale 설정 (`GlobalLocalizedConfig` — permission).
+- `EasySetupConfig.localizations`: Xcode knownRegions에 등록할 언어 목록.
+- `EasySetupConfig.permission`: 기본 iOS 권한 설명 (Base.lproj용).
+- `EasySetupConfig.localizedPermission`: locale별 iOS 권한 설명.
 - 파일 부재나 파싱 오류 시 친절한 에러 메시지를 제공합니다.
 
 ### `ProjectFinder` — 경로 유틸리티

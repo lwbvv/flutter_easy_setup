@@ -423,4 +423,95 @@ void main() {
       expect(uuid, '97C146ED1CF9000F007C117D');
     });
   });
+
+  group('PbxprojModifier.modifyKnownRegions', () {
+    late Directory tempDir;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('known_regions_test_');
+    });
+
+    tearDown(() {
+      tempDir.deleteSync(recursive: true);
+    });
+
+    test('updates knownRegions with localizations list', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(
+        '\t\t\tknownRegions = (\n'
+        '\t\t\t\ten,\n'
+        '\t\t\t\tBase,\n'
+        '\t\t\t);\n',
+      );
+
+      PbxprojModifier.modifyKnownRegions(
+        file.path,
+        ['ko', 'en', 'zh-HK'],
+      );
+
+      final content = file.readAsStringSync();
+      expect(content, contains('Base,'));
+      expect(content, contains('ko,'));
+      expect(content, contains('en,'));
+      expect(content, contains('zh-HK,'));
+    });
+
+    test('includes Base even if not in localizations', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(
+        '\t\t\tknownRegions = (\n'
+        '\t\t\t\ten,\n'
+        '\t\t\t\tBase,\n'
+        '\t\t\t);\n',
+      );
+
+      PbxprojModifier.modifyKnownRegions(
+        file.path,
+        ['ko', 'ja'],
+      );
+
+      final content = file.readAsStringSync();
+      expect(content, contains('Base,'));
+      expect(content, contains('ko,'));
+      expect(content, contains('ja,'));
+      // en is no longer in the list
+      expect(content, isNot(contains('en,')));
+    });
+
+    test('does not modify file in dry-run mode', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      final original =
+        '\t\t\tknownRegions = (\n'
+        '\t\t\t\ten,\n'
+        '\t\t\t\tBase,\n'
+        '\t\t\t);\n';
+      file.writeAsStringSync(original);
+
+      PbxprojModifier.modifyKnownRegions(
+        file.path,
+        ['ko', 'en'],
+        dryRun: true,
+      );
+
+      expect(file.readAsStringSync(), original);
+    });
+
+    test('is idempotent on re-run', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(
+        '\t\t\tknownRegions = (\n'
+        '\t\t\t\ten,\n'
+        '\t\t\t\tBase,\n'
+        '\t\t\t);\n',
+      );
+
+      PbxprojModifier.modifyKnownRegions(file.path, ['ko', 'en']);
+      final first = file.readAsStringSync();
+
+      PbxprojModifier.modifyKnownRegions(file.path, ['ko', 'en']);
+      final second = file.readAsStringSync();
+
+      expect(second, first);
+    });
+  });
 }

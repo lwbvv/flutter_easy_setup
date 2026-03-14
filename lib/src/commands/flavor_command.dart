@@ -148,7 +148,7 @@ class FlavorCommand {
     InfoPlistModifier.modify(plistPath, dryRun: dryRun);
 
     // 7.5단계: iOS — localized 설정으로 InfoPlist.strings 생성
-    //          flavor별 app_name + 전역 permission을 병합
+    //          flavor별 app_name + 기본/locale별 permission을 병합
     {
       // 모든 flavor의 localized를 병합 (같은 locale에 여러 flavor가
       // app_name을 정의하면 마지막 flavor의 값이 사용됨)
@@ -161,16 +161,28 @@ class FlavorCommand {
           }
         }
       }
-      final globalLoc = config.localized;
-      if (mergedFlavorLocalized.isNotEmpty || globalLoc != null) {
+      if (mergedFlavorLocalized.isNotEmpty ||
+          config.permission != null ||
+          config.localizedPermission != null) {
         InfoPlistStringsGenerator.generate(
           root,
           flavorLocalized:
               mergedFlavorLocalized.isNotEmpty ? mergedFlavorLocalized : null,
-          globalLocalized: globalLoc,
+          permission: config.permission,
+          localizedPermission: config.localizedPermission,
           dryRun: dryRun,
         );
       }
+    }
+
+    // 7.6단계: iOS — knownRegions 업데이트 (localizations 설정이 있는 경우)
+    if (config.localizations != null && config.localizations!.isNotEmpty) {
+      print('\n--- iOS knownRegions ---');
+      PbxprojModifier.modifyKnownRegions(
+        pbxprojPath,
+        config.localizations!,
+        dryRun: dryRun,
+      );
     }
 
     // 8단계: iOS — Podfile에 flavor별 빌드 모드 매핑 추가
