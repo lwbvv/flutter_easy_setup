@@ -137,12 +137,9 @@ end
 
   /// project 'Runner' 블록 내용을 생성합니다.
   ///
-  /// 기본 Debug/Profile/Release + flavor별 매핑을 포함합니다.
+  /// flavor별 매핑만 포함합니다.
   static String _buildConfigBlock(Map<String, FlavorConfig> flavors) {
     final sb = StringBuffer();
-    sb.writeln("  'Debug' => :debug,");
-    sb.writeln("  'Profile' => :release,");
-    sb.writeln("  'Release' => :release,");
     for (final flavor in flavors.keys) {
       sb.writeln("  'Debug-$flavor' => :debug,");
       sb.writeln("  'Profile-$flavor' => :release,");

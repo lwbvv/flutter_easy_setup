@@ -105,6 +105,7 @@ $ref
       buildConfiguration = "Debug-$flavor"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      customLLDBInitFile = "\$(SRCROOT)/Flutter/ephemeral/flutter_lldbinit"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
       </Testables>
@@ -113,6 +114,7 @@ $ref
       buildConfiguration = "Debug-$flavor"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      customLLDBInitFile = "\$(SRCROOT)/Flutter/ephemeral/flutter_lldbinit"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
