@@ -89,7 +89,6 @@ void main() {
           codeSignIdentity: 'Apple Development',
           provisioningProfile: 'Dev Profile',
           entitlements: 'ios/Runner/Dev.entitlements',
-          appIcon: 'AppIcon-Dev',
         ),
       );
 
@@ -101,7 +100,6 @@ void main() {
       expect(content, contains('CODE_SIGN_IDENTITY=Apple Development'));
       expect(content, contains('PROVISIONING_PROFILE_SPECIFIER=Dev Profile'));
       expect(content, contains('CODE_SIGN_ENTITLEMENTS=ios/Runner/Dev.entitlements'));
-      expect(content, contains('ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-Dev'));
     });
 
     test('includes only provided iOS config variables (partial)', () {
@@ -110,7 +108,6 @@ void main() {
         name: 'MyApp Dev',
         ios: IosFlavorConfig(
           teamId: 'TEAM123',
-          appIcon: 'AppIcon-Dev',
         ),
       );
 
@@ -119,10 +116,29 @@ void main() {
       final content = File(p.join(tempDir.path, 'Debug-dev.xcconfig')).readAsStringSync();
       expect(content, contains('APP_DISPLAY_NAME=MyApp Dev'));
       expect(content, contains('DEVELOPMENT_TEAM=TEAM123'));
-      expect(content, contains('ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-Dev'));
       expect(content, isNot(contains('CODE_SIGN_IDENTITY=')));
       expect(content, isNot(contains('PROVISIONING_PROFILE_SPECIFIER=')));
       expect(content, isNot(contains('CODE_SIGN_ENTITLEMENTS=')));
+    });
+
+    test('auto-sets ASSETCATALOG_COMPILER_APPICON_NAME when appIcon is set', () {
+      const configWithAppIcon = FlavorConfig(
+        bundleId: 'com.example.app.dev',
+        name: 'MyApp Dev',
+        appIcon: 'assets/icons/dev_icon.png',
+      );
+
+      XcconfigGenerator.generate(tempDir.path, 'dev', configWithAppIcon);
+
+      final content = File(p.join(tempDir.path, 'Debug-dev.xcconfig')).readAsStringSync();
+      expect(content, contains('ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-dev'));
+    });
+
+    test('does not set ASSETCATALOG_COMPILER_APPICON_NAME when appIcon is null', () {
+      XcconfigGenerator.generate(tempDir.path, 'dev', config);
+
+      final content = File(p.join(tempDir.path, 'Debug-dev.xcconfig')).readAsStringSync();
+      expect(content, isNot(contains('ASSETCATALOG_COMPILER_APPICON_NAME=')));
     });
 
     test('does not include iOS variables when ios config is absent', () {

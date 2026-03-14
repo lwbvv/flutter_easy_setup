@@ -34,6 +34,11 @@ void main() {
         'name': 'MyApp Dev',
         'version_code': 42,
         'version_name': '1.0.0-dev',
+        'app_icon': 'assets/icons/dev_icon.png',
+        'app_icon_localized': {
+          'ja': 'assets/icons/dev_icon_ja.png',
+          'ko': 'assets/icons/dev_icon_ko.png',
+        },
         'signing': {
           'keystore': 'keys/dev.keystore',
           'alias': 'dev-key',
@@ -47,11 +52,14 @@ void main() {
           'provisioning_profile': 'Dev Profile',
           'code_sign_identity': 'Apple Development',
           'entitlements': 'ios/Runner/Dev.entitlements',
-          'app_icon': 'AppIcon-Dev',
         },
       });
       expect(config.versionCode, 42);
       expect(config.versionName, '1.0.0-dev');
+      expect(config.appIcon, 'assets/icons/dev_icon.png');
+      expect(config.appIconLocalized, isNotNull);
+      expect(config.appIconLocalized!['ja'], 'assets/icons/dev_icon_ja.png');
+      expect(config.appIconLocalized!['ko'], 'assets/icons/dev_icon_ko.png');
       expect(config.signing, isNotNull);
       expect(config.signing!.keystore, 'keys/dev.keystore');
       expect(config.signing!.alias, 'dev-key');
@@ -63,7 +71,6 @@ void main() {
       expect(config.ios!.provisioningProfile, 'Dev Profile');
       expect(config.ios!.codeSignIdentity, 'Apple Development');
       expect(config.ios!.entitlements, 'ios/Runner/Dev.entitlements');
-      expect(config.ios!.appIcon, 'AppIcon-Dev');
     });
 
     test('optional fields are null when not provided', () {
@@ -76,6 +83,18 @@ void main() {
       expect(config.signing, isNull);
       expect(config.firebase, isNull);
       expect(config.ios, isNull);
+      expect(config.appIcon, isNull);
+      expect(config.appIconLocalized, isNull);
+    });
+
+    test('parses app_icon without app_icon_localized', () {
+      final config = FlavorConfig.fromYaml({
+        'bundle_id': 'com.example.app',
+        'name': 'MyApp',
+        'app_icon': 'assets/icons/icon.png',
+      });
+      expect(config.appIcon, 'assets/icons/icon.png');
+      expect(config.appIconLocalized, isNull);
     });
   });
 
@@ -144,13 +163,11 @@ void main() {
         'provisioning_profile': 'My Profile',
         'code_sign_identity': 'Apple Distribution',
         'entitlements': 'Runner/Prod.entitlements',
-        'app_icon': 'AppIcon-Prod',
       });
       expect(config.teamId, 'TEAM123');
       expect(config.provisioningProfile, 'My Profile');
       expect(config.codeSignIdentity, 'Apple Distribution');
       expect(config.entitlements, 'Runner/Prod.entitlements');
-      expect(config.appIcon, 'AppIcon-Prod');
     });
 
     test('all fields are optional', () {
@@ -159,16 +176,13 @@ void main() {
       expect(config.provisioningProfile, isNull);
       expect(config.codeSignIdentity, isNull);
       expect(config.entitlements, isNull);
-      expect(config.appIcon, isNull);
     });
 
     test('parses partial fields', () {
       final config = IosFlavorConfig.fromYaml({
         'team_id': 'TEAM123',
-        'app_icon': 'AppIcon-Dev',
       });
       expect(config.teamId, 'TEAM123');
-      expect(config.appIcon, 'AppIcon-Dev');
       expect(config.codeSignIdentity, isNull);
       expect(config.provisioningProfile, isNull);
       expect(config.entitlements, isNull);
@@ -287,6 +301,9 @@ easy_setup:
       name: MyApp Dev
       version_code: 1
       version_name: "1.0.0-dev"
+      app_icon: assets/icons/dev_icon.png
+      app_icon_localized:
+        ja: assets/icons/dev_icon_ja.png
       signing:
         keystore: keys/dev.keystore
         alias: dev-key
@@ -295,17 +312,18 @@ easy_setup:
         ios: config/dev/GoogleService-Info.plist
       ios:
         team_id: "ABCDEF1234"
-        app_icon: AppIcon-Dev
 ''');
 
       final config = EasySetupConfig.fromFile(yamlFile.path);
       final dev = config.flavors['dev']!;
       expect(dev.versionCode, 1);
       expect(dev.versionName, '1.0.0-dev');
+      expect(dev.appIcon, 'assets/icons/dev_icon.png');
+      expect(dev.appIconLocalized, isNotNull);
+      expect(dev.appIconLocalized!['ja'], 'assets/icons/dev_icon_ja.png');
       expect(dev.signing!.keystore, 'keys/dev.keystore');
       expect(dev.firebase!.android, 'config/dev/google-services.json');
       expect(dev.ios!.teamId, 'ABCDEF1234');
-      expect(dev.ios!.appIcon, 'AppIcon-Dev');
     });
   });
 }

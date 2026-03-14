@@ -1,6 +1,7 @@
 import '../android/build_gradle_modifier.dart';
 import '../exceptions.dart';
 import '../firebase/firebase_copier.dart';
+import '../ios/app_icon_generator.dart';
 import '../ios/info_plist_modifier.dart';
 import '../ios/pbxproj_modifier.dart';
 import '../ios/podfile_modifier.dart';
@@ -86,6 +87,22 @@ class FlavorCommand {
           root,
           entry.key,
           firebase!.ios!,
+          dryRun: dryRun,
+        );
+      }
+    }
+
+    // 4.6단계: iOS — app_icon이 있는 flavor에 대해 앱 아이콘 자동 생성
+    final assetCatalogDir = ProjectFinder.iosAssetCatalogDir(root);
+    for (final entry in config.flavors.entries) {
+      if (entry.value.appIcon != null) {
+        print('\n--- iOS App Icon (${entry.key}) ---');
+        AppIconGenerator.generate(
+          root,
+          assetCatalogDir,
+          entry.key,
+          entry.value.appIcon!,
+          appIconLocalized: entry.value.appIconLocalized,
           dryRun: dryRun,
         );
       }

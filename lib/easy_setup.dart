@@ -10,6 +10,7 @@ export 'src/commands/ci_cd_command.dart';
 export 'src/commands/flavor_command.dart';
 
 export 'src/exceptions.dart';
+export 'src/ios/app_icon_generator.dart';
 export 'src/firebase/firebase_copier.dart';
 export 'src/models/ci_cd_config.dart';
 export 'src/models/flavor_config.dart';

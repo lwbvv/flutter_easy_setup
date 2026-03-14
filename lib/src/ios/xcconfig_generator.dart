@@ -21,7 +21,7 @@ class XcconfigGenerator {
     FlavorConfig config, {
     bool dryRun = false,
   }) {
-    final vars = _buildXcconfigVars(config);
+    final vars = _buildXcconfigVars(config, flavor: flavor);
 
     // Debug용 xcconfig — Debug.xcconfig를 상속
     _writeXcconfig(
@@ -44,7 +44,10 @@ class XcconfigGenerator {
   }
 
   /// FlavorConfig로부터 xcconfig 변수 문자열을 조합합니다.
-  static String _buildXcconfigVars(FlavorConfig config) {
+  ///
+  /// [flavor]가 전달되고 [config.appIcon]이 설정되어 있으면
+  /// ASSETCATALOG_COMPILER_APPICON_NAME을 AppIcon-{flavor}로 자동 설정합니다.
+  static String _buildXcconfigVars(FlavorConfig config, {String? flavor}) {
     final sb = StringBuffer();
     sb.writeln('APP_DISPLAY_NAME=${config.name}');
     final ios = config.ios;
@@ -61,9 +64,9 @@ class XcconfigGenerator {
       if (ios.entitlements != null) {
         sb.writeln('CODE_SIGN_ENTITLEMENTS=${ios.entitlements}');
       }
-      if (ios.appIcon != null) {
-        sb.writeln('ASSETCATALOG_COMPILER_APPICON_NAME=${ios.appIcon}');
-      }
+    }
+    if (config.appIcon != null && flavor != null) {
+      sb.writeln('ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-$flavor');
     }
     return sb.toString();
   }

@@ -41,14 +41,12 @@ class IosFlavorConfig {
   final String? provisioningProfile;
   final String? codeSignIdentity;
   final String? entitlements;
-  final String? appIcon;
 
   const IosFlavorConfig({
     this.teamId,
     this.provisioningProfile,
     this.codeSignIdentity,
     this.entitlements,
-    this.appIcon,
   });
 
   factory IosFlavorConfig.fromYaml(Map yaml) {
@@ -57,7 +55,6 @@ class IosFlavorConfig {
       provisioningProfile: yaml['provisioning_profile'] as String?,
       codeSignIdentity: yaml['code_sign_identity'] as String?,
       entitlements: yaml['entitlements'] as String?,
-      appIcon: yaml['app_icon'] as String?,
     );
   }
 }
@@ -74,6 +71,8 @@ class FlavorConfig {
   final SigningConfig? signing;
   final FirebaseConfig? firebase;
   final IosFlavorConfig? ios;
+  final String? appIcon;
+  final Map<String, String>? appIconLocalized;
 
   const FlavorConfig({
     required this.bundleId,
@@ -83,10 +82,21 @@ class FlavorConfig {
     this.signing,
     this.firebase,
     this.ios,
+    this.appIcon,
+    this.appIconLocalized,
   });
 
   /// YAML 맵으로부터 FlavorConfig 인스턴스를 생성합니다.
   factory FlavorConfig.fromYaml(Map yaml) {
+    Map<String, String>? appIconLocalized;
+    final localizedMap = yaml['app_icon_localized'];
+    if (localizedMap != null) {
+      appIconLocalized = <String, String>{};
+      for (final entry in (localizedMap as Map).entries) {
+        appIconLocalized[entry.key as String] = entry.value as String;
+      }
+    }
+
     return FlavorConfig(
       bundleId: yaml['bundle_id'] as String,
       name: yaml['name'] as String,
@@ -101,6 +111,8 @@ class FlavorConfig {
       ios: yaml['ios'] != null
           ? IosFlavorConfig.fromYaml(yaml['ios'] as Map)
           : null,
+      appIcon: yaml['app_icon'] as String?,
+      appIconLocalized: appIconLocalized,
     );
   }
 }

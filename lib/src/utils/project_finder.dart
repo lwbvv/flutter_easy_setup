@@ -68,4 +68,8 @@ class ProjectFinder {
   /// iOS Podfile 경로를 반환합니다.
   static String iosPodfilePath(String projectRoot) =>
       p.join(projectRoot, 'ios', 'Podfile');
+
+  /// iOS Assets.xcassets 디렉터리 경로를 반환합니다.
+  static String iosAssetCatalogDir(String projectRoot) =>
+      p.join(projectRoot, 'ios', 'Runner', 'Assets.xcassets');
 }
