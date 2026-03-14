@@ -12,6 +12,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 - [설치](#설치)
 - [사용법](#사용법)
 - [설정 파일 (easy_setup.yaml)](#설정-파일-easy_setupyaml)
+- [앱 아이콘 자동 생성](#앱-아이콘-자동-생성)
 - [CI/CD 설정 (ci-cd 커맨드)](#cicd-설정-ci-cd-커맨드)
 - [자동으로 수정되는 파일](#자동으로-수정되는-파일)
 - [프로젝트 구조](#프로젝트-구조)
@@ -31,6 +32,8 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 | **iOS** | flavor별 `.xcscheme` 파일 생성 |
 | **iOS** | `Info.plist`의 앱 이름을 xcconfig 변수로 교체 |
 | **iOS** | `Podfile`에 빌드 모드 매핑 추가 |
+| **iOS** | 1024x1024 소스 이미지로 앱 아이콘 자동 생성 (flavor별 + locale별 지원) |
+| **Firebase** | `google-services.json` / `GoogleService-Info.plist` flavor별 자동 복사 |
 | **CI/CD** | Fastlane 파일 자동 생성 (Gemfile, Matchfile, Appfile, Fastfile + register lane) |
 | **CI/CD** | GitHub Actions 워크플로우 자동 생성 (ios-deploy.yml) |
 | **CI/CD** | Apple Developer Bundle ID 자동 등록 (API Key) |
@@ -141,20 +144,99 @@ easy_setup:
     dev:
       bundle_id: com.example.app.dev
       name: MyApp Dev
+      app_icon: assets/icons/dev_icon.png         # 선택사항: 1024x1024 소스 이미지
+      app_icon_localized:                          # 선택사항: locale별 아이콘
+        ja: assets/icons/dev_icon_ja.png
+        ko: assets/icons/dev_icon_ko.png
     staging:
       bundle_id: com.example.app.staging
       name: MyApp Staging
     prod:
       bundle_id: com.example.app
       name: MyApp
+      app_icon: assets/icons/prod_icon.png
 ```
 
 ### 필드 설명
 
-| 필드 | 설명 | 예시 |
-|------|------|------|
-| `bundle_id` | 앱의 고유 식별자 (Android applicationId / iOS PRODUCT_BUNDLE_IDENTIFIER) | `com.example.app.dev` |
-| `name` | 사용자에게 표시되는 앱 이름 (Android app_name / iOS APP_DISPLAY_NAME) | `MyApp Dev` |
+| 필드 | 필수 | 설명 | 예시 |
+|------|------|------|------|
+| `bundle_id` | O | 앱의 고유 식별자 (Android applicationId / iOS PRODUCT_BUNDLE_IDENTIFIER) | `com.example.app.dev` |
+| `name` | O | 사용자에게 표시되는 앱 이름 (Android app_name / iOS APP_DISPLAY_NAME) | `MyApp Dev` |
+| `version_code` | | 앱 버전 코드 (정수) | `42` |
+| `version_name` | | 앱 버전 이름 (문자열) | `1.0.0-dev` |
+| `app_icon` | | 1024x1024 소스 이미지 경로 (프로젝트 루트 기준 상대경로) | `assets/icons/dev_icon.png` |
+| `app_icon_localized` | | locale별 아이콘 소스 이미지 경로 맵 (iOS 18+ 지원) | 아래 [앱 아이콘](#앱-아이콘-자동-생성) 참조 |
+| `signing` | | Android signing 설정 (`keystore`, `alias`) | |
+| `firebase` | | Firebase 설정 파일 경로 (`android`, `ios`) | |
+| `ios` | | iOS 전용 설정 (`team_id`, `provisioning_profile`, `code_sign_identity`, `entitlements`) | |
+
+---
+
+## 앱 아이콘 자동 생성
+
+`app_icon` 필드에 1024x1024 PNG 소스 이미지 경로를 지정하면, `easy_setup flavor` 실행 시 iOS 앱 아이콘을 자동으로 생성합니다.
+
+### 동작 방식
+
+1. 소스 이미지(1024x1024)를 로드하고 크기를 검증합니다.
+2. 15개 고유 사이즈로 리사이즈하여 PNG 파일을 생성합니다.
+3. `Contents.json` (19개 엔트리)을 생성합니다.
+4. xcconfig에 `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-{flavor}`를 자동 설정합니다.
+
+### 생성 경로
+
+```
+ios/Runner/Assets.xcassets/AppIcon-{flavor}.appiconset/
+  Contents.json
+  Icon-App-20x20@1x.png      (20px)
+  Icon-App-20x20@2x.png      (40px)
+  Icon-App-20x20@3x.png      (60px)
+  Icon-App-29x29@1x.png      (29px)
+  Icon-App-29x29@2x.png      (58px)
+  Icon-App-29x29@3x.png      (87px)
+  Icon-App-40x40@1x.png      (40px)
+  Icon-App-40x40@2x.png      (80px)
+  Icon-App-40x40@3x.png      (120px)
+  Icon-App-60x60@2x.png      (120px)
+  Icon-App-60x60@3x.png      (180px)
+  Icon-App-76x76@1x.png      (76px)
+  Icon-App-76x76@2x.png      (152px)
+  Icon-App-83.5x83.5@2x.png  (167px)
+  Icon-App-1024x1024@1x.png  (1024px)
+```
+
+### Locale별 아이콘 (iOS 18+)
+
+`app_icon_localized`를 설정하면 locale별 `.lproj/` 서브디렉터리에 별도 아이콘 세트를 생성합니다:
+
+```yaml
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.app.dev
+      name: MyApp Dev
+      app_icon: assets/icons/dev_icon.png
+      app_icon_localized:
+        ja: assets/icons/dev_icon_ja.png
+        ko: assets/icons/dev_icon_ko.png
+```
+
+생성 구조:
+
+```
+AppIcon-dev.appiconset/
+  Contents.json              # 기본 아이콘
+  Icon-App-*.png
+  ja.lproj/                  # 일본어 아이콘
+    Contents.json
+    Icon-App-*.png
+  ko.lproj/                  # 한국어 아이콘
+    Contents.json
+    Icon-App-*.png
+```
+
+> iOS 18+ / Xcode 16+에서 지원됩니다. 이전 버전에서는 기본 아이콘만 표시됩니다.
 
 ---
 
@@ -338,19 +420,24 @@ Kotlin DSL(`.kts`)도 자동으로 인식하여 올바른 문법으로 생성합
    - `Debug-{flavor}.xcconfig` — Debug.xcconfig를 include하고 `APP_DISPLAY_NAME` 설정
    - `Release-{flavor}.xcconfig` — Release.xcconfig를 include
    - `Profile-{flavor}.xcconfig` — Release.xcconfig를 include
+   - `app_icon`이 설정된 경우 `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-{flavor}` 자동 추가
 
-2. **project.pbxproj** (`ios/Runner.xcodeproj/`)
+2. **앱 아이콘** (`ios/Runner/Assets.xcassets/`) — `app_icon` 설정 시
+   - `AppIcon-{flavor}.appiconset/` 디렉터리에 15개 사이즈 PNG + Contents.json 생성
+   - locale별 `.lproj/` 서브디렉터리 생성 (`app_icon_localized` 설정 시)
+
+3. **project.pbxproj** (`ios/Runner.xcodeproj/`)
    - 기존 Debug/Release/Profile 빌드 구성을 복제하여 flavor별 구성 생성
    - PBXFileReference, PBXGroup, XCBuildConfiguration, XCConfigurationList 모두 수정
 
-3. **xcscheme** (`ios/Runner.xcodeproj/xcshareddata/xcschemes/`)
+4. **xcscheme** (`ios/Runner.xcodeproj/xcshareddata/xcschemes/`)
    - flavor별 Xcode 빌드 스키마 생성
    - Build/Launch → Debug-{flavor}, Profile → Profile-{flavor}, Archive → Release-{flavor}
 
-4. **Info.plist** (`ios/Runner/`)
+5. **Info.plist** (`ios/Runner/`)
    - `CFBundleDisplayName` 값을 `$(APP_DISPLAY_NAME)`으로 교체
 
-5. **Podfile** (`ios/`)
+6. **Podfile** (`ios/`)
    - `Debug-{flavor} => :debug`, `Release-{flavor} => :release` 등 매핑 추가
 
 ---
@@ -381,11 +468,14 @@ easy_setup/
 │       ├── android/
 │       │   └── build_gradle_modifier.dart # build.gradle flavor 설정
 │       ├── ios/
+│       │   ├── app_icon_generator.dart    # 앱 아이콘 자동 생성 (리사이즈 + Contents.json)
 │       │   ├── xcconfig_generator.dart    # xcconfig 파일 생성
 │       │   ├── pbxproj_modifier.dart      # project.pbxproj 수정 (가장 복잡)
 │       │   ├── scheme_generator.dart      # .xcscheme 생성
 │       │   ├── info_plist_modifier.dart   # Info.plist 수정
 │       │   └── podfile_modifier.dart      # Podfile 수정
+│       ├── firebase/
+│       │   └── firebase_copier.dart       # google-services.json / GoogleService-Info.plist 복사
 │       ├── fastlane/
 │       │   ├── gemfile_generator.dart     # Gemfile 생성
 │       │   ├── matchfile_generator.dart   # Matchfile 생성
@@ -407,8 +497,9 @@ easy_setup/
 - 서브커맨드 생략 시 `flavor`로 동작하여 하위 호환성을 보장합니다.
 
 ### `FlavorCommand` — flavor 오케스트레이터
-- flavor 설정 과정을 8단계로 나누어 순차적으로 실행합니다.
-- 프로젝트 루트 자동 탐지 → YAML 로드 → Android → iOS (xcconfig → pbxproj → scheme → plist → Podfile).
+- flavor 설정 과정을 순차적으로 실행합니다.
+- 프로젝트 루트 자동 탐지 → YAML 로드 → Android → iOS (xcconfig → Firebase → 앱 아이콘 → pbxproj → scheme → plist → Podfile).
+- `app_icon`이 설정된 flavor에 대해 `AppIconGenerator`를 호출하여 아이콘을 자동 생성합니다.
 
 ### `CiCdCommand` — CI/CD 오케스트레이터
 - CI/CD 파이프라인 설정을 순차적으로 실행합니다.
@@ -416,6 +507,12 @@ easy_setup/
 - API Key 파일(.p8)이 있으면 Bundle ID를 자동 등록하고, 없으면 건너뜁니다.
 - `FastfileGenerator.addRegisterLane()`으로 Fastfile에 register lane을 추가합니다.
 - `ci_cd.metadata` 설정이 있으면 메타데이터 파일을 생성하고 `update_metadata` lane을 추가합니다.
+
+### `AppIconGenerator` — iOS 앱 아이콘 생성
+- 1024x1024 소스 PNG를 15개 고유 사이즈로 리사이즈합니다 (`image` 패키지 사용).
+- `Contents.json` (19개 엔트리)을 생성하여 iPhone/iPad/App Store용 아이콘을 매핑합니다.
+- locale별 소스가 있으면 `.lproj/` 서브디렉터리에 동일한 아이콘 세트를 생성합니다 (iOS 18+).
+- 덮어쓰기 방식으로 재실행 시에도 안전합니다 (idempotent).
 
 ### `FastfileGenerator` — Fastfile 생성 + lane 관리
 - `generate()`: 기본 Fastfile 골격 생성 (api_key, certificates, beta lane).
@@ -429,15 +526,20 @@ easy_setup/
 
 ### `FlavorConfig` / `EasySetupConfig` — 설정 모델
 - `easy_setup.yaml`을 파싱하여 `Map<String, FlavorConfig>`로 변환합니다.
+- `appIcon`, `appIconLocalized` 필드로 소스 이미지 경로를 관리합니다.
 - 파일 부재나 파싱 오류 시 친절한 에러 메시지를 제공합니다.
 
 ### `ProjectFinder` — 경로 유틸리티
 - 현재 디렉터리에서 위로 올라가며 `pubspec.yaml`에 Flutter SDK 참조가 있는지 확인합니다.
-- Android, iOS 각 설정 파일의 표준 경로를 반환합니다.
+- Android, iOS 각 설정 파일의 표준 경로를 반환합니다 (`iosAssetCatalogDir` 포함).
 
 ### `BuildGradleModifier` — Android 설정
 - `buildTypes` 블록을 찾아 그 뒤에 `flavorDimensions` + `productFlavors`를 삽입합니다.
 - 중괄호 깊이(brace-counting)로 블록 끝을 정확히 탐지합니다.
+
+### `FirebaseCopier` — Firebase 설정 파일 복사
+- `firebase.android` 경로의 `google-services.json`을 flavor별 Android 디렉터리에 복사합니다.
+- `firebase.ios` 경로의 `GoogleService-Info.plist`를 flavor별 iOS 디렉터리에 복사합니다.
 
 ### `PbxprojModifier` — iOS 프로젝트 설정 (가장 복잡)
 - Xcode `project.pbxproj` 파일의 6개 섹션을 수정합니다.
@@ -447,6 +549,7 @@ easy_setup/
 ### `XcconfigGenerator` — iOS xcconfig 생성
 - 각 flavor에 대해 Debug/Release/Profile 3개의 xcconfig 파일을 생성합니다.
 - 기존 Debug.xcconfig, Release.xcconfig를 `#include`로 상속합니다.
+- `appIcon`이 설정된 경우 `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-{flavor}`를 자동 추가합니다.
 
 ### `SchemeGenerator` — iOS 빌드 스키마 생성
 - Xcode의 Build/Test/Launch/Profile/Analyze/Archive 액션에 올바른 빌드 구성을 매핑합니다.
@@ -494,6 +597,14 @@ easy_setup/
 ### iOS 설정이 건너뛰어지는 경우
 - `ios/` 디렉터리가 있는지 확인하세요 (`flutter create`로 iOS 지원이 활성화되어 있어야 합니다).
 - `ios/Runner.xcodeproj/project.pbxproj` 파일이 존재하는지 확인하세요.
+
+### "App icon source must be 1024x1024"
+- `app_icon` 경로의 PNG 이미지가 정확히 1024x1024 픽셀이어야 합니다.
+- JPEG 등 다른 포맷이 아닌 PNG 파일을 사용하세요.
+
+### "App icon source image not found"
+- `app_icon` 경로가 프로젝트 루트 기준 상대경로인지 확인하세요.
+- 파일이 해당 경로에 존재하는지 확인하세요.
 
 ### 이미 설정된 경우
 - `flavor` / `ci-cd`: 덮어쓰기 방식 — 기존 설정을 제거하고 새로 생성합니다.
