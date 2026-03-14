@@ -73,6 +73,14 @@ class FlavorCommand {
     // 4단계: iOS — flavor별 xcconfig 파일 생성 (Debug/Release/Profile)
     print('\n--- iOS xcconfig ---');
     final xcconfigDir = ProjectFinder.iosXcconfigDir(root);
+
+    // 사용하지 않는 xcconfig 파일 정리 (flavor 변경 시 이전 xcconfig 제거)
+    XcconfigGenerator.cleanupUnusedXcconfigs(
+      xcconfigDir,
+      config.flavors.keys.toSet(),
+      dryRun: dryRun,
+    );
+
     for (final entry in config.flavors.entries) {
       XcconfigGenerator.generate(
         xcconfigDir,
@@ -155,6 +163,14 @@ class FlavorCommand {
     // 6단계: iOS — flavor별 .xcscheme 파일 생성
     print('\n--- iOS schemes ---');
     final schemesDir = ProjectFinder.iosSchemesDir(root);
+
+    // 사용하지 않는 scheme 파일 정리 (flavor 변경 시 이전 scheme 제거)
+    SchemeGenerator.cleanupUnusedSchemes(
+      schemesDir,
+      config.flavors.keys.toSet(),
+      dryRun: dryRun,
+    );
+
     for (final flavor in config.flavors.keys) {
       SchemeGenerator.generate(
         schemesDir,

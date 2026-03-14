@@ -71,6 +71,47 @@ class XcconfigGenerator {
     return sb.toString();
   }
 
+  /// [xcconfigDir]에서 사용하지 않는 flavor별 xcconfig 파일을 삭제합니다.
+  ///
+  /// [activeFlavors]: 현재 활성 flavor 목록 (이들의 xcconfig만 보존)
+  /// Debug-{flavor}, Release-{flavor}, Profile-{flavor} 패턴의 파일만 대상으로 합니다.
+  static void cleanupUnusedXcconfigs(
+    String xcconfigDir,
+    Set<String> activeFlavors, {
+    bool dryRun = false,
+  }) {
+    final dir = Directory(xcconfigDir);
+    if (!dir.existsSync()) return;
+
+    final prefixes = ['Debug-', 'Release-', 'Profile-'];
+
+    try {
+      for (final entity in dir.listSync()) {
+        if (entity is! File) continue;
+        final fileName = p.basename(entity.path);
+        if (!fileName.endsWith('.xcconfig')) continue;
+
+        for (final prefix in prefixes) {
+          if (fileName.startsWith(prefix)) {
+            final flavor =
+                fileName.replaceFirst(prefix, '').replaceFirst('.xcconfig', '');
+            if (!activeFlavors.contains(flavor)) {
+              if (dryRun) {
+                print('  [dry-run] Would delete: ${entity.path}');
+              } else {
+                entity.deleteSync();
+                print('  Deleted unused xcconfig: ${entity.path}');
+              }
+            }
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      print('  Warning: Failed to cleanup xcconfigs: $e');
+    }
+  }
+
   /// 개별 xcconfig 파일을 작성합니다 (기존 파일이 있으면 덮어씁니다).
   static void _writeXcconfig(
     String path,

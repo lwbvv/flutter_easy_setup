@@ -37,6 +37,45 @@ class SchemeGenerator {
     print('  Wrote scheme: $outPath');
   }
 
+  /// [schemesDir]에서 사용하지 않는 flavor별 .xcscheme 파일을 삭제합니다.
+  ///
+  /// [activeFlavors]: 현재 활성 flavor 목록 (이들의 scheme만 보존)
+  /// Runner.xcscheme 등 flavor가 아닌 기본 scheme은 건드리지 않습니다.
+  static void cleanupUnusedSchemes(
+    String schemesDir,
+    Set<String> activeFlavors, {
+    bool dryRun = false,
+  }) {
+    final dir = Directory(schemesDir);
+    if (!dir.existsSync()) return;
+
+    try {
+      for (final entity in dir.listSync()) {
+        if (entity is! File) continue;
+        final fileName = p.basename(entity.path);
+        if (!fileName.endsWith('.xcscheme')) continue;
+
+        final schemeName = fileName.replaceFirst('.xcscheme', '');
+
+        // 기본 scheme(Runner 등)은 건너뜀 — flavor 이름과 일치하는 것만 대상
+        if (activeFlavors.contains(schemeName)) continue;
+
+        // flavor scheme인지 확인: 내용에 Debug-{schemeName} 패턴이 있는지 검사
+        final content = entity.readAsStringSync();
+        if (!content.contains('Debug-$schemeName')) continue;
+
+        if (dryRun) {
+          print('  [dry-run] Would delete: ${entity.path}');
+        } else {
+          entity.deleteSync();
+          print('  Deleted unused scheme: ${entity.path}');
+        }
+      }
+    } catch (e) {
+      print('  Warning: Failed to cleanup schemes: $e');
+    }
+  }
+
   /// flavor에 맞는 .xcscheme XML 전체를 생성합니다.
   ///
   /// Xcode 15.1 형식을 기반으로 하며,
