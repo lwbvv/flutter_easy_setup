@@ -17,7 +17,7 @@ void main() {
 
   group('FastfileGenerator', () {
     test('creates Fastfile referencing ENV variables', () {
-      FastfileGenerator.generate(tempDir.path, ['dev', 'prod']);
+      FastfileGenerator.generate(tempDir.path, {'dev': 'com.app.dev', 'prod': 'com.app'});
 
       final file = File(p.join(tempDir.path, 'Fastfile'));
       expect(file.existsSync(), isTrue);
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('defaults to prod flavor when available', () {
-      FastfileGenerator.generate(tempDir.path, ['dev', 'prod']);
+      FastfileGenerator.generate(tempDir.path, {'dev': 'com.app.dev', 'prod': 'com.app'});
 
       final content = File(p.join(tempDir.path, 'Fastfile'))
           .readAsStringSync();
@@ -41,7 +41,7 @@ void main() {
     });
 
     test('defaults to first flavor when prod is not available', () {
-      FastfileGenerator.generate(tempDir.path, ['staging', 'dev']);
+      FastfileGenerator.generate(tempDir.path, {'staging': 'com.app.staging', 'dev': 'com.app.dev'});
 
       final content = File(p.join(tempDir.path, 'Fastfile'))
           .readAsStringSync();
@@ -49,18 +49,18 @@ void main() {
     });
 
     test('overwrites existing file with correct content', () {
-      FastfileGenerator.generate(tempDir.path, ['prod']);
+      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
       final file = File(p.join(tempDir.path, 'Fastfile'));
       final afterFirst = file.readAsStringSync();
 
       file.writeAsStringSync('CUSTOM');
 
-      FastfileGenerator.generate(tempDir.path, ['prod']);
+      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
       expect(file.readAsStringSync(), afterFirst);
     });
 
     test('beta lane includes increment_build_number_in_pubspec', () {
-      FastfileGenerator.generate(tempDir.path, ['prod']);
+      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
 
       final content = File(p.join(tempDir.path, 'Fastfile'))
           .readAsStringSync();
@@ -72,8 +72,39 @@ void main() {
       expect(incrementIndex, lessThan(buildIndex));
     });
 
+    test('generates per-flavor build configuration signing settings', () {
+      FastfileGenerator.generate(tempDir.path, {
+        'dev': 'com.app.dev',
+        'prod': 'com.app',
+      });
+
+      final content = File(p.join(tempDir.path, 'Fastfile'))
+          .readAsStringSync();
+
+      // Debug-{flavor} configurations
+      expect(content, contains('build_configurations: "Debug-dev"'));
+      expect(content, contains('build_configurations: "Debug-prod"'));
+      // Release-{flavor} configurations
+      expect(content, contains('build_configurations: "Release-dev"'));
+      expect(content, contains('build_configurations: "Release-prod"'));
+      // Profile-{flavor} configurations
+      expect(content, contains('build_configurations: "Profile-dev"'));
+      expect(content, contains('build_configurations: "Profile-prod"'));
+
+      // Bundle IDs are used directly (not Ruby variables)
+      expect(content, contains('bundle_identifier: "com.app.dev"'));
+      expect(content, contains('bundle_identifier: "com.app"'));
+
+      // Profile name mappings
+      expect(content, contains('profile_name: "match Development com.app.dev"'));
+      expect(content, contains('profile_name: "match AppStore com.app"'));
+
+      // Release/Profile use Apple Distribution identity
+      expect(content, contains('code_sign_identity: "Apple Distribution"'));
+    });
+
     test('does not create file in dry-run mode', () {
-      FastfileGenerator.generate(tempDir.path, ['prod'], dryRun: true);
+      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'}, dryRun: true);
 
       expect(
         File(p.join(tempDir.path, 'Fastfile')).existsSync(),

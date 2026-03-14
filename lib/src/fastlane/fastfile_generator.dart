@@ -12,17 +12,79 @@ import '../exceptions.dart';
 class FastfileGenerator {
   /// [outputDir]에 Fastfile을 생성합니다 (기본 골격 + 내장 lane).
   ///
-  /// [flavorNames]: 사용 가능한 flavor 이름 목록
+  /// [flavorBundleIds]: flavor 이름 → bundle ID 매핑
   static void generate(
     String outputDir,
-    List<String> flavorNames, {
+    Map<String, String> flavorBundleIds, {
     bool dryRun = false,
   }) {
     final path = p.join(outputDir, 'Fastfile');
+    final flavorNames = flavorBundleIds.keys.toList();
 
     final defaultFlavor = flavorNames.contains('prod')
         ? 'prod'
         : flavorNames.first;
+
+    // sync_certs lane: flavor별 build configuration에 맞는 서명 설정 생성
+    final syncCerts = StringBuffer();
+    syncCerts.writeln(
+        '    # readonly: true를 주면 기존에 만들어진 걸 가져오기만 합니다 (팀원용)');
+    syncCerts.writeln(
+        '#     match(type: "development", readonly: true, api_key: api_key)');
+    syncCerts.writeln(
+        '#     match(type: "appstore", readonly: true, api_key: api_key)');
+    syncCerts.writeln(
+        '#     match(type: "adhoc", readonly: true, api_key: api_key)');
+    syncCerts.writeln();
+    syncCerts.writeln(
+        '    # Xcode 프로젝트 서명 설정을 업데이트합니다.');
+
+    for (final entry in flavorBundleIds.entries) {
+      final flavor = entry.key;
+      final bundleId = entry.value;
+
+      // Debug-{flavor} → Development
+      syncCerts.writeln();
+      syncCerts.writeln('    # $flavor — 개발용');
+      syncCerts.writeln('    update_code_signing_settings(');
+      syncCerts.writeln('      use_automatic_signing: false,');
+      syncCerts.writeln('      path: "../../ios/Runner.xcodeproj",');
+      syncCerts.writeln('      bundle_identifier: "$bundleId",');
+      syncCerts.writeln('      build_configurations: "Debug-$flavor",');
+      syncCerts.writeln(
+          '      profile_name: "match Development $bundleId"');
+      syncCerts.writeln('    )');
+
+      // Release-{flavor} → AppStore
+      syncCerts.writeln();
+      syncCerts.writeln('    # $flavor — 배포용');
+      syncCerts.writeln('    update_code_signing_settings(');
+      syncCerts.writeln('      use_automatic_signing: false,');
+      syncCerts.writeln('      path: "../../ios/Runner.xcodeproj",');
+      syncCerts.writeln('      bundle_identifier: "$bundleId",');
+      syncCerts.writeln('      build_configurations: "Release-$flavor",');
+      syncCerts.writeln(
+          '      profile_name: "match AppStore $bundleId",');
+      syncCerts.writeln('      code_sign_identity: "Apple Distribution"');
+      syncCerts.writeln('    )');
+
+      // Profile-{flavor} → AppStore
+      syncCerts.writeln();
+      syncCerts.writeln('    # $flavor — 프로파일용');
+      syncCerts.writeln('    update_code_signing_settings(');
+      syncCerts.writeln('      use_automatic_signing: false,');
+      syncCerts.writeln('      path: "../../ios/Runner.xcodeproj",');
+      syncCerts.writeln('      bundle_identifier: "$bundleId",');
+      syncCerts.writeln('      build_configurations: "Profile-$flavor",');
+      syncCerts.writeln(
+          '      profile_name: "match AppStore $bundleId",');
+      syncCerts.writeln('      code_sign_identity: "Apple Distribution"');
+      syncCerts.writeln('    )');
+    }
+
+    syncCerts.writeln();
+    syncCerts.write(
+        '    UI.success "Xcode 프로젝트에 프로필 매핑이 완료되었습니다!"');
 
     final content = 'default_platform(:ios)\n'
         '\n'
@@ -54,32 +116,7 @@ class FastfileGenerator {
         '  # ── 인증서 동기화 + Xcode 서명 설정 ──────────────────\n'
         '  desc "Sync certificates and update Xcode signing settings"\n'
         '  lane :sync_certs do\n'
-        '    # readonly: true를 주면 기존에 만들어진 걸 가져오기만 합니다 (팀원용)\n'
-        '#     match(type: "development", readonly: true, api_key: api_key)\n'
-        '#     match(type: "appstore", readonly: true, api_key: api_key)\n'
-        '#     match(type: "adhoc", readonly: true, api_key: api_key)\n'
-        '\n'
-        '    # Xcode 프로젝트 서명 설정을 업데이트합니다.\n'
-        '    # 개발용 매핑\n'
-        '    update_code_signing_settings(\n'
-        '      use_automatic_signing: false,\n'
-        '      path: "ios/Runner.xcodeproj",\n'
-        '      bundle_identifier: app_bundle_id,\n'
-        '      build_configurations: "Debug",\n'
-        '      profile_name: "match Development #{app_bundle_id}"\n'
-        '    )\n'
-        '\n'
-        '    # 배포용 매핑\n'
-        '    update_code_signing_settings(\n'
-        '      use_automatic_signing: false,\n'
-        '      path: "ios/Runner.xcodeproj",\n'
-        '      bundle_identifier: app_bundle_id,\n'
-        '      profile_name: "match AppStore #{app_bundle_id}",\n'
-        '      build_configurations: "Release",\n'
-        '      code_sign_identity: "Apple Distribution"\n'
-        '    )\n'
-        '\n'
-        '    UI.success "Xcode 프로젝트에 프로필 매핑이 완료되었습니다!"\n'
+        '${syncCerts.toString()}\n'
         '  end\n'
         '\n'
         '  # ── 프로필만 재생성 ─────────────────────────────────\n'

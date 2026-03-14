@@ -57,7 +57,10 @@ class CiCdCommand {
     GemfileGenerator.generate(fastlaneDir, dryRun: dryRun);
     MatchfileGenerator.generate(fastlaneDir, bundleIds, dryRun: dryRun);
     AppfileGenerator.generate(fastlaneDir, dryRun: dryRun);
-    FastfileGenerator.generate(fastlaneDir, flavorNames, dryRun: dryRun);
+    final flavorBundleIds = resolvedFlavors.map(
+      (key, info) => MapEntry(key, info.bundleId),
+    );
+    FastfileGenerator.generate(fastlaneDir, flavorBundleIds, dryRun: dryRun);
 
     // 5. bundle install (fastlane 디렉터리)
     await FastlaneRunner.bundleInstall(fastlaneDir, dryRun: dryRun);
