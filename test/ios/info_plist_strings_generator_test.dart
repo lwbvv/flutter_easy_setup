@@ -33,7 +33,8 @@ void main() {
       expect(File(stringsPath).existsSync(), isTrue);
 
       final content = File(stringsPath).readAsStringSync();
-      expect(content, contains('"CFBundleDisplayName" = "테스트 앱";'));
+      // InfoPlist.strings에서는 xcconfig의 변수를 참조
+      expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
     });
 
     test('generates Base.lproj with base permission', () {
@@ -100,7 +101,8 @@ void main() {
       final stringsPath =
           p.join(projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
       final content = File(stringsPath).readAsStringSync();
-      expect(content, contains('"CFBundleDisplayName" = "테스트";'));
+      // 변수 참조로 변경
+      expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
       expect(content,
           contains('"NSCameraUsageDescription" = "카메라 접근이 필요합니다";'));
     });
@@ -168,11 +170,11 @@ void main() {
       InfoPlistStringsGenerator.generate(
         projectRoot,
         flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(appIcon: 'assets/icons/ko.png'),
+          'ko': const FlavorLocalizedConfig(),
         },
       );
 
-      // app_icon only → no InfoPlist.strings entry needed
+      // 비어있는 locale 설정 → no InfoPlist.strings entry needed
       final lprojDir = p.join(projectRoot, 'ios', 'Runner', 'ko.lproj');
       expect(Directory(lprojDir).existsSync(), isFalse);
     });

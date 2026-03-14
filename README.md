@@ -249,51 +249,42 @@ easy_setup:
 | `permission` | 기본 iOS 권한 설명. `Base.lproj/InfoPlist.strings`에 생성됨 |
 | `localized_permission` | locale별 iOS 권한 설명. 각 `{locale}.lproj/InfoPlist.strings`에 생성됨 |
 
-### ⚠️ 중요: Flavor별 Localized App Name의 제약
+### Flavor별 Localized App Name
 
-iOS의 구조상 제약으로 **모든 flavor가 같은 locale에서 동일한 app_name을 가져야 합니다**.
+각 flavor는 locale별로 다른 앱 이름을 정의할 수 있습니다. 이는 다음 방식으로 작동합니다:
 
-❌ **잘못된 예시** (같은 locale에 다른 app_name):
+**작동 방식:**
+1. 각 flavor의 `.xcconfig` 파일(Debug-{flavor}.xcconfig 등)에 locale별 변수 정의
+   - `APP_DISPLAY_NAME=Test Dev` (기본값)
+   - `APP_DISPLAY_NAME_KO=테스트 Dev` (한국어)
+   - `APP_DISPLAY_NAME_EN=Test Dev` (영어)
+
+2. `InfoPlist.strings`에서 xcconfig 변수 참조
+   - `ko.lproj/InfoPlist.strings`: `"CFBundleDisplayName" = "($APP_DISPLAY_NAME_KO)";`
+   - `en.lproj/InfoPlist.strings`: `"CFBundleDisplayName" = "($APP_DISPLAY_NAME_EN)";`
+
+**예시:**
 ```yaml
 flavors:
   dev:
     name: MyApp Dev
     localized:
       ko: app_name: "마이앱 Dev"
+      en: app_name: "MyApp Dev"
   prod:
     name: MyApp
     localized:
-      ko: app_name: "마이앱"  # ← 같은 locale에 다른 값 = 충돌!
+      ko: app_name: "마이앱"
+      en: app_name: "MyApp"
 ```
 
-이 경우 경고 메시지가 표시되고, **첫 번째 flavor의 값만 사용**됩니다.
+이렇게 설정하면:
+- `dev` flavor + 한국어: "마이앱 Dev" 표시
+- `dev` flavor + 영어: "MyApp Dev" 표시
+- `prod` flavor + 한국어: "마이앱" 표시
+- `prod` flavor + 영어: "MyApp" 표시
 
-✅ **올바른 예시**:
-```yaml
-flavors:
-  dev:
-    name: MyApp Dev
-    localized:
-      ko: app_name: "마이앱 Dev"
-      ja: app_name: "マイアプリ Dev"
-  prod:
-    name: MyApp
-    localized:
-      ko: app_name: "마이앱 Dev"        # ← dev와 동일
-      ja: app_name: "マイアプリ Dev"    # ← dev와 동일
-```
-
-또는 **한 flavor만 localized를 정의**:
-```yaml
-flavors:
-  dev:
-    name: MyApp Dev
-    localized:
-      ko: app_name: "마이앱 Dev"
-  prod:
-    name: MyApp
-    # localized 정의 안 함 → ko.lproj에서 dev의 값 사용
-```
+각 flavor의 xcconfig에는 고유한 locale별 변수가 정의되므로 flavor별 localization이 완벽하게 동작합니다.
 
 ### 생성되는 파일
 

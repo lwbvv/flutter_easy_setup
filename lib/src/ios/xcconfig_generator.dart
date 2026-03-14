@@ -45,11 +45,27 @@ class XcconfigGenerator {
 
   /// FlavorConfig로부터 xcconfig 변수 문자열을 조합합니다.
   ///
+  /// APP_DISPLAY_NAME: 기본 앱 이름 (영문)
+  /// APP_DISPLAY_NAME_{locale}: locale별 앱 이름 (InfoPlist.strings에서 참조됨)
   /// [flavor]가 전달되고 [config.appIcon]이 설정되어 있으면
   /// ASSETCATALOG_COMPILER_APPICON_NAME을 AppIcon-{flavor}로 자동 설정합니다.
   static String _buildXcconfigVars(FlavorConfig config, {String? flavor}) {
     final sb = StringBuffer();
     sb.writeln('APP_DISPLAY_NAME=${config.name}');
+
+    // locale별 앱 이름을 xcconfig 변수로 추가
+    // InfoPlist.strings에서 $(APP_DISPLAY_NAME_{locale})로 참조 가능
+    if (config.localized != null && config.localized!.isNotEmpty) {
+      for (final entry in config.localized!.entries) {
+        final locale = entry.key;
+        final localizedConfig = entry.value;
+        if (localizedConfig.appName != null) {
+          final varName = 'APP_DISPLAY_NAME_${locale.toUpperCase()}';
+          sb.writeln('$varName=${localizedConfig.appName}');
+        }
+      }
+    }
+
     final ios = config.ios;
     if (ios != null) {
       if (ios.teamId != null) {

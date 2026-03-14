@@ -398,9 +398,10 @@ void main() {
       expect(androidDest.existsSync(), isFalse);
     });
 
-    test('detects and warns about localized app_name conflicts across flavors', () {
-      // Multiple flavors with conflicting app_names for the same locale
-      final conflictingYaml = '''
+    test('each flavor defines locale-specific variables in its xcconfig', () {
+      // Multiple flavors with different app_names for the same locale
+      // → Each flavor should have its own xcconfig with locale-specific variables
+      final multiFlavorYaml = '''
 easy_setup:
   flavors:
     dev:
@@ -409,39 +410,52 @@ easy_setup:
       localized:
         ko:
           app_name: 개발 앱
+        en:
+          app_name: Test Dev
     prod:
       bundle_id: com.example.prod
       name: Test Prod
       localized:
         ko:
           app_name: 상용 앱
+        en:
+          app_name: Test Prod
 ''';
 
-      final root = _createFlutterProject(tempDir, yamlContent: conflictingYaml);
+      final root = _createFlutterProject(tempDir, yamlContent: multiFlavorYaml);
+      FlavorCommand.run(projectRoot: root.path);
 
-      // Capture print output
-      final capturedOutput = <String>[];
-      final originalPrint = print;
-      Zone.current.fork(specification: ZoneSpecification(
-        print: (self, parent, zone, msg) {
-          capturedOutput.add(msg);
-          parent.print(zone, msg);
-        },
-      )).run(() {
-        FlavorCommand.run(projectRoot: root.path);
-      });
+      // Dev flavor's xcconfig should have APP_DISPLAY_NAME_KO=개발 앱
+      final devDebugXcconfig = File(p.join(
+        root.path,
+        'ios',
+        'Flutter',
+        'Debug-dev.xcconfig',
+      )).readAsStringSync();
+      expect(devDebugXcconfig, contains('APP_DISPLAY_NAME_KO=개발 앱'));
+      expect(devDebugXcconfig, contains('APP_DISPLAY_NAME_EN=Test Dev'));
 
-      // Should warn about conflict
-      expect(capturedOutput.any((msg) => msg.contains('WARNING')), isTrue);
-      expect(capturedOutput.any((msg) => msg.contains('Multiple flavors')), isTrue);
-      expect(capturedOutput.any((msg) => msg.contains('ko')), isTrue);
+      // Prod flavor's xcconfig should have APP_DISPLAY_NAME_KO=상용 앱
+      final prodDebugXcconfig = File(p.join(
+        root.path,
+        'ios',
+        'Flutter',
+        'Debug-prod.xcconfig',
+      )).readAsStringSync();
+      expect(prodDebugXcconfig, contains('APP_DISPLAY_NAME_KO=상용 앱'));
+      expect(prodDebugXcconfig, contains('APP_DISPLAY_NAME_EN=Test Prod'));
 
-      // The first flavor's value should be used in the InfoPlist.strings
+      // InfoPlist.strings should reference the xcconfig variables
       final koStringsPath =
           p.join(root.path, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
       final koContent = File(koStringsPath).readAsStringSync();
-      // Should contain dev's app_name since it was first
-      expect(koContent, contains('개발 앱'));
+      // Should reference the variable, not hardcode the value
+      expect(koContent, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
+
+      final enStringsPath =
+          p.join(root.path, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
+      final enContent = File(enStringsPath).readAsStringSync();
+      expect(enContent, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_EN)";'));
     });
   });
 }

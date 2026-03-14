@@ -49,9 +49,11 @@ class InfoPlistStringsGenerator {
       final entries = <String, String>{};
 
       // flavor별 app_name → CFBundleDisplayName
+      // xcconfig의 APP_DISPLAY_NAME_{locale} 변수를 참조하도록 설정
       final flavorConfig = flavorLocalized?[locale];
       if (flavorConfig?.appName != null) {
-        entries['CFBundleDisplayName'] = flavorConfig!.appName!;
+        final varName = 'APP_DISPLAY_NAME_${locale.toUpperCase()}';
+        entries['CFBundleDisplayName'] = '(\$$varName)';
       }
 
       // locale별 permission
