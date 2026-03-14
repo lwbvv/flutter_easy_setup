@@ -190,8 +190,6 @@ app_identifier([
 ])
 
 team_id("XXXXXXXXXX")
-
-api_key_path("fastlane/api_key.json")
 ```
 
 #### `ios/fastlane/Appfile`

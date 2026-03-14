@@ -32,7 +32,6 @@ void main() {
       expect(content, contains('type("appstore")'));
       expect(content, contains('"com.app.dev"'));
       expect(content, contains('"com.app"'));
-      expect(content, contains('api_key_path("api_key.json")'));
     });
 
     test('overwrites existing file with correct content', () {

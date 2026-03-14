@@ -25,9 +25,7 @@ class MatchfileGenerator {
         '])\n'
         '\n'
         'team_id(ENV["TEAM_ID"])\n'
-        'username(ENV["APPLE_ID"])\n'
-        '\n'
-        'api_key_path("api_key.json")\n';
+        'username(ENV["APPLE_ID"])\n';
 
     _writeFile(path, content, dryRun: dryRun);
   }
