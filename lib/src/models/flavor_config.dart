@@ -59,6 +59,45 @@ class IosFlavorConfig {
   }
 }
 
+/// Flavor별 locale 설정을 담는 모델 클래스입니다.
+///
+/// [appIcon]: locale별 앱 아이콘 소스 이미지 경로 (1024x1024 PNG)
+/// [appName]: locale별 앱 표시 이름
+class FlavorLocalizedConfig {
+  final String? appIcon;
+  final String? appName;
+
+  const FlavorLocalizedConfig({this.appIcon, this.appName});
+
+  factory FlavorLocalizedConfig.fromYaml(Map yaml) {
+    return FlavorLocalizedConfig(
+      appIcon: yaml['app_icon'] as String?,
+      appName: yaml['app_name'] as String?,
+    );
+  }
+}
+
+/// 전역 locale 설정을 담는 모델 클래스입니다.
+///
+/// [permission]: iOS 권한 설명 문자열 맵 (NSCameraUsageDescription 등)
+class GlobalLocalizedConfig {
+  final Map<String, String>? permission;
+
+  const GlobalLocalizedConfig({this.permission});
+
+  factory GlobalLocalizedConfig.fromYaml(Map yaml) {
+    Map<String, String>? permission;
+    final permMap = yaml['permission'];
+    if (permMap != null) {
+      permission = <String, String>{};
+      for (final entry in (permMap as Map).entries) {
+        permission[entry.key as String] = entry.value as String;
+      }
+    }
+    return GlobalLocalizedConfig(permission: permission);
+  }
+}
+
 /// 단일 flavor의 설정값을 담는 모델 클래스입니다.
 ///
 /// [bundleId]: 앱의 고유 식별자 (예: com.example.app.dev)
@@ -72,7 +111,7 @@ class FlavorConfig {
   final FirebaseConfig? firebase;
   final IosFlavorConfig? ios;
   final String? appIcon;
-  final Map<String, String>? appIconLocalized;
+  final Map<String, FlavorLocalizedConfig>? localized;
 
   const FlavorConfig({
     required this.bundleId,
@@ -83,17 +122,18 @@ class FlavorConfig {
     this.firebase,
     this.ios,
     this.appIcon,
-    this.appIconLocalized,
+    this.localized,
   });
 
   /// YAML 맵으로부터 FlavorConfig 인스턴스를 생성합니다.
   factory FlavorConfig.fromYaml(Map yaml) {
-    Map<String, String>? appIconLocalized;
-    final localizedMap = yaml['app_icon_localized'];
+    Map<String, FlavorLocalizedConfig>? localized;
+    final localizedMap = yaml['localized'];
     if (localizedMap != null) {
-      appIconLocalized = <String, String>{};
+      localized = <String, FlavorLocalizedConfig>{};
       for (final entry in (localizedMap as Map).entries) {
-        appIconLocalized[entry.key as String] = entry.value as String;
+        localized[entry.key as String] =
+            FlavorLocalizedConfig.fromYaml(entry.value as Map);
       }
     }
 
@@ -112,7 +152,7 @@ class FlavorConfig {
           ? IosFlavorConfig.fromYaml(yaml['ios'] as Map)
           : null,
       appIcon: yaml['app_icon'] as String?,
-      appIconLocalized: appIconLocalized,
+      localized: localized,
     );
   }
 }
@@ -120,12 +160,18 @@ class FlavorConfig {
 /// easy_setup.yaml 파일 전체를 파싱한 결과를 담는 클래스입니다.
 ///
 /// [flavors]: flavor 이름(dev, prod 등)을 키로, [FlavorConfig]를 값으로 하는 맵
+/// [localized]: 선택사항 — 전역 locale 설정 (permission 등)
 /// [metadata]: 선택사항 — App Store Connect 메타데이터 (locale별)
 class EasySetupConfig {
   final Map<String, FlavorConfig> flavors;
+  final Map<String, GlobalLocalizedConfig>? localized;
   final Map<String, LocaleMetadataConfig>? metadata;
 
-  const EasySetupConfig({required this.flavors, this.metadata});
+  const EasySetupConfig({
+    required this.flavors,
+    this.localized,
+    this.metadata,
+  });
 
   /// [path]에 위치한 easy_setup.yaml 파일을 읽고 파싱합니다.
   ///
@@ -164,6 +210,16 @@ class EasySetupConfig {
         flavors[entry.key as String] = FlavorConfig.fromYaml(entry.value as Map);
       }
 
+      Map<String, GlobalLocalizedConfig>? localized;
+      final localizedMap = easySetup['localized'];
+      if (localizedMap != null) {
+        localized = <String, GlobalLocalizedConfig>{};
+        for (final entry in (localizedMap as Map).entries) {
+          localized[entry.key as String] =
+              GlobalLocalizedConfig.fromYaml(entry.value as Map);
+        }
+      }
+
       Map<String, LocaleMetadataConfig>? metadata;
       final metadataMap = easySetup['metadata'];
       if (metadataMap != null) {
@@ -174,7 +230,11 @@ class EasySetupConfig {
         }
       }
 
-      return EasySetupConfig(flavors: flavors, metadata: metadata);
+      return EasySetupConfig(
+        flavors: flavors,
+        localized: localized,
+        metadata: metadata,
+      );
     } catch (e) {
       if (e is SetupException) rethrow;
       throw SetupException('Failed to parse easy_setup.yaml: $e');

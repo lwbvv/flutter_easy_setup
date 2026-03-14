@@ -12,6 +12,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 - [설치](#설치)
 - [사용법](#사용법)
 - [설정 파일 (easy_setup.yaml)](#설정-파일-easy_setupyaml)
+- [Localization](#localization)
 - [앱 아이콘 자동 생성](#앱-아이콘-자동-생성)
 - [CI/CD 설정 (ci-cd 커맨드)](#cicd-설정-ci-cd-커맨드)
 - [자동으로 수정되는 파일](#자동으로-수정되는-파일)
@@ -33,6 +34,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 | **iOS** | `Info.plist`의 앱 이름을 xcconfig 변수로 교체 |
 | **iOS** | `Podfile`에 빌드 모드 매핑 추가 |
 | **iOS** | 1024x1024 소스 이미지로 앱 아이콘 자동 생성 (flavor별 + locale별 지원) |
+| **iOS** | locale별 `InfoPlist.strings` 자동 생성 (앱 이름 + 권한 설명 localization) |
 | **Firebase** | `google-services.json` / `GoogleService-Info.plist` flavor별 자동 복사 |
 | **CI/CD** | Fastlane 파일 자동 생성 (Gemfile, Matchfile, Appfile, Fastfile + register lane) |
 | **CI/CD** | GitHub Actions 워크플로우 자동 생성 (ios-deploy.yml) |
@@ -144,10 +146,14 @@ easy_setup:
     dev:
       bundle_id: com.example.app.dev
       name: MyApp Dev
-      app_icon: assets/icons/dev_icon.png         # 선택사항: 1024x1024 소스 이미지
-      app_icon_localized:                          # 선택사항: locale별 아이콘
-        ja: assets/icons/dev_icon_ja.png
-        ko: assets/icons/dev_icon_ko.png
+      app_icon: assets/icons/dev_icon.png       # 선택사항: 1024x1024 소스 이미지
+      localized:                                 # 선택사항: flavor별 localization
+        ko:
+          app_icon: assets/icons/dev_icon_ko.png
+          app_name: 마이앱 Dev
+        ja:
+          app_icon: assets/icons/dev_icon_ja.png
+          app_name: マイアプリ Dev
     staging:
       bundle_id: com.example.app.staging
       name: MyApp Staging
@@ -155,9 +161,22 @@ easy_setup:
       bundle_id: com.example.app
       name: MyApp
       app_icon: assets/icons/prod_icon.png
+      localized:
+        ko:
+          app_name: 마이앱
+
+  permission:
+     NSCameraUsageDescription: "Camera access is required"
+     NSPhotoLibraryUsageDescription: "Photo library access is required"
+  localized_permission:                                     # 선택사항: 전역 localization (권한 등)
+    ko:
+      NSCameraUsageDescription: "카메라 접근이 필요합니다"
+    en:
+      NSCameraUsageDescription: "Camera access is required"
+      NSPhotoLibraryUsageDescription: "Photo library access is required"
 ```
 
-### 필드 설명
+### Flavor 필드 설명
 
 | 필드 | 필수 | 설명 | 예시 |
 |------|------|------|------|
@@ -166,10 +185,79 @@ easy_setup:
 | `version_code` | | 앱 버전 코드 (정수) | `42` |
 | `version_name` | | 앱 버전 이름 (문자열) | `1.0.0-dev` |
 | `app_icon` | | 1024x1024 소스 이미지 경로 (프로젝트 루트 기준 상대경로) | `assets/icons/dev_icon.png` |
-| `app_icon_localized` | | locale별 아이콘 소스 이미지 경로 맵 (iOS 18+ 지원) | 아래 [앱 아이콘](#앱-아이콘-자동-생성) 참조 |
+| `localized` | | flavor별 locale 설정 (아래 [Localization](#localization) 참조) | |
 | `signing` | | Android signing 설정 (`keystore`, `alias`) | |
 | `firebase` | | Firebase 설정 파일 경로 (`android`, `ios`) | |
 | `ios` | | iOS 전용 설정 (`team_id`, `provisioning_profile`, `code_sign_identity`, `entitlements`) | |
+
+---
+
+## Localization
+
+Localization 설정은 두 레벨로 나뉩니다:
+
+### 1. Flavor별 `localized` — 앱 아이콘, 앱 이름
+
+각 flavor 아래에 `localized` 섹션을 추가하여 locale별 앱 아이콘과 앱 이름을 설정합니다:
+
+```yaml
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.app.dev
+      name: MyApp Dev
+      app_icon: assets/icons/dev_icon.png
+      localized:
+        ko:
+          app_icon: assets/icons/dev_icon_ko.png   # locale별 앱 아이콘 (iOS 18+)
+          app_name: 마이앱 Dev                      # locale별 앱 이름
+        ja:
+          app_name: マイアプリ Dev
+```
+
+| 필드 | 설명 |
+|------|------|
+| `app_icon` | locale별 앱 아이콘 소스 이미지 경로 (1024x1024 PNG). `.lproj/` 서브디렉터리에 생성됨 |
+| `app_name` | locale별 앱 표시 이름. `InfoPlist.strings`의 `CFBundleDisplayName`으로 생성됨 |
+
+### 2. 전역 `localized` — 권한 설명 (permission)
+
+`easy_setup` 레벨에 `localized` 섹션을 추가하여 모든 flavor에 공통으로 적용되는 iOS 권한 설명을 설정합니다:
+
+```yaml
+easy_setup:
+  localized:
+    ko:
+      permission:
+        NSCameraUsageDescription: "카메라 접근이 필요합니다"
+        NSPhotoLibraryUsageDescription: "사진 접근이 필요합니다"
+    en:
+      permission:
+        NSCameraUsageDescription: "Camera access is required"
+        NSPhotoLibraryUsageDescription: "Photo library access is required"
+```
+
+| 필드 | 설명 |
+|------|------|
+| `permission` | iOS 권한 설명 문자열 맵. `InfoPlist.strings`에 해당 키-값 쌍으로 생성됨 |
+
+### 생성되는 파일
+
+flavor별 `app_name`과 전역 `permission`이 병합되어 locale별 `InfoPlist.strings` 파일이 생성됩니다:
+
+```
+ios/Runner/ko.lproj/InfoPlist.strings
+ios/Runner/ja.lproj/InfoPlist.strings
+ios/Runner/en.lproj/InfoPlist.strings
+```
+
+파일 내용 예시 (`ko.lproj/InfoPlist.strings`):
+
+```
+"CFBundleDisplayName" = "마이앱 Dev";
+"NSCameraUsageDescription" = "카메라 접근이 필요합니다";
+"NSPhotoLibraryUsageDescription" = "사진 접근이 필요합니다";
+```
 
 ---
 
@@ -208,7 +296,7 @@ ios/Runner/Assets.xcassets/AppIcon-{flavor}.appiconset/
 
 ### Locale별 아이콘 (iOS 18+)
 
-`app_icon_localized`를 설정하면 locale별 `.lproj/` 서브디렉터리에 별도 아이콘 세트를 생성합니다:
+flavor의 `localized` 섹션에 `app_icon`을 설정하면 locale별 `.lproj/` 서브디렉터리에 별도 아이콘 세트를 생성합니다:
 
 ```yaml
 easy_setup:
@@ -217,9 +305,11 @@ easy_setup:
       bundle_id: com.example.app.dev
       name: MyApp Dev
       app_icon: assets/icons/dev_icon.png
-      app_icon_localized:
-        ja: assets/icons/dev_icon_ja.png
-        ko: assets/icons/dev_icon_ko.png
+      localized:
+        ja:
+          app_icon: assets/icons/dev_icon_ja.png
+        ko:
+          app_icon: assets/icons/dev_icon_ko.png
 ```
 
 생성 구조:
@@ -424,7 +514,7 @@ Kotlin DSL(`.kts`)도 자동으로 인식하여 올바른 문법으로 생성합
 
 2. **앱 아이콘** (`ios/Runner/Assets.xcassets/`) — `app_icon` 설정 시
    - `AppIcon-{flavor}.appiconset/` 디렉터리에 15개 사이즈 PNG + Contents.json 생성
-   - locale별 `.lproj/` 서브디렉터리 생성 (`app_icon_localized` 설정 시)
+   - flavor의 `localized.{locale}.app_icon`이 있으면 `.lproj/` 서브디렉터리에 locale별 아이콘 생성
 
 3. **project.pbxproj** (`ios/Runner.xcodeproj/`)
    - 기존 Debug/Release/Profile 빌드 구성을 복제하여 flavor별 구성 생성
@@ -437,7 +527,12 @@ Kotlin DSL(`.kts`)도 자동으로 인식하여 올바른 문법으로 생성합
 5. **Info.plist** (`ios/Runner/`)
    - `CFBundleDisplayName` 값을 `$(APP_DISPLAY_NAME)`으로 교체
 
-6. **Podfile** (`ios/`)
+6. **InfoPlist.strings** (`ios/Runner/{locale}.lproj/`) — `localized` 설정 시
+   - flavor별 `app_name` → `CFBundleDisplayName` 키로 생성
+   - 전역 `permission` → 해당 권한 키로 생성
+   - 같은 locale에 대해 flavor의 app_name과 전역 permission이 병합됨
+
+7. **Podfile** (`ios/`)
    - `Debug-{flavor} => :debug`, `Release-{flavor} => :release` 등 매핑 추가
 
 ---
@@ -453,7 +548,7 @@ easy_setup/
 │   └── src/
 │       ├── exceptions.dart                # SetupException 정의
 │       ├── models/
-│       │   ├── flavor_config.dart         # FlavorConfig, EasySetupConfig 모델
+│       │   ├── flavor_config.dart         # FlavorConfig, EasySetupConfig, FlavorLocalizedConfig, GlobalLocalizedConfig
 │       │   └── ci_cd_config.dart          # CiCdConfig, CiCdIosConfig 등
 │       ├── utils/
 │       │   ├── project_finder.dart        # Flutter 프로젝트 경로 탐색
@@ -473,6 +568,7 @@ easy_setup/
 │       │   ├── pbxproj_modifier.dart      # project.pbxproj 수정 (가장 복잡)
 │       │   ├── scheme_generator.dart      # .xcscheme 생성
 │       │   ├── info_plist_modifier.dart   # Info.plist 수정
+│       │   ├── info_plist_strings_generator.dart  # {locale}.lproj/InfoPlist.strings 생성
 │       │   └── podfile_modifier.dart      # Podfile 수정
 │       ├── firebase/
 │       │   └── firebase_copier.dart       # google-services.json / GoogleService-Info.plist 복사
@@ -498,8 +594,9 @@ easy_setup/
 
 ### `FlavorCommand` — flavor 오케스트레이터
 - flavor 설정 과정을 순차적으로 실행합니다.
-- 프로젝트 루트 자동 탐지 → YAML 로드 → Android → iOS (xcconfig → Firebase → 앱 아이콘 → pbxproj → scheme → plist → Podfile).
+- 프로젝트 루트 자동 탐지 → YAML 로드 → Android → iOS (xcconfig → Firebase → 앱 아이콘 → pbxproj → scheme → plist → InfoPlist.strings → Podfile).
 - `app_icon`이 설정된 flavor에 대해 `AppIconGenerator`를 호출하여 아이콘을 자동 생성합니다.
+- flavor별 `localized`와 전역 `localized`를 병합하여 `InfoPlistStringsGenerator`로 `.strings` 파일을 생성합니다.
 
 ### `CiCdCommand` — CI/CD 오케스트레이터
 - CI/CD 파이프라인 설정을 순차적으로 실행합니다.
@@ -514,6 +611,11 @@ easy_setup/
 - locale별 소스가 있으면 `.lproj/` 서브디렉터리에 동일한 아이콘 세트를 생성합니다 (iOS 18+).
 - 덮어쓰기 방식으로 재실행 시에도 안전합니다 (idempotent).
 
+### `InfoPlistStringsGenerator` — iOS InfoPlist.strings 생성
+- flavor별 `localized` (app_name)과 전역 `localized` (permission)을 병합합니다.
+- locale별로 `ios/Runner/{locale}.lproj/InfoPlist.strings` 파일을 생성합니다.
+- `app_name` → `CFBundleDisplayName`, `permission` 키 → 해당 권한 키로 매핑됩니다.
+
 ### `FastfileGenerator` — Fastfile 생성 + lane 관리
 - `generate()`: 기본 Fastfile 골격 생성 (api_key, certificates, beta lane).
 - `addLane()`: 범용 lane 삽입 (마커 기반 idempotent strip-and-replace).
@@ -526,7 +628,8 @@ easy_setup/
 
 ### `FlavorConfig` / `EasySetupConfig` — 설정 모델
 - `easy_setup.yaml`을 파싱하여 `Map<String, FlavorConfig>`로 변환합니다.
-- `appIcon`, `appIconLocalized` 필드로 소스 이미지 경로를 관리합니다.
+- `FlavorConfig.localized`: flavor별 locale 설정 (`FlavorLocalizedConfig` — app_icon, app_name).
+- `EasySetupConfig.localized`: 전역 locale 설정 (`GlobalLocalizedConfig` — permission).
 - 파일 부재나 파싱 오류 시 친절한 에러 메시지를 제공합니다.
 
 ### `ProjectFinder` — 경로 유틸리티
@@ -575,6 +678,10 @@ easy_setup/
 
 ### Brace-Counting 파서
 정규식만으로는 중첩된 중괄호 구조를 안전하게 파싱할 수 없으므로, 깊이(depth)를 추적하는 전용 파서(`_findBlockEnd`)를 사용합니다.
+
+### 2단계 Localization
+- **Flavor별 `localized`**: 앱 아이콘, 앱 이름 등 flavor에 따라 달라질 수 있는 설정
+- **전역 `localized`**: iOS 권한 설명 등 모든 flavor에 공통으로 적용되는 설정
 
 ### Dry-Run 모드
 `--dry-run` 플래그로 실제 파일을 변경하지 않고 어떤 작업이 수행될지 미리 확인할 수 있습니다.

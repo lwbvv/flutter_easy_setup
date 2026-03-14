@@ -3,6 +3,7 @@ import '../exceptions.dart';
 import '../firebase/firebase_copier.dart';
 import '../ios/app_icon_generator.dart';
 import '../ios/info_plist_modifier.dart';
+import '../ios/info_plist_strings_generator.dart';
 import '../ios/pbxproj_modifier.dart';
 import '../ios/podfile_modifier.dart';
 import '../ios/scheme_generator.dart';
@@ -97,12 +98,23 @@ class FlavorCommand {
     for (final entry in config.flavors.entries) {
       if (entry.value.appIcon != null) {
         print('\n--- iOS App Icon (${entry.key}) ---');
+        // flavor.localized에서 locale별 app_icon 경로를 추출
+        Map<String, String>? localizedIcons;
+        if (entry.value.localized != null) {
+          localizedIcons = <String, String>{};
+          for (final locEntry in entry.value.localized!.entries) {
+            if (locEntry.value.appIcon != null) {
+              localizedIcons[locEntry.key] = locEntry.value.appIcon!;
+            }
+          }
+          if (localizedIcons.isEmpty) localizedIcons = null;
+        }
         AppIconGenerator.generate(
           root,
           assetCatalogDir,
           entry.key,
           entry.value.appIcon!,
-          appIconLocalized: entry.value.appIconLocalized,
+          appIconLocalized: localizedIcons,
           dryRun: dryRun,
         );
       }
@@ -134,6 +146,32 @@ class FlavorCommand {
     print('\n--- iOS Info.plist ---');
     final plistPath = ProjectFinder.iosInfoPlistPath(root);
     InfoPlistModifier.modify(plistPath, dryRun: dryRun);
+
+    // 7.5단계: iOS — localized 설정으로 InfoPlist.strings 생성
+    //          flavor별 app_name + 전역 permission을 병합
+    {
+      // 모든 flavor의 localized를 병합 (같은 locale에 여러 flavor가
+      // app_name을 정의하면 마지막 flavor의 값이 사용됨)
+      final mergedFlavorLocalized = <String, FlavorLocalizedConfig>{};
+      for (final entry in config.flavors.entries) {
+        final flavorLoc = entry.value.localized;
+        if (flavorLoc != null) {
+          for (final locEntry in flavorLoc.entries) {
+            mergedFlavorLocalized[locEntry.key] = locEntry.value;
+          }
+        }
+      }
+      final globalLoc = config.localized;
+      if (mergedFlavorLocalized.isNotEmpty || globalLoc != null) {
+        InfoPlistStringsGenerator.generate(
+          root,
+          flavorLocalized:
+              mergedFlavorLocalized.isNotEmpty ? mergedFlavorLocalized : null,
+          globalLocalized: globalLoc,
+          dryRun: dryRun,
+        );
+      }
+    }
 
     // 8단계: iOS — Podfile에 flavor별 빌드 모드 매핑 추가
     print('\n--- iOS Podfile ---');

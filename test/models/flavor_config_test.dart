@@ -35,9 +35,15 @@ void main() {
         'version_code': 42,
         'version_name': '1.0.0-dev',
         'app_icon': 'assets/icons/dev_icon.png',
-        'app_icon_localized': {
-          'ja': 'assets/icons/dev_icon_ja.png',
-          'ko': 'assets/icons/dev_icon_ko.png',
+        'localized': {
+          'ja': {
+            'app_icon': 'assets/icons/dev_icon_ja.png',
+            'app_name': 'MyApp Dev JA',
+          },
+          'ko': {
+            'app_icon': 'assets/icons/dev_icon_ko.png',
+            'app_name': '마이앱 Dev',
+          },
         },
         'signing': {
           'keystore': 'keys/dev.keystore',
@@ -57,9 +63,11 @@ void main() {
       expect(config.versionCode, 42);
       expect(config.versionName, '1.0.0-dev');
       expect(config.appIcon, 'assets/icons/dev_icon.png');
-      expect(config.appIconLocalized, isNotNull);
-      expect(config.appIconLocalized!['ja'], 'assets/icons/dev_icon_ja.png');
-      expect(config.appIconLocalized!['ko'], 'assets/icons/dev_icon_ko.png');
+      expect(config.localized, isNotNull);
+      expect(config.localized!['ja']!.appIcon, 'assets/icons/dev_icon_ja.png');
+      expect(config.localized!['ja']!.appName, 'MyApp Dev JA');
+      expect(config.localized!['ko']!.appIcon, 'assets/icons/dev_icon_ko.png');
+      expect(config.localized!['ko']!.appName, '마이앱 Dev');
       expect(config.signing, isNotNull);
       expect(config.signing!.keystore, 'keys/dev.keystore');
       expect(config.signing!.alias, 'dev-key');
@@ -84,17 +92,30 @@ void main() {
       expect(config.firebase, isNull);
       expect(config.ios, isNull);
       expect(config.appIcon, isNull);
-      expect(config.appIconLocalized, isNull);
+      expect(config.localized, isNull);
     });
 
-    test('parses app_icon without app_icon_localized', () {
+    test('parses app_icon without localized', () {
       final config = FlavorConfig.fromYaml({
         'bundle_id': 'com.example.app',
         'name': 'MyApp',
         'app_icon': 'assets/icons/icon.png',
       });
       expect(config.appIcon, 'assets/icons/icon.png');
-      expect(config.appIconLocalized, isNull);
+      expect(config.localized, isNull);
+    });
+
+    test('parses localized with only app_name', () {
+      final config = FlavorConfig.fromYaml({
+        'bundle_id': 'com.example.app',
+        'name': 'MyApp',
+        'localized': {
+          'ko': {'app_name': '마이앱'},
+        },
+      });
+      expect(config.localized, isNotNull);
+      expect(config.localized!['ko']!.appName, '마이앱');
+      expect(config.localized!['ko']!.appIcon, isNull);
     });
   });
 
@@ -186,6 +207,52 @@ void main() {
       expect(config.codeSignIdentity, isNull);
       expect(config.provisioningProfile, isNull);
       expect(config.entitlements, isNull);
+    });
+  });
+
+  group('FlavorLocalizedConfig.fromYaml', () {
+    test('parses all fields', () {
+      final config = FlavorLocalizedConfig.fromYaml({
+        'app_icon': 'assets/icons/icon_ja.png',
+        'app_name': '마이앱',
+      });
+      expect(config.appIcon, 'assets/icons/icon_ja.png');
+      expect(config.appName, '마이앱');
+    });
+
+    test('all fields are optional', () {
+      final config = FlavorLocalizedConfig.fromYaml({});
+      expect(config.appIcon, isNull);
+      expect(config.appName, isNull);
+    });
+
+    test('parses partial fields', () {
+      final config = FlavorLocalizedConfig.fromYaml({
+        'app_name': 'テスト',
+      });
+      expect(config.appName, 'テスト');
+      expect(config.appIcon, isNull);
+    });
+  });
+
+  group('GlobalLocalizedConfig.fromYaml', () {
+    test('parses permission map', () {
+      final config = GlobalLocalizedConfig.fromYaml({
+        'permission': {
+          'NSCameraUsageDescription': 'Camera access needed',
+          'NSPhotoLibraryUsageDescription': 'Photo library access needed',
+        },
+      });
+      expect(config.permission, isNotNull);
+      expect(config.permission!['NSCameraUsageDescription'],
+          'Camera access needed');
+      expect(config.permission!['NSPhotoLibraryUsageDescription'],
+          'Photo library access needed');
+    });
+
+    test('all fields are optional', () {
+      final config = GlobalLocalizedConfig.fromYaml({});
+      expect(config.permission, isNull);
     });
   });
 
@@ -302,8 +369,10 @@ easy_setup:
       version_code: 1
       version_name: "1.0.0-dev"
       app_icon: assets/icons/dev_icon.png
-      app_icon_localized:
-        ja: assets/icons/dev_icon_ja.png
+      localized:
+        ja:
+          app_icon: assets/icons/dev_icon_ja.png
+          app_name: MyApp Dev JA
       signing:
         keystore: keys/dev.keystore
         alias: dev-key
@@ -312,6 +381,11 @@ easy_setup:
         ios: config/dev/GoogleService-Info.plist
       ios:
         team_id: "ABCDEF1234"
+
+  localized:
+    ko:
+      permission:
+        NSCameraUsageDescription: "카메라 접근이 필요합니다"
 ''');
 
       final config = EasySetupConfig.fromFile(yamlFile.path);
@@ -319,11 +393,16 @@ easy_setup:
       expect(dev.versionCode, 1);
       expect(dev.versionName, '1.0.0-dev');
       expect(dev.appIcon, 'assets/icons/dev_icon.png');
-      expect(dev.appIconLocalized, isNotNull);
-      expect(dev.appIconLocalized!['ja'], 'assets/icons/dev_icon_ja.png');
+      expect(dev.localized, isNotNull);
+      expect(dev.localized!['ja']!.appIcon, 'assets/icons/dev_icon_ja.png');
+      expect(dev.localized!['ja']!.appName, 'MyApp Dev JA');
       expect(dev.signing!.keystore, 'keys/dev.keystore');
       expect(dev.firebase!.android, 'config/dev/google-services.json');
       expect(dev.ios!.teamId, 'ABCDEF1234');
+      // 전역 localized
+      expect(config.localized, isNotNull);
+      expect(config.localized!['ko']!.permission!['NSCameraUsageDescription'],
+          '카메라 접근이 필요합니다');
     });
   });
 }
