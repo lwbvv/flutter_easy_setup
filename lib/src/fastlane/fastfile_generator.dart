@@ -12,21 +12,20 @@ import '../exceptions.dart';
 class FastfileGenerator {
   /// [outputDir]에 Fastfile을 생성합니다 (기본 골격 + 내장 lane).
   ///
-  /// [flavorNames]: 사용 가능한 flavor 이름 목록
-  /// [buildConfigs]: Xcode 프로젝트의 실제 빌드 구성 목록 (이름 + bundle ID)
+  /// [flavorBundleIds]: flavor 이름 → bundle ID 매핑
   static void generate(
     String outputDir,
-    List<String> flavorNames, {
-    List<({String name, String bundleId})> buildConfigs = const [],
+    Map<String, String> flavorBundleIds, {
     bool dryRun = false,
   }) {
     final path = p.join(outputDir, 'Fastfile');
+    final flavorNames = flavorBundleIds.keys.toList();
 
     final defaultFlavor = flavorNames.contains('prod')
         ? 'prod'
         : flavorNames.first;
 
-    // sync_certs lane: 실제 빌드 구성에 맞는 서명 설정 생성
+    // sync_certs lane: flavor별 서명 설정 생성
     final syncCerts = StringBuffer();
     syncCerts.writeln(
         '    # readonly: true를 주면 기존에 만들어진 걸 가져오기만 합니다 (팀원용)');
@@ -40,21 +39,29 @@ class FastfileGenerator {
     syncCerts.writeln(
         '    # Xcode 프로젝트 서명 설정을 업데이트합니다.');
 
-    for (final config in buildConfigs) {
-      final isDebug = config.name.startsWith('Debug');
-      final profileType = isDebug ? 'Development' : 'AppStore';
-      final identity = isDebug ? 'Apple Development' : 'Apple Distribution';
+    for (final entry in flavorBundleIds.entries) {
+      final flavor = entry.key;
+      final bundleId = entry.value;
 
       syncCerts.writeln();
-      syncCerts.writeln('    update_code_signing_settings(');
-      syncCerts.writeln('      use_automatic_signing: false,');
-      syncCerts.writeln('      path: "../../ios/Runner.xcodeproj",');
-      syncCerts.writeln('      bundle_identifier: "${config.bundleId}",');
-      syncCerts.writeln('      build_configurations: "${config.name}",');
-      syncCerts.writeln(
-          '      profile_name: "match $profileType ${config.bundleId}",');
-      syncCerts.writeln('      code_sign_identity: "$identity"');
-      syncCerts.writeln('    )');
+      syncCerts.writeln('    bundle_id = "$bundleId"');
+
+      for (final buildType in ['Debug', 'Release', 'Profile']) {
+        final isDebug = buildType == 'Debug';
+        final profileType = isDebug ? 'Development' : 'AppStore';
+        final identity = isDebug ? 'Apple Development' : 'Apple Distribution';
+
+        syncCerts.writeln();
+        syncCerts.writeln('    update_code_signing_settings(');
+        syncCerts.writeln('      use_automatic_signing: false,');
+        syncCerts.writeln('      path: "../../ios/Runner.xcodeproj",');
+        syncCerts.writeln('      bundle_identifier: bundle_id,');
+        syncCerts.writeln('      build_configurations: "$buildType-$flavor",');
+        syncCerts.writeln(
+            '      profile_name: "match $profileType \#{bundle_id}",');
+        syncCerts.writeln('      code_sign_identity: "$identity"');
+        syncCerts.writeln('    )');
+      }
     }
 
     syncCerts.writeln();

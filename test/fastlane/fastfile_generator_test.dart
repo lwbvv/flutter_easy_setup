@@ -17,7 +17,7 @@ void main() {
 
   group('FastfileGenerator', () {
     test('creates Fastfile referencing ENV variables', () {
-      FastfileGenerator.generate(tempDir.path, ['dev', 'prod']);
+      FastfileGenerator.generate(tempDir.path, {'dev': 'com.app.dev', 'prod': 'com.app'});
 
       final file = File(p.join(tempDir.path, 'Fastfile'));
       expect(file.existsSync(), isTrue);
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('defaults to prod flavor when available', () {
-      FastfileGenerator.generate(tempDir.path, ['dev', 'prod']);
+      FastfileGenerator.generate(tempDir.path, {'dev': 'com.app.dev', 'prod': 'com.app'});
 
       final content =
           File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
@@ -41,7 +41,7 @@ void main() {
     });
 
     test('defaults to first flavor when prod is not available', () {
-      FastfileGenerator.generate(tempDir.path, ['staging', 'dev']);
+      FastfileGenerator.generate(tempDir.path, {'staging': 'com.app.staging', 'dev': 'com.app.dev'});
 
       final content =
           File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
@@ -49,18 +49,18 @@ void main() {
     });
 
     test('overwrites existing file with correct content', () {
-      FastfileGenerator.generate(tempDir.path, ['prod']);
+      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
       final file = File(p.join(tempDir.path, 'Fastfile'));
       final afterFirst = file.readAsStringSync();
 
       file.writeAsStringSync('CUSTOM');
 
-      FastfileGenerator.generate(tempDir.path, ['prod']);
+      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
       expect(file.readAsStringSync(), afterFirst);
     });
 
     test('beta lane includes increment_build_number_in_pubspec', () {
-      FastfileGenerator.generate(tempDir.path, ['prod']);
+      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
 
       final content =
           File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
@@ -73,26 +73,16 @@ void main() {
       expect(incrementIndex, lessThan(buildIndex));
     });
 
-    test('generates signing settings from build configs', () {
-      final buildConfigs = [
-        (name: 'Debug-dev', bundleId: 'com.app.dev'),
-        (name: 'Release-dev', bundleId: 'com.app.dev'),
-        (name: 'Profile-dev', bundleId: 'com.app.dev'),
-        (name: 'Debug-prod', bundleId: 'com.app'),
-        (name: 'Release-prod', bundleId: 'com.app'),
-        (name: 'Profile-prod', bundleId: 'com.app'),
-      ];
-
-      FastfileGenerator.generate(
-        tempDir.path,
-        ['dev', 'prod'],
-        buildConfigs: buildConfigs,
-      );
+    test('generates signing settings from flavor bundle IDs', () {
+      FastfileGenerator.generate(tempDir.path, {
+        'dev': 'com.app.dev',
+        'prod': 'com.app',
+      });
 
       final content =
           File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
 
-      // 각 빌드 구성에 대한 update_code_signing_settings 호출
+      // 각 flavor에 대해 Debug/Release/Profile 구성 생성
       expect(content, contains('build_configurations: "Debug-dev"'));
       expect(content, contains('build_configurations: "Release-dev"'));
       expect(content, contains('build_configurations: "Profile-dev"'));
@@ -100,33 +90,24 @@ void main() {
       expect(content, contains('build_configurations: "Release-prod"'));
       expect(content, contains('build_configurations: "Profile-prod"'));
 
-      // bundle ID
-      expect(content, contains('bundle_identifier: "com.app.dev"'));
-      expect(content, contains('bundle_identifier: "com.app"'));
+      // bundle_id 변수 할당
+      expect(content, contains('bundle_id = "com.app.dev"'));
+      expect(content, contains('bundle_id = "com.app"'));
 
-      // Debug → Development, Release/Profile → AppStore
-      expect(
-          content, contains('profile_name: "match Development com.app.dev"'));
-      expect(content, contains('profile_name: "match AppStore com.app.dev"'));
-      expect(content, contains('profile_name: "match AppStore com.app"'));
+      // bundle_identifier는 변수 참조
+      expect(content, contains('bundle_identifier: bundle_id,'));
+
+      // profile_name은 Ruby 문자열 보간 사용
+      expect(content, contains('profile_name: "match Development \#{bundle_id}"'));
+      expect(content, contains('profile_name: "match AppStore \#{bundle_id}"'));
 
       // Debug → Apple Development, Release/Profile → Apple Distribution
       expect(content, contains('code_sign_identity: "Apple Development"'));
       expect(content, contains('code_sign_identity: "Apple Distribution"'));
     });
 
-    test('sync_certs works without build configs', () {
-      FastfileGenerator.generate(tempDir.path, ['prod']);
-
-      final content =
-          File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
-      expect(content, contains('lane :sync_certs'));
-      // update_code_signing_settings 호출이 없어야 함
-      expect(content, isNot(contains('update_code_signing_settings')));
-    });
-
     test('does not create file in dry-run mode', () {
-      FastfileGenerator.generate(tempDir.path, ['prod'], dryRun: true);
+      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'}, dryRun: true);
 
       expect(
         File(p.join(tempDir.path, 'Fastfile')).existsSync(),
