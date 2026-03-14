@@ -174,19 +174,49 @@ class FlavorCommand {
     InfoPlistModifier.modify(plistPath, dryRun: dryRun);
 
     // 7.5단계: iOS — localized 설정으로 InfoPlist.strings 생성
-    //          flavor별 app_name + 기본/locale별 permission을 병합
+    //          모든 flavor의 localized를 수집하되, 같은 locale에서 충돌이 있으면
+    //          경고를 출력하고 첫 번째 flavor의 값만 사용
     {
-      // 모든 flavor의 localized를 병합 (같은 locale에 여러 flavor가
-      // app_name을 정의하면 마지막 flavor의 값이 사용됨)
       final mergedFlavorLocalized = <String, FlavorLocalizedConfig>{};
+      final localeConflicts = <String, List<String>>{};
+
       for (final entry in config.flavors.entries) {
         final flavorLoc = entry.value.localized;
         if (flavorLoc != null) {
           for (final locEntry in flavorLoc.entries) {
-            mergedFlavorLocalized[locEntry.key] = locEntry.value;
+            final locale = locEntry.key;
+            final newConfig = locEntry.value;
+
+            if (mergedFlavorLocalized.containsKey(locale)) {
+              // 같은 locale에 여러 flavor가 app_name을 정의했다면 충돌
+              final existing = mergedFlavorLocalized[locale];
+              if (existing?.appName != newConfig.appName) {
+                if (!localeConflicts.containsKey(locale)) {
+                  localeConflicts[locale] = [];
+                  // 첫 flavor의 app_name 기록
+                  localeConflicts[locale]!
+                      .add('${existing?.appName} (from first flavor)');
+                }
+                localeConflicts[locale]!.add('${newConfig.appName} (from ${entry.key})');
+              }
+            } else {
+              mergedFlavorLocalized[locale] = newConfig;
+            }
           }
         }
       }
+
+      // 충돌이 있으면 경고 출력
+      if (localeConflicts.isNotEmpty) {
+        print('\n⚠️  WARNING: Multiple flavors define different app_name for same locale:');
+        for (final entry in localeConflicts.entries) {
+          print('  locale "${ entry.key}": ${entry.value.join(', ')}');
+        }
+        print('  → Using the first flavor\'s value for InfoPlist.strings');
+        print('  → To avoid conflicts, keep localized app_name consistent across flavors,');
+        print('     or define it in only one flavor.');
+      }
+
       if (mergedFlavorLocalized.isNotEmpty ||
           config.permission != null ||
           config.localizedPermission != null) {

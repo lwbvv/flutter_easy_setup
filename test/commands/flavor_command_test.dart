@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:easy_setup/easy_setup.dart';
@@ -395,6 +396,52 @@ void main() {
         root.path, 'android', 'app', 'src', 'dev', 'google-services.json',
       ));
       expect(androidDest.existsSync(), isFalse);
+    });
+
+    test('detects and warns about localized app_name conflicts across flavors', () {
+      // Multiple flavors with conflicting app_names for the same locale
+      final conflictingYaml = '''
+easy_setup:
+  flavors:
+    dev:
+      bundle_id: com.example.dev
+      name: Test Dev
+      localized:
+        ko:
+          app_name: 개발 앱
+    prod:
+      bundle_id: com.example.prod
+      name: Test Prod
+      localized:
+        ko:
+          app_name: 상용 앱
+''';
+
+      final root = _createFlutterProject(tempDir, yamlContent: conflictingYaml);
+
+      // Capture print output
+      final capturedOutput = <String>[];
+      final originalPrint = print;
+      Zone.current.fork(specification: ZoneSpecification(
+        print: (self, parent, zone, msg) {
+          capturedOutput.add(msg);
+          parent.print(zone, msg);
+        },
+      )).run(() {
+        FlavorCommand.run(projectRoot: root.path);
+      });
+
+      // Should warn about conflict
+      expect(capturedOutput.any((msg) => msg.contains('WARNING')), isTrue);
+      expect(capturedOutput.any((msg) => msg.contains('Multiple flavors')), isTrue);
+      expect(capturedOutput.any((msg) => msg.contains('ko')), isTrue);
+
+      // The first flavor's value should be used in the InfoPlist.strings
+      final koStringsPath =
+          p.join(root.path, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
+      final koContent = File(koStringsPath).readAsStringSync();
+      // Should contain dev's app_name since it was first
+      expect(koContent, contains('개발 앱'));
     });
   });
 }

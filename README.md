@@ -33,7 +33,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 | **iOS** | flavor별 `.xcscheme` 파일 생성 |
 | **iOS** | `Info.plist`의 앱 이름을 xcconfig 변수로 교체 |
 | **iOS** | `Podfile`에 빌드 모드 매핑 추가 |
-| **iOS** | 1024x1024 소스 이미지로 앱 아이콘 자동 생성 (flavor별 + locale별 지원) |
+| **iOS** | 1024x1024 소스 이미지로 앱 아이콘 자동 생성 (flavor별 지원) |
 | **iOS** | locale별 `InfoPlist.strings` 자동 생성 (앱 이름 + 권한 설명 localization) |
 | **Firebase** | `google-services.json` / `GoogleService-Info.plist` flavor별 자동 복사 |
 | **CI/CD** | Fastlane 파일 자동 생성 (Gemfile, Matchfile, Appfile, Fastfile + register lane) |
@@ -149,10 +149,8 @@ easy_setup:
       app_icon: assets/icons/dev_icon.png       # 선택사항: 1024x1024 소스 이미지
       localized:                                 # 선택사항: flavor별 localization
         ko:
-          app_icon: assets/icons/dev_icon_ko.png
           app_name: 마이앱 Dev
         ja:
-          app_icon: assets/icons/dev_icon_ja.png
           app_name: マイアプリ Dev
     staging:
       bundle_id: com.example.app.staging
@@ -206,9 +204,9 @@ easy_setup:
   localizations: [ko, en, zh-HK]
 ```
 
-### 2. Flavor별 `localized` — 앱 아이콘, 앱 이름
+### 2. Flavor별 `localized` — 앱 이름
 
-각 flavor 아래에 `localized` 섹션을 추가하여 locale별 앱 아이콘과 앱 이름을 설정합니다:
+각 flavor 아래에 `localized` 섹션을 추가하여 locale별 앱 이름을 설정합니다:
 
 ```yaml
 easy_setup:
@@ -219,7 +217,6 @@ easy_setup:
       app_icon: assets/icons/dev_icon.png
       localized:
         ko:
-          app_icon: assets/icons/dev_icon_ko.png   # locale별 앱 아이콘 (iOS 18+)
           app_name: 마이앱 Dev                      # locale별 앱 이름
         ja:
           app_name: マイアプリ Dev
@@ -227,7 +224,6 @@ easy_setup:
 
 | 필드 | 설명 |
 |------|------|
-| `app_icon` | locale별 앱 아이콘 소스 이미지 경로 (1024x1024 PNG). `.lproj/` 서브디렉터리에 생성됨 |
 | `app_name` | locale별 앱 표시 이름. `InfoPlist.strings`의 `CFBundleDisplayName`으로 생성됨 |
 
 ### 3. `permission` / `localized_permission` — iOS 권한 설명
@@ -252,6 +248,52 @@ easy_setup:
 |------|------|
 | `permission` | 기본 iOS 권한 설명. `Base.lproj/InfoPlist.strings`에 생성됨 |
 | `localized_permission` | locale별 iOS 권한 설명. 각 `{locale}.lproj/InfoPlist.strings`에 생성됨 |
+
+### ⚠️ 중요: Flavor별 Localized App Name의 제약
+
+iOS의 구조상 제약으로 **모든 flavor가 같은 locale에서 동일한 app_name을 가져야 합니다**.
+
+❌ **잘못된 예시** (같은 locale에 다른 app_name):
+```yaml
+flavors:
+  dev:
+    name: MyApp Dev
+    localized:
+      ko: app_name: "마이앱 Dev"
+  prod:
+    name: MyApp
+    localized:
+      ko: app_name: "마이앱"  # ← 같은 locale에 다른 값 = 충돌!
+```
+
+이 경우 경고 메시지가 표시되고, **첫 번째 flavor의 값만 사용**됩니다.
+
+✅ **올바른 예시**:
+```yaml
+flavors:
+  dev:
+    name: MyApp Dev
+    localized:
+      ko: app_name: "마이앱 Dev"
+      ja: app_name: "マイアプリ Dev"
+  prod:
+    name: MyApp
+    localized:
+      ko: app_name: "마이앱 Dev"        # ← dev와 동일
+      ja: app_name: "マイアプリ Dev"    # ← dev와 동일
+```
+
+또는 **한 flavor만 localized를 정의**:
+```yaml
+flavors:
+  dev:
+    name: MyApp Dev
+    localized:
+      ko: app_name: "마이앱 Dev"
+  prod:
+    name: MyApp
+    # localized 정의 안 함 → ko.lproj에서 dev의 값 사용
+```
 
 ### 생성되는 파일
 
@@ -305,40 +347,6 @@ ios/Runner/Assets.xcassets/AppIcon-{flavor}.appiconset/
   Icon-App-83.5x83.5@2x.png  (167px)
   Icon-App-1024x1024@1x.png  (1024px)
 ```
-
-### Locale별 아이콘 (iOS 18+)
-
-flavor의 `localized` 섹션에 `app_icon`을 설정하면 locale별 `.lproj/` 서브디렉터리에 별도 아이콘 세트를 생성합니다:
-
-```yaml
-easy_setup:
-  flavors:
-    dev:
-      bundle_id: com.example.app.dev
-      name: MyApp Dev
-      app_icon: assets/icons/dev_icon.png
-      localized:
-        ja:
-          app_icon: assets/icons/dev_icon_ja.png
-        ko:
-          app_icon: assets/icons/dev_icon_ko.png
-```
-
-생성 구조:
-
-```
-AppIcon-dev.appiconset/
-  Contents.json              # 기본 아이콘
-  Icon-App-*.png
-  ja.lproj/                  # 일본어 아이콘
-    Contents.json
-    Icon-App-*.png
-  ko.lproj/                  # 한국어 아이콘
-    Contents.json
-    Icon-App-*.png
-```
-
-> iOS 18+ / Xcode 16+에서 지원됩니다. 이전 버전에서는 기본 아이콘만 표시됩니다.
 
 ---
 
@@ -526,7 +534,6 @@ Kotlin DSL(`.kts`)도 자동으로 인식하여 올바른 문법으로 생성합
 
 2. **앱 아이콘** (`ios/Runner/Assets.xcassets/`) — `app_icon` 설정 시
    - `AppIcon-{flavor}.appiconset/` 디렉터리에 15개 사이즈 PNG + Contents.json 생성
-   - flavor의 `localized.{locale}.app_icon`이 있으면 `.lproj/` 서브디렉터리에 locale별 아이콘 생성
 
 3. **project.pbxproj** (`ios/Runner.xcodeproj/`)
    - 기존 Debug/Release/Profile 빌드 구성을 복제하여 flavor별 구성 생성
@@ -607,8 +614,8 @@ easy_setup/
 ### `FlavorCommand` — flavor 오케스트레이터
 - flavor 설정 과정을 순차적으로 실행합니다.
 - 프로젝트 루트 자동 탐지 → YAML 로드 → Android → iOS (xcconfig → Firebase → 앱 아이콘 → pbxproj → scheme → plist → InfoPlist.strings → Podfile).
-- `app_icon`이 설정된 flavor에 대해 `AppIconGenerator`를 호출하여 아이콘을 자동 생성합니다.
-- flavor별 `localized`와 전역 `localized`를 병합하여 `InfoPlistStringsGenerator`로 `.strings` 파일을 생성합니다.
+- `app_icon`이 설정된 flavor에 대해 `AppIconGenerator`를 호출하여 flavor별 아이콘을 자동 생성합니다.
+- flavor별 `localized` (app_name)과 전역 `localized_permission` (권한)을 병합하여 `InfoPlistStringsGenerator`로 `.strings` 파일을 생성합니다.
 
 ### `CiCdCommand` — CI/CD 오케스트레이터
 - CI/CD 파이프라인 설정을 순차적으로 실행합니다.
@@ -618,15 +625,14 @@ easy_setup/
 - `ci_cd.metadata` 설정이 있으면 메타데이터 파일을 생성하고 `update_metadata` lane을 추가합니다.
 
 ### `AppIconGenerator` — iOS 앱 아이콘 생성
-- 1024x1024 소스 PNG를 15개 고유 사이즈로 리사이즈합니다 (`image` 패키지 사용).
+- flavor별로 1024x1024 소스 PNG를 15개 고유 사이즈로 리사이즈합니다 (`image` 패키지 사용).
 - `Contents.json` (19개 엔트리)을 생성하여 iPhone/iPad/App Store용 아이콘을 매핑합니다.
-- locale별 소스가 있으면 `.lproj/` 서브디렉터리에 동일한 아이콘 세트를 생성합니다 (iOS 18+).
 - 덮어쓰기 방식으로 재실행 시에도 안전합니다 (idempotent).
 
 ### `InfoPlistStringsGenerator` — iOS InfoPlist.strings 생성
-- flavor별 `localized` (app_name)과 전역 `localized` (permission)을 병합합니다.
+- flavor별 `localized` (app_name)과 전역 `localized_permission` (권한)을 병합합니다.
 - locale별로 `ios/Runner/{locale}.lproj/InfoPlist.strings` 파일을 생성합니다.
-- `app_name` → `CFBundleDisplayName`, `permission` 키 → 해당 권한 키로 매핑됩니다.
+- `app_name` → `CFBundleDisplayName`, permission 키 → 해당 권한 키로 매핑됩니다.
 
 ### `FastfileGenerator` — Fastfile 생성 + lane 관리
 - `generate()`: 기본 Fastfile 골격 생성 (api_key, certificates, beta lane).
@@ -640,7 +646,7 @@ easy_setup/
 
 ### `FlavorConfig` / `EasySetupConfig` — 설정 모델
 - `easy_setup.yaml`을 파싱하여 `Map<String, FlavorConfig>`로 변환합니다.
-- `FlavorConfig.localized`: flavor별 locale 설정 (`FlavorLocalizedConfig` — app_icon, app_name).
+- `FlavorConfig.localized`: flavor별 locale 설정 (`FlavorLocalizedConfig` — app_name).
 - `EasySetupConfig.localizations`: Xcode knownRegions에 등록할 언어 목록.
 - `EasySetupConfig.permission`: 기본 iOS 권한 설명 (Base.lproj용).
 - `EasySetupConfig.localizedPermission`: locale별 iOS 권한 설명.
