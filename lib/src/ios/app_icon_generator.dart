@@ -86,6 +86,47 @@ class AppIconGenerator {
     }
   }
 
+  /// [assetCatalogDir]에서 사용하지 않는 AppIcon-*.appiconset 디렉터리를 삭제합니다.
+  ///
+  /// [activeFlavors]: 현재 활성 flavor 목록 (이들의 앱 아이콘만 보존)
+  /// dry-run 모드에서는 삭제할 디렉터리를 출력만 합니다.
+  static void cleanupUnusedAppIcons(
+    String assetCatalogDir,
+    Set<String> activeFlavors, {
+    bool dryRun = false,
+  }) {
+    final assetDir = Directory(assetCatalogDir);
+    if (!assetDir.existsSync()) return;
+
+    try {
+      for (final entity in assetDir.listSync()) {
+        if (entity is! Directory) continue;
+        final dirName = p.basename(entity.path);
+
+        // AppIcon-{flavor}.appiconset 패턴만 대상
+        if (!dirName.startsWith('AppIcon-') || !dirName.endsWith('.appiconset')) {
+          continue;
+        }
+
+        // 활성 flavor 목록에서 추출
+        final flavor =
+            dirName.replaceFirst('AppIcon-', '').replaceFirst('.appiconset', '');
+
+        // 현재 설정된 flavor가 아니면 삭제
+        if (!activeFlavors.contains(flavor)) {
+          if (dryRun) {
+            print('  [dry-run] Would delete: ${entity.path}');
+          } else {
+            entity.deleteSync(recursive: true);
+            print('  Deleted unused app icon: ${entity.path}');
+          }
+        }
+      }
+    } catch (e) {
+      print('  Warning: Failed to cleanup app icons: $e');
+    }
+  }
+
   /// 소스 이미지를 로드하고 15개 사이즈 PNG + Contents.json을 생성합니다.
   static void _generateIconSet(
     String sourcePath,

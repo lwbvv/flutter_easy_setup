@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../android/build_gradle_modifier.dart';
 import '../exceptions.dart';
 import '../firebase/firebase_copier.dart';
@@ -95,6 +97,26 @@ class FlavorCommand {
 
     // 4.6단계: iOS — app_icon이 있는 flavor에 대해 앱 아이콘 자동 생성
     final assetCatalogDir = ProjectFinder.iosAssetCatalogDir(root);
+
+    // 현재 설정된 flavor 목록 추출 (앱 아이콘이 있는 flavor)
+    final activeFlavorsWithIcon = <String>{};
+    for (final entry in config.flavors.entries) {
+      if (entry.value.appIcon != null) {
+        activeFlavorsWithIcon.add(entry.key);
+      }
+    }
+
+    // 사용하지 않는 앱 아이콘 정리 (flavor 변경 시 이전 아이콘 제거)
+    if (activeFlavorsWithIcon.isNotEmpty ||
+        Directory(assetCatalogDir).existsSync()) {
+      AppIconGenerator.cleanupUnusedAppIcons(
+        assetCatalogDir,
+        activeFlavorsWithIcon,
+        dryRun: dryRun,
+      );
+    }
+
+    // 각 flavor의 앱 아이콘 생성
     for (final entry in config.flavors.entries) {
       if (entry.value.appIcon != null) {
         print('\n--- iOS App Icon (${entry.key}) ---');
