@@ -61,17 +61,14 @@ class IosFlavorConfig {
 
 /// Flavor별 locale 설정을 담는 모델 클래스입니다.
 ///
-/// [appIcon]: locale별 앱 아이콘 소스 이미지 경로 (1024x1024 PNG)
 /// [appName]: locale별 앱 표시 이름
 class FlavorLocalizedConfig {
-  final String? appIcon;
   final String? appName;
 
-  const FlavorLocalizedConfig({this.appIcon, this.appName});
+  const FlavorLocalizedConfig({this.appName});
 
   factory FlavorLocalizedConfig.fromYaml(Map yaml) {
     return FlavorLocalizedConfig(
-      appIcon: yaml['app_icon'] as String?,
       appName: yaml['app_name'] as String?,
     );
   }
