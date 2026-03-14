@@ -2,38 +2,101 @@ import 'dart:io';
 
 import '../models/flavor_config.dart';
 
-/// iOS Podfile에 flavor별 빌드 모드 매핑을 추가하는 클래스입니다.
+/// iOS Podfile을 생성하거나 수정하는 클래스입니다.
 ///
-/// Flutter iOS 프로젝트의 Podfile에는 빌드 구성(configuration) 이름을
-/// CocoaPods 빌드 모드(:debug / :release)로 매핑하는 코드가 있습니다.
-/// flavor를 추가하면 "Debug-dev", "Release-dev" 같은 새로운 구성 이름이 생기므로,
-/// 이 매핑에도 해당 항목을 추가해야 합니다.
+/// Podfile이 없으면 Flutter 표준 Podfile을 생성하고,
+/// 있으면 기존 Podfile에 flavor별 빌드 모드 매핑을 추가합니다.
 ///
-/// 삽입 위치: `'Release' => :release,` 줄 바로 뒤
-///
-/// 추가 예시:
-/// ```ruby
-/// 'Debug-dev' => :debug,
-/// 'Profile-dev' => :release,
-/// 'Release-dev' => :release,
-/// ```
+/// project 'Runner' 블록에 각 flavor의 빌드 구성을 매핑합니다:
+///   - Debug-{flavor}   → :debug
+///   - Profile-{flavor}  → :release
+///   - Release-{flavor}  → :release
 class PodfileModifier {
-  /// Podfile에 flavor별 빌드 모드 매핑을 추가합니다.
+  /// Podfile을 생성하거나 수정합니다.
   ///
-  /// - Podfile이 없으면 건너뜁니다.
-  /// - 이미 flavor 매핑이 존재하면 중복 삽입을 방지합니다 (멱등성 보장).
-  /// - `'Release' => :release,` 마커를 찾을 수 없으면 건너뜁니다.
+  /// - Podfile이 없으면 Flutter 표준 Podfile을 생성하며, flavor 매핑을 포함합니다.
+  /// - Podfile이 있으면 기존 파일에 flavor 매핑을 추가/갱신합니다.
   static void modify(
     String podfilePath,
     Map<String, FlavorConfig> flavors, {
     bool dryRun = false,
   }) {
     final file = File(podfilePath);
+
     if (!file.existsSync()) {
-      print('  Podfile not found at $podfilePath, skipping.');
+      _createPodfile(file, flavors, dryRun: dryRun);
       return;
     }
 
+    _modifyExistingPodfile(file, flavors, dryRun: dryRun);
+  }
+
+  /// Flutter 표준 Podfile을 생성합니다.
+  static void _createPodfile(
+    File file,
+    Map<String, FlavorConfig> flavors, {
+    required bool dryRun,
+  }) {
+    final configBlock = _buildConfigBlock(flavors);
+
+    final content = '''# Uncomment this line to define a global platform for your project
+# platform :ios, '13.0'
+
+# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+$configBlock}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end
+''';
+
+    if (dryRun) {
+      print('  [dry-run] Would create Podfile: ${file.path}');
+      return;
+    }
+
+    file.parent.createSync(recursive: true);
+    file.writeAsStringSync(content);
+    print('  Created Podfile: ${file.path}');
+  }
+
+  /// 기존 Podfile에 flavor별 빌드 모드 매핑을 추가합니다.
+  static void _modifyExistingPodfile(
+    File file,
+    Map<String, FlavorConfig> flavors, {
+    required bool dryRun,
+  }) {
     var content = file.readAsStringSync();
 
     // 기존 flavor 매핑이 있으면 제거 후 재생성
@@ -49,7 +112,7 @@ class PodfileModifier {
       return;
     }
 
-    // 각 flavor에 대해 Debug → :debug, Profile/Release → :release 매핑 생성
+    // 각 flavor에 대해 매핑 생성
     final sb = StringBuffer();
     for (final flavor in flavors.keys) {
       sb.writeln("  'Debug-$flavor' => :debug,");
@@ -70,5 +133,21 @@ class PodfileModifier {
 
     file.writeAsStringSync(content);
     print('  Updated Podfile with flavor configuration mappings.');
+  }
+
+  /// project 'Runner' 블록 내용을 생성합니다.
+  ///
+  /// 기본 Debug/Profile/Release + flavor별 매핑을 포함합니다.
+  static String _buildConfigBlock(Map<String, FlavorConfig> flavors) {
+    final sb = StringBuffer();
+    sb.writeln("  'Debug' => :debug,");
+    sb.writeln("  'Profile' => :release,");
+    sb.writeln("  'Release' => :release,");
+    for (final flavor in flavors.keys) {
+      sb.writeln("  'Debug-$flavor' => :debug,");
+      sb.writeln("  'Profile-$flavor' => :release,");
+      sb.writeln("  'Release-$flavor' => :release,");
+    }
+    return sb.toString().trimRight();
   }
 }
