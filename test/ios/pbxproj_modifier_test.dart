@@ -226,7 +226,8 @@ void main() {
   });
 
   final flavors = {
-    'dev': const FlavorConfig(bundleId: 'com.example.app.dev', name: 'MyApp Dev'),
+    'dev':
+        const FlavorConfig(bundleId: 'com.example.app.dev', name: 'MyApp Dev'),
     'prod': const FlavorConfig(bundleId: 'com.example.app', name: 'MyApp'),
   };
 
@@ -275,7 +276,8 @@ void main() {
       final result = file.readAsStringSync();
 
       // Extract the Flutter group block
-      final flutterGroupStart = result.indexOf('9740EEB11CF90186004384FC /* Flutter */');
+      final flutterGroupStart =
+          result.indexOf('9740EEB11CF90186004384FC /* Flutter */');
       final childrenStart = result.indexOf('children = (', flutterGroupStart);
       final childrenEnd = result.indexOf(');', childrenStart);
       final childrenBlock = result.substring(childrenStart, childrenEnd);
@@ -298,11 +300,17 @@ void main() {
       );
       expect(runnerListStart, isNot(-1));
       final runnerListEnd = result.indexOf('};', runnerListStart);
-      final runnerListBlock = result.substring(runnerListStart, runnerListEnd);
+      final runnerListBlock =
+          result.substring(runnerListStart, runnerListEnd);
 
       expect(runnerListBlock, contains('Debug-dev'));
       expect(runnerListBlock, contains('Release-dev'));
       expect(runnerListBlock, contains('Profile-dev'));
+
+      // Base configs should be removed from config list
+      expect(runnerListBlock, isNot(contains('97C147061CF9000F007C117D')));
+      expect(runnerListBlock, isNot(contains('97C147071CF9000F007C117D')));
+      expect(runnerListBlock, isNot(contains('249021D4217E4FDB00AE95B9')));
 
       // Project config list
       final projListStart = result.indexOf(
@@ -317,21 +325,105 @@ void main() {
       expect(projListBlock, contains('Profile-dev'));
     });
 
-    test('cloned Runner configs have correct bundle IDs', () {
+    test('generated Runner configs have correct bundle IDs', () {
       final file = File('${tempDir.path}/project.pbxproj');
       file.writeAsStringSync(_minimalPbxproj);
 
-      PbxprojModifier.modify(file.path, {'dev': const FlavorConfig(bundleId: 'com.example.app.dev', name: 'Dev')});
+      PbxprojModifier.modify(file.path, {
+        'dev': const FlavorConfig(
+            bundleId: 'com.example.app.dev', name: 'Dev'),
+      });
       final result = file.readAsStringSync();
 
-      // Find a Debug-dev config that has PRODUCT_BUNDLE_IDENTIFIER (Runner-level clone)
+      // Find a Debug-dev config that has PRODUCT_BUNDLE_IDENTIFIER (Runner-level)
       final pattern = RegExp(
         r'/\* Debug-dev \*/ = \{[^}]*PRODUCT_BUNDLE_IDENTIFIER[^}]*\}',
         dotAll: true,
       );
       final match = pattern.firstMatch(result);
-      expect(match, isNotNull, reason: 'Should find a Debug-dev config with PRODUCT_BUNDLE_IDENTIFIER');
-      expect(match!.group(0), contains('PRODUCT_BUNDLE_IDENTIFIER = com.example.app.dev;'));
+      expect(match, isNotNull,
+          reason:
+              'Should find a Debug-dev config with PRODUCT_BUNDLE_IDENTIFIER');
+      expect(match!.group(0),
+          contains('PRODUCT_BUNDLE_IDENTIFIER = com.example.app.dev;'));
+    });
+
+    test('generated Runner configs have correct template settings', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(_minimalPbxproj);
+
+      PbxprojModifier.modify(file.path, {
+        'dev': const FlavorConfig(
+          bundleId: 'com.example.app.dev',
+          name: 'Dev',
+          ios: IosFlavorConfig(teamId: 'TEAM123'),
+        ),
+      });
+      final result = file.readAsStringSync();
+
+      // Runner Debug config should have Debug-specific settings
+      final debugPattern = RegExp(
+        r'/\* Debug-dev \*/ = \{[^}]*baseConfigurationReference[^}]*SWIFT_OPTIMIZATION_LEVEL[^}]*\}',
+        dotAll: true,
+      );
+      expect(debugPattern.hasMatch(result), isTrue,
+          reason: 'Debug config should have SWIFT_OPTIMIZATION_LEVEL');
+
+      // Runner Release config should NOT have SWIFT_OPTIMIZATION_LEVEL = "-Onone"
+      final releaseStart = result.indexOf('/* Release-dev */');
+      expect(releaseStart, isNot(-1));
+      final releaseBlockEnd = result.indexOf('};', releaseStart);
+      final releaseBlock = result.substring(releaseStart, releaseBlockEnd);
+      expect(releaseBlock, isNot(contains('SWIFT_OPTIMIZATION_LEVEL')));
+
+      // Should contain DEVELOPMENT_TEAM from ios config
+      expect(result, contains('DEVELOPMENT_TEAM = TEAM123;'));
+
+      // Should contain standard Runner settings
+      expect(result, contains('CLANG_ENABLE_MODULES = YES;'));
+      expect(result, contains('ENABLE_BITCODE = NO;'));
+      expect(result, contains('VERSIONING_SYSTEM = "apple-generic";'));
+    });
+
+    test('generated Project configs have correct build type settings', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(_minimalPbxproj);
+
+      PbxprojModifier.modify(file.path, {
+        'dev': const FlavorConfig(
+            bundleId: 'com.example.app.dev', name: 'Dev'),
+      });
+      final result = file.readAsStringSync();
+
+      // Project-level configs should have Xcode boilerplate
+      expect(result, contains('CLANG_ANALYZER_NONNULL = YES;'));
+      expect(result, contains('CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";'));
+
+      // Debug project config should have debug-specific settings
+      expect(result, contains('GCC_OPTIMIZATION_LEVEL = 0;'));
+      expect(result, contains('ENABLE_TESTABILITY = YES;'));
+
+      // Release project config should have release-specific settings
+      expect(result, contains('VALIDATE_PRODUCT = YES;'));
+      expect(result, contains('SWIFT_COMPILATION_MODE = wholemodule;'));
+    });
+
+    test('generated Runner configs use AppIcon-flavor when appIcon is set',
+        () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(_minimalPbxproj);
+
+      PbxprojModifier.modify(file.path, {
+        'dev': const FlavorConfig(
+          bundleId: 'com.example.app.dev',
+          name: 'Dev',
+          appIcon: 'assets/icon.png',
+        ),
+      });
+      final result = file.readAsStringSync();
+
+      expect(result,
+          contains('ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-dev;'));
     });
 
     test('returns Runner target UUID', () {
@@ -359,11 +451,44 @@ void main() {
       expect(afterSecond, contains('Release-prod'));
       // 중복이 없는지 확인
       expect('Debug-dev'.allMatches(afterFirst).length,
-             'Debug-dev'.allMatches(afterSecond).length);
+          'Debug-dev'.allMatches(afterSecond).length);
       expect(uuid, '97C146ED1CF9000F007C117D');
     });
 
-    test('clones RunnerTests configurations for each flavor', () {
+    test('base configurations are removed after modify', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(_minimalPbxproj);
+
+      PbxprojModifier.modify(file.path, flavors);
+      final result = file.readAsStringSync();
+
+      // Base config UUIDs should be removed from config lists
+      final runnerListStart = result.indexOf(
+        '97C147051CF9000F007C117D /* Build configuration list',
+      );
+      final runnerListEnd = result.indexOf('};', runnerListStart);
+      final runnerListBlock =
+          result.substring(runnerListStart, runnerListEnd);
+      expect(runnerListBlock, isNot(contains('/* Debug */')));
+      expect(runnerListBlock, isNot(contains('/* Release */')));
+      expect(runnerListBlock, isNot(contains('/* Profile */')));
+
+      // Base XCBuildConfiguration blocks should also be removed
+      expect(
+        RegExp(r'97C147031CF9000F007C117D /\* Debug \*/ = \{')
+            .hasMatch(result),
+        isFalse,
+        reason: 'Base Project Debug config block should be removed',
+      );
+      expect(
+        RegExp(r'97C147061CF9000F007C117D /\* Debug \*/ = \{')
+            .hasMatch(result),
+        isFalse,
+        reason: 'Base Runner Debug config block should be removed',
+      );
+    });
+
+    test('generates RunnerTests configurations for each flavor', () {
       final file = File('${tempDir.path}/project.pbxproj');
       file.writeAsStringSync(_pbxprojWithRunnerTests);
 
@@ -389,6 +514,11 @@ void main() {
       expect(rtListBlock, isNot(contains('331C8088294A63A400263BE5')));
       expect(rtListBlock, isNot(contains('331C8089294A63A400263BE5')));
       expect(rtListBlock, isNot(contains('331C808A294A63A400263BE5')));
+
+      // Generated RunnerTests configs should have correct test bundle ID
+      expect(result,
+          contains('PRODUCT_BUNDLE_IDENTIFIER = com.example.runner.RunnerTests;'));
+      expect(result, contains('TEST_HOST'));
     });
 
     test('RunnerTests flavor configs are idempotent on second run', () {
@@ -408,7 +538,8 @@ void main() {
 
     test('throws SetupException when file does not exist', () {
       expect(
-        () => PbxprojModifier.modify('${tempDir.path}/nonexistent.pbxproj', flavors),
+        () => PbxprojModifier.modify(
+            '${tempDir.path}/nonexistent.pbxproj', flavors),
         throwsA(isA<SetupException>()),
       );
     });
@@ -480,11 +611,10 @@ void main() {
 
     test('does not modify file in dry-run mode', () {
       final file = File('${tempDir.path}/project.pbxproj');
-      final original =
-        '\t\t\tknownRegions = (\n'
-        '\t\t\t\ten,\n'
-        '\t\t\t\tBase,\n'
-        '\t\t\t);\n';
+      final original = '\t\t\tknownRegions = (\n'
+          '\t\t\t\ten,\n'
+          '\t\t\t\tBase,\n'
+          '\t\t\t);\n';
       file.writeAsStringSync(original);
 
       PbxprojModifier.modifyKnownRegions(
