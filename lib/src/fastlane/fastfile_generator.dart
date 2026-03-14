@@ -28,13 +28,13 @@ class FastfileGenerator {
     // sync_certs lane: flavor별 서명 설정 생성
     final syncCerts = StringBuffer();
     syncCerts.writeln(
-        '    # readonly: true를 주면 기존에 만들어진 걸 가져오기만 합니다 (팀원용)');
+        '    # readonly: true를 주면 기존에 만들어진 걸 가져오기만 합니다.');
     syncCerts.writeln(
-        '#     match(type: "development", readonly: true, api_key: api_key)');
+        '    match(type: "development", readonly: true, api_key: api_key)');
     syncCerts.writeln(
-        '#     match(type: "appstore", readonly: true, api_key: api_key)');
+        '    match(type: "appstore", readonly: true, api_key: api_key)');
     syncCerts.writeln(
-        '#     match(type: "adhoc", readonly: true, api_key: api_key)');
+        '    match(type: "adhoc", readonly: true, api_key: api_key)');
     syncCerts.writeln();
     syncCerts.writeln(
         '    # Xcode 프로젝트 서명 설정을 업데이트합니다.');
