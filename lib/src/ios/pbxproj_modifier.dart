@@ -35,10 +35,10 @@ class PbxprojModifier {
 
     var content = file.readAsStringSync();
 
-    // 기존 flavor 설정이 있으면 제거 후 재생성
-    content = _stripExistingFlavorConfigs(content);
-
-    // ---- 기존 정보 추출 ----
+    // ---- 스트리핑 전: 템플릿 블록 추출 ----
+    // 기존 flavor 설정을 제거하기 전에, 클론 소스로 사용할 빌드 구성 블록을 미리 저장합니다.
+    // 기본 구성(Debug/Release/Profile)이 있으면 우선 사용하고,
+    // 없으면 flavor 구성(Debug-xxx)에서 추출합니다.
 
     // Runner 타겟(PBXNativeTarget)의 UUID 추출
     final runnerTargetUuid = _extractRunnerTargetUuid(content);
@@ -73,23 +73,21 @@ class PbxprojModifier {
       );
     }
 
-    // 기존 빌드 구성(Debug/Release/Profile)의 UUID 맵 추출
-    // 이전 실행에서 기본 구성이 config list에서 제거된 경우,
-    // XCBuildConfiguration 블록에서 직접 검색 (fallback)
+    // 기존 빌드 구성 UUID 추출 (스트리핑 전에 수행)
     var runnerConfigUuids =
         _extractConfigsFromList(content, runnerConfigListUuid);
     if (runnerConfigUuids.isEmpty) {
       runnerConfigUuids =
-          _findBaseConfigBlockUuids(content, targetType: _TargetType.runner);
+          _findBaseOrFlavorConfigBlockUuids(content, targetType: _TargetType.runner);
     }
     var projectConfigUuids =
         _extractConfigsFromList(content, projectConfigListUuid);
     if (projectConfigUuids.isEmpty) {
       projectConfigUuids =
-          _findBaseConfigBlockUuids(content, targetType: _TargetType.project);
+          _findBaseOrFlavorConfigBlockUuids(content, targetType: _TargetType.project);
     }
 
-    // 기존 xcconfig 파일 참조 UUID 추출 (새 빌드 구성에서 참조를 교체할 때 사용)
+    // 기존 xcconfig 파일 참조 UUID 추출
     final debugXcconfigRef = _extractXcconfigFileRefUuid(content, 'Debug.xcconfig');
     final releaseXcconfigRef =
         _extractXcconfigFileRefUuid(content, 'Release.xcconfig');
@@ -107,10 +105,23 @@ class PbxprojModifier {
             _extractConfigsFromList(content, runnerTestsConfigListUuid);
         if (runnerTestsConfigUuids.isEmpty) {
           runnerTestsConfigUuids =
-              _findBaseConfigBlockUuids(content, targetType: _TargetType.runnerTests);
+              _findBaseOrFlavorConfigBlockUuids(content, targetType: _TargetType.runnerTests);
         }
       }
     }
+
+    // 템플릿 블록 문자열을 미리 저장 (스트리핑 후에도 사용 가능)
+    final savedTemplateBlocks = <String, String>{};
+    for (final uuid in [
+      ...runnerConfigUuids.values,
+      ...projectConfigUuids.values,
+      ...runnerTestsConfigUuids.values,
+    ]) {
+      savedTemplateBlocks[uuid] = _extractXCBuildConfigBlock(content, uuid);
+    }
+
+    // 기존 flavor 설정 제거
+    content = _stripExistingFlavorConfigs(content);
 
     // ---- flavor별 새 UUID 일괄 생성 ----
     final flavorUuids = <String, _FlavorUuids>{};
@@ -146,6 +157,7 @@ class PbxprojModifier {
       runnerConfigUuids,
       debugXcconfigRef,
       releaseXcconfigRef,
+      savedTemplateBlocks,
     );
 
     // Step e-2: Project 레벨의 XCBuildConfiguration 블록 복제
@@ -155,6 +167,7 @@ class PbxprojModifier {
       flavors,
       flavorUuids,
       projectConfigUuids,
+      savedTemplateBlocks,
     );
 
     // Step f: Runner의 XCConfigurationList에 새 빌드 구성 UUID 등록
@@ -182,6 +195,7 @@ class PbxprojModifier {
         flavors,
         flavorUuids,
         runnerTestsConfigUuids,
+        savedTemplateBlocks,
         uuidSelector: (uuids, buildType) => buildType == 'Debug'
             ? uuids.debugRunnerTestsConfig
             : buildType == 'Release'
@@ -372,38 +386,59 @@ class PbxprojModifier {
 
   /// XCBuildConfiguration 블록에서 기본 구성(Debug/Release/Profile)의 UUID를 직접 검색합니다.
   ///
-  /// config list에서 기본 구성이 제거된 경우(이전 실행으로 인해) fallback으로 사용됩니다.
+  /// 기본 구성이 없으면 flavor 구성(Debug-xxx 등)에서 추출합니다 (fallback).
   /// [targetType]으로 Runner/Project/RunnerTests 블록을 구분합니다.
-  static Map<String, String> _findBaseConfigBlockUuids(
+  static Map<String, String> _findBaseOrFlavorConfigBlockUuids(
     String content, {
     required _TargetType targetType,
   }) {
     final result = <String, String>{};
     for (final name in ['Debug', 'Release', 'Profile']) {
-      final matches = RegExp(
+      // 1차: 기본 구성 블록 검색 (/* Debug */ = {)
+      final baseMatches = RegExp(
         r'([0-9A-F]{24}) /\* ' + name + r' \*/ = \{',
       ).allMatches(content);
-      for (final m in matches) {
-        final block = _extractXCBuildConfigBlock(content, m.group(1)!);
-        if (block.isEmpty) continue;
-        if (!block.contains('isa = XCBuildConfiguration')) continue;
-
-        final hasBundleId = block.contains('PRODUCT_BUNDLE_IDENTIFIER');
-        final hasTestHost = block.contains('TEST_HOST');
-
-        final isMatch = switch (targetType) {
-          _TargetType.runner => hasBundleId && !hasTestHost,
-          _TargetType.project => !hasBundleId,
-          _TargetType.runnerTests => hasBundleId && hasTestHost,
-        };
-
-        if (isMatch) {
+      for (final m in baseMatches) {
+        if (_matchesTargetType(content, m.group(1)!, targetType)) {
           result[name] = m.group(1)!;
           break;
         }
       }
+
+      // 2차: 기본 구성이 없으면 flavor 구성에서 검색 (/* Debug-xxx */ = {)
+      if (!result.containsKey(name)) {
+        final flavorMatches = RegExp(
+          r'([0-9A-F]{24}) /\* ' + name + r'-\w+ \*/ = \{',
+        ).allMatches(content);
+        for (final m in flavorMatches) {
+          if (_matchesTargetType(content, m.group(1)!, targetType)) {
+            result[name] = m.group(1)!;
+            break;
+          }
+        }
+      }
     }
     return result;
+  }
+
+  /// UUID에 해당하는 XCBuildConfiguration 블록이 지정한 타겟 유형과 일치하는지 확인합니다.
+  static bool _matchesTargetType(
+    String content,
+    String uuid,
+    _TargetType targetType,
+  ) {
+    final block = _extractXCBuildConfigBlock(content, uuid);
+    if (block.isEmpty) return false;
+    if (!block.contains('isa = XCBuildConfiguration')) return false;
+
+    final hasBundleId = block.contains('PRODUCT_BUNDLE_IDENTIFIER');
+    final hasTestHost = block.contains('TEST_HOST');
+
+    return switch (targetType) {
+      _TargetType.runner => hasBundleId && !hasTestHost,
+      _TargetType.project => !hasBundleId,
+      _TargetType.runnerTests => hasBundleId && hasTestHost,
+    };
   }
 
   // ──────────────────────────── UUID 추출 메서드 ────────────────────────────
@@ -682,6 +717,7 @@ class PbxprojModifier {
     Map<String, String> runnerConfigUuids,
     String debugXcconfigRef,
     String releaseXcconfigRef,
+    Map<String, String> savedTemplateBlocks,
   ) {
     final sb = StringBuffer();
     for (final entry in flavors.entries) {
@@ -691,8 +727,7 @@ class PbxprojModifier {
 
       // Debug 빌드 구성 복제
       if (runnerConfigUuids['Debug'] != null) {
-        final original =
-            _extractXCBuildConfigBlock(content, runnerConfigUuids['Debug']!);
+        final original = savedTemplateBlocks[runnerConfigUuids['Debug']!] ?? '';
         if (original.isNotEmpty) {
           sb.write(_cloneXCBuildConfig(
             original,
@@ -709,8 +744,7 @@ class PbxprojModifier {
 
       // Release 빌드 구성 복제
       if (runnerConfigUuids['Release'] != null) {
-        final original =
-            _extractXCBuildConfigBlock(content, runnerConfigUuids['Release']!);
+        final original = savedTemplateBlocks[runnerConfigUuids['Release']!] ?? '';
         if (original.isNotEmpty) {
           sb.write(_cloneXCBuildConfig(
             original,
@@ -727,8 +761,7 @@ class PbxprojModifier {
 
       // Profile 빌드 구성 복제 (Profile은 Release xcconfig를 기반으로 함)
       if (runnerConfigUuids['Profile'] != null) {
-        final original =
-            _extractXCBuildConfigBlock(content, runnerConfigUuids['Profile']!);
+        final original = savedTemplateBlocks[runnerConfigUuids['Profile']!] ?? '';
         if (original.isNotEmpty) {
           sb.write(_cloneXCBuildConfig(
             original,
@@ -761,6 +794,7 @@ class PbxprojModifier {
     Map<String, FlavorConfig> flavors,
     Map<String, _FlavorUuids> flavorUuids,
     Map<String, String> projectConfigUuids,
+    Map<String, String> savedTemplateBlocks,
   ) {
     final sb = StringBuffer();
     for (final entry in flavors.entries) {
@@ -779,16 +813,19 @@ class PbxprojModifier {
                 : uuids.profileProjectConfig;
         final newName = '$buildType-$flavor'; // 예: "Debug-dev"
 
-        final original = _extractXCBuildConfigBlock(content, originalUuid);
+        final original = savedTemplateBlocks[originalUuid] ?? '';
         if (original.isEmpty) continue;
 
-        // UUID, 주석, name 필드만 교체
+        // UUID, 주석, name 필드만 교체 (템플릿이 flavor 구성일 수 있으므로 패턴 매칭)
         var cloned = original;
         cloned = cloned.replaceFirst(originalUuid, newUuid);
-        cloned = cloned.replaceFirst('/* $buildType */', '/* $newName */');
         cloned = cloned.replaceFirst(
-          RegExp(r'\bname = ' + buildType + r';'),
-          'name = $newName;',
+          RegExp(r'/\* ' + buildType + r'(?:-\w+)? \*/'),
+          '/* $newName */',
+        );
+        cloned = cloned.replaceFirst(
+          RegExp(r'\bname = "?' + buildType + r'(?:-\w+)?"?;'),
+          'name = "$newName";',
         );
         sb.write(cloned);
       }
@@ -824,13 +861,16 @@ class PbxprojModifier {
     // 1. UUID 교체
     result = result.replaceFirst(originalUuid, newUuid);
 
-    // 2. 주석 내 이름 교체: `/* Debug */` → `/* Debug-dev */`
-    result = result.replaceFirst('/* $originalName */', '/* $newName */');
-
-    // 3. name 속성 교체: `name = Debug;` → `name = Debug-dev;`
+    // 2. 주석 내 이름 교체: `/* Debug */` 또는 `/* Debug-xxx */` → `/* Debug-dev */`
     result = result.replaceFirst(
-      RegExp(r'\bname = ' + originalName + r';'),
-      'name = $newName;',
+      RegExp(r'/\* ' + originalName + r'(?:-\w+)? \*/'),
+      '/* $newName */',
+    );
+
+    // 3. name 속성 교체: `name = Debug;` 또는 `name = "Debug-xxx";` → `name = "Debug-dev";`
+    result = result.replaceFirst(
+      RegExp(r'\bname = "?' + originalName + r'(?:-\w+)?"?;'),
+      'name = "$newName";',
     );
 
     // 4. PRODUCT_BUNDLE_IDENTIFIER 교체
@@ -840,15 +880,11 @@ class PbxprojModifier {
     );
 
     // 5. baseConfigurationReference 교체 (xcconfig 파일 경로 변경)
-    if (oldXcconfigRef != null &&
-        newXcconfigRef != null &&
-        oldXcconfigRef.isNotEmpty &&
-        newXcconfigRef.isNotEmpty) {
+    // 템플릿이 flavor 구성일 수 있으므로 UUID와 무관하게 패턴 매칭
+    if (newXcconfigRef != null && newXcconfigRef.isNotEmpty) {
       result = result.replaceFirst(
         RegExp(
-          r'baseConfigurationReference = ' +
-              oldXcconfigRef +
-              r' /\* [^*]+ \*/;',
+          r'baseConfigurationReference = [0-9A-F]{24} /\* [^*]+ \*/;',
         ),
         'baseConfigurationReference = $newXcconfigRef /* $newName.xcconfig */;',
       );
@@ -921,7 +957,8 @@ class PbxprojModifier {
     String content,
     Map<String, FlavorConfig> flavors,
     Map<String, _FlavorUuids> flavorUuids,
-    Map<String, String> baseConfigUuids, {
+    Map<String, String> baseConfigUuids,
+    Map<String, String> savedTemplateBlocks, {
     required String Function(_FlavorUuids uuids, String buildType) uuidSelector,
   }) {
     final sb = StringBuffer();
@@ -935,15 +972,18 @@ class PbxprojModifier {
         final newUuid = uuidSelector(uuids, buildType);
         final newName = '$buildType-$flavor';
 
-        final original = _extractXCBuildConfigBlock(content, originalUuid);
+        final original = savedTemplateBlocks[originalUuid] ?? '';
         if (original.isEmpty) continue;
 
         var cloned = original;
         cloned = cloned.replaceFirst(originalUuid, newUuid);
-        cloned = cloned.replaceFirst('/* $buildType */', '/* $newName */');
         cloned = cloned.replaceFirst(
-          RegExp(r'\bname = ' + buildType + r';'),
-          'name = $newName;',
+          RegExp(r'/\* ' + buildType + r'(?:-\w+)? \*/'),
+          '/* $newName */',
+        );
+        cloned = cloned.replaceFirst(
+          RegExp(r'\bname = "?' + buildType + r'(?:-\w+)?"?;'),
+          'name = "$newName";',
         );
         sb.write(cloned);
       }
