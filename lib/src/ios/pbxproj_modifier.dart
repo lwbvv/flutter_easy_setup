@@ -74,10 +74,20 @@ class PbxprojModifier {
     }
 
     // 기존 빌드 구성(Debug/Release/Profile)의 UUID 맵 추출
-    final runnerConfigUuids =
+    // 이전 실행에서 기본 구성이 config list에서 제거된 경우,
+    // XCBuildConfiguration 블록에서 직접 검색 (fallback)
+    var runnerConfigUuids =
         _extractConfigsFromList(content, runnerConfigListUuid);
-    final projectConfigUuids =
+    if (runnerConfigUuids.isEmpty) {
+      runnerConfigUuids =
+          _findBaseConfigBlockUuids(content, isRunner: true);
+    }
+    var projectConfigUuids =
         _extractConfigsFromList(content, projectConfigListUuid);
+    if (projectConfigUuids.isEmpty) {
+      projectConfigUuids =
+          _findBaseConfigBlockUuids(content, isRunner: false);
+    }
 
     // 기존 xcconfig 파일 참조 UUID 추출 (새 빌드 구성에서 참조를 교체할 때 사용)
     final debugXcconfigRef = _extractXcconfigFileRefUuid(content, 'Debug.xcconfig');
@@ -143,6 +153,14 @@ class PbxprojModifier {
       flavors,
       flavorUuids,
       isRunner: false,
+    );
+
+    // Step h: 기본 빌드 구성(Debug, Release, Profile) 제거
+    //         flavor 구성이 클론 완료되었으므로 원본 기본 구성은 불필요
+    content = _removeBaseConfigurations(
+      content,
+      runnerConfigUuids,
+      projectConfigUuids,
     );
 
     if (dryRun) {
@@ -234,6 +252,55 @@ class PbxprojModifier {
         RegExp(r'([0-9A-F]{24}) /\* ([^*]+) \*/').allMatches(block);
     for (final m in matches) {
       result[m.group(2)!.trim()] = m.group(1)!;
+    }
+    return result;
+  }
+
+  /// 기본 빌드 구성(Debug, Release, Profile)을 XCConfigurationList에서 제거합니다.
+  ///
+  /// XCBuildConfiguration 블록 자체는 유지합니다 (재실행 시 클론 소스로 사용).
+  /// Xcode는 XCConfigurationList에서 참조되지 않는 블록은 무시합니다.
+  static String _removeBaseConfigurations(
+    String content,
+    Map<String, String> runnerConfigUuids,
+    Map<String, String> projectConfigUuids,
+  ) {
+    // XCConfigurationList에서 기본 구성 참조만 제거 (블록은 유지)
+    content = content.replaceAll(
+      RegExp(
+        r'\t\t\t\t[0-9A-F]{24} /\* (?:Debug|Release|Profile) \*/,\n',
+      ),
+      '',
+    );
+
+    return content;
+  }
+
+  /// XCBuildConfiguration 블록에서 기본 구성(Debug/Release/Profile)의 UUID를 직접 검색합니다.
+  ///
+  /// config list에서 기본 구성이 제거된 경우(이전 실행으로 인해) fallback으로 사용됩니다.
+  /// [isRunner]가 true이면 PRODUCT_BUNDLE_IDENTIFIER가 있는 Runner 타겟 블록을,
+  /// false이면 없는 Project 레벨 블록을 반환합니다.
+  static Map<String, String> _findBaseConfigBlockUuids(
+    String content, {
+    required bool isRunner,
+  }) {
+    final result = <String, String>{};
+    for (final name in ['Debug', 'Release', 'Profile']) {
+      final matches = RegExp(
+        r'([0-9A-F]{24}) /\* ' + name + r' \*/ = \{',
+      ).allMatches(content);
+      for (final m in matches) {
+        final block = _extractXCBuildConfigBlock(content, m.group(1)!);
+        if (block.isEmpty) continue;
+        // isa = XCBuildConfiguration인지 확인
+        if (!block.contains('isa = XCBuildConfiguration')) continue;
+        final hasBundleId = block.contains('PRODUCT_BUNDLE_IDENTIFIER');
+        if (isRunner == hasBundleId) {
+          result[name] = m.group(1)!;
+          break;
+        }
+      }
     }
     return result;
   }
