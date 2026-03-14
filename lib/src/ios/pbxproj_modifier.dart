@@ -80,13 +80,13 @@ class PbxprojModifier {
         _extractConfigsFromList(content, runnerConfigListUuid);
     if (runnerConfigUuids.isEmpty) {
       runnerConfigUuids =
-          _findBaseConfigBlockUuids(content, isRunner: true);
+          _findBaseConfigBlockUuids(content, targetType: _TargetType.runner);
     }
     var projectConfigUuids =
         _extractConfigsFromList(content, projectConfigListUuid);
     if (projectConfigUuids.isEmpty) {
       projectConfigUuids =
-          _findBaseConfigBlockUuids(content, isRunner: false);
+          _findBaseConfigBlockUuids(content, targetType: _TargetType.project);
     }
 
     // 기존 xcconfig 파일 참조 UUID 추출 (새 빌드 구성에서 참조를 교체할 때 사용)
@@ -94,8 +94,25 @@ class PbxprojModifier {
     final releaseXcconfigRef =
         _extractXcconfigFileRefUuid(content, 'Release.xcconfig');
 
+    // RunnerTests 타겟의 buildConfigurationList UUID 추출 (존재하지 않을 수 있음)
+    final runnerTestsTargetUuid = _extractNativeTargetUuid(content, 'RunnerTests');
+    String runnerTestsConfigListUuid = '';
+    Map<String, String> runnerTestsConfigUuids = {};
+    if (runnerTestsTargetUuid.isNotEmpty) {
+      runnerTestsConfigListUuid = _extractBuildConfigListForTarget(
+        content, runnerTestsTargetUuid, 'RunnerTests',
+      );
+      if (runnerTestsConfigListUuid.isNotEmpty) {
+        runnerTestsConfigUuids =
+            _extractConfigsFromList(content, runnerTestsConfigListUuid);
+        if (runnerTestsConfigUuids.isEmpty) {
+          runnerTestsConfigUuids =
+              _findBaseConfigBlockUuids(content, targetType: _TargetType.runnerTests);
+        }
+      }
+    }
+
     // ---- flavor별 새 UUID 일괄 생성 ----
-    // 각 flavor마다 9개의 UUID가 필요 (파일 참조 3개 + Runner 빌드 구성 3개 + Project 빌드 구성 3개)
     final flavorUuids = <String, _FlavorUuids>{};
     for (final flavor in flavors.keys) {
       flavorUuids[flavor] = _FlavorUuids(
@@ -108,6 +125,9 @@ class PbxprojModifier {
         debugProjectConfig: UuidGenerator.generate(),
         releaseProjectConfig: UuidGenerator.generate(),
         profileProjectConfig: UuidGenerator.generate(),
+        debugRunnerTestsConfig: UuidGenerator.generate(),
+        releaseRunnerTestsConfig: UuidGenerator.generate(),
+        profileRunnerTestsConfig: UuidGenerator.generate(),
       );
     }
 
@@ -155,7 +175,37 @@ class PbxprojModifier {
       isRunner: false,
     );
 
-    // Step h: 기본 빌드 구성(Debug, Release, Profile) 제거
+    // Step h: RunnerTests 타겟의 XCBuildConfiguration 블록 복제 (존재하는 경우)
+    if (runnerTestsConfigUuids.isNotEmpty) {
+      content = _cloneSimpleXCBuildConfigurations(
+        content,
+        flavors,
+        flavorUuids,
+        runnerTestsConfigUuids,
+        uuidSelector: (uuids, buildType) => buildType == 'Debug'
+            ? uuids.debugRunnerTestsConfig
+            : buildType == 'Release'
+                ? uuids.releaseRunnerTestsConfig
+                : uuids.profileRunnerTestsConfig,
+      );
+
+      // RunnerTests의 XCConfigurationList에 새 빌드 구성 UUID 등록
+      if (runnerTestsConfigListUuid.isNotEmpty) {
+        content = _addToConfigListGeneric(
+          content,
+          runnerTestsConfigListUuid,
+          flavors,
+          flavorUuids,
+          uuidSelector: (uuids, buildType) => buildType == 'Debug'
+              ? uuids.debugRunnerTestsConfig
+              : buildType == 'Release'
+                  ? uuids.releaseRunnerTestsConfig
+                  : uuids.profileRunnerTestsConfig,
+        );
+      }
+    }
+
+    // Step i: 기본 빌드 구성(Debug, Release, Profile) 제거
     //         flavor 구성이 클론 완료되었으므로 원본 기본 구성은 불필요
     content = _removeBaseConfigurations(
       content,
@@ -279,11 +329,10 @@ class PbxprojModifier {
   /// XCBuildConfiguration 블록에서 기본 구성(Debug/Release/Profile)의 UUID를 직접 검색합니다.
   ///
   /// config list에서 기본 구성이 제거된 경우(이전 실행으로 인해) fallback으로 사용됩니다.
-  /// [isRunner]가 true이면 PRODUCT_BUNDLE_IDENTIFIER가 있는 Runner 타겟 블록을,
-  /// false이면 없는 Project 레벨 블록을 반환합니다.
+  /// [targetType]으로 Runner/Project/RunnerTests 블록을 구분합니다.
   static Map<String, String> _findBaseConfigBlockUuids(
     String content, {
-    required bool isRunner,
+    required _TargetType targetType,
   }) {
     final result = <String, String>{};
     for (final name in ['Debug', 'Release', 'Profile']) {
@@ -293,10 +342,18 @@ class PbxprojModifier {
       for (final m in matches) {
         final block = _extractXCBuildConfigBlock(content, m.group(1)!);
         if (block.isEmpty) continue;
-        // isa = XCBuildConfiguration인지 확인
         if (!block.contains('isa = XCBuildConfiguration')) continue;
+
         final hasBundleId = block.contains('PRODUCT_BUNDLE_IDENTIFIER');
-        if (isRunner == hasBundleId) {
+        final hasTestHost = block.contains('TEST_HOST');
+
+        final isMatch = switch (targetType) {
+          _TargetType.runner => hasBundleId && !hasTestHost,
+          _TargetType.project => !hasBundleId,
+          _TargetType.runnerTests => hasBundleId && hasTestHost,
+        };
+
+        if (isMatch) {
           result[name] = m.group(1)!;
           break;
         }
@@ -309,10 +366,15 @@ class PbxprojModifier {
 
   /// pbxproj에서 Runner PBXNativeTarget의 24자리 UUID를 추출합니다.
   static String _extractRunnerTargetUuid(String content) {
-    final matches =
-        RegExp(r'([0-9A-F]{24}) /\* Runner \*/ = \{').allMatches(content);
+    return _extractNativeTargetUuid(content, 'Runner');
+  }
+
+  /// pbxproj에서 지정된 이름의 PBXNativeTarget UUID를 추출합니다.
+  static String _extractNativeTargetUuid(String content, String targetName) {
+    final matches = RegExp(
+      r'([0-9A-F]{24}) /\* ' + RegExp.escape(targetName) + r' \*/ = \{',
+    ).allMatches(content);
     for (final m in matches) {
-      // PBXNativeTarget 블록인지 확인 (다른 타입의 Runner 항목과 구분)
       final snippet = content.substring(m.start, m.start + 300);
       if (snippet.contains('isa = PBXNativeTarget')) return m.group(1)!;
     }
@@ -333,9 +395,10 @@ class PbxprojModifier {
   /// 특정 타겟의 buildConfigurationList UUID를 추출합니다.
   static String _extractBuildConfigListForTarget(
     String content,
-    String targetUuid,
-  ) {
-    final targetStart = content.indexOf('$targetUuid /* Runner */ = {');
+    String targetUuid, [
+    String targetName = 'Runner',
+  ]) {
+    final targetStart = content.indexOf('$targetUuid /* $targetName */ = {');
     if (targetStart == -1) return '';
     final braceStart = content.indexOf('{', targetStart);
     if (braceStart == -1) return '';
@@ -806,15 +869,102 @@ class PbxprojModifier {
         sb.toString() +
         content.substring(configsEnd);
   }
+
+  /// UUID + name만 변경하는 범용 XCBuildConfiguration 블록 복제입니다.
+  ///
+  /// RunnerTests 등 bundle ID/xcconfig 교체가 필요 없는 타겟에 사용합니다.
+  static String _cloneSimpleXCBuildConfigurations(
+    String content,
+    Map<String, FlavorConfig> flavors,
+    Map<String, _FlavorUuids> flavorUuids,
+    Map<String, String> baseConfigUuids, {
+    required String Function(_FlavorUuids uuids, String buildType) uuidSelector,
+  }) {
+    final sb = StringBuffer();
+    for (final entry in flavors.entries) {
+      final flavor = entry.key;
+      final uuids = flavorUuids[flavor]!;
+
+      for (final configEntry in baseConfigUuids.entries) {
+        final buildType = configEntry.key;
+        final originalUuid = configEntry.value;
+        final newUuid = uuidSelector(uuids, buildType);
+        final newName = '$buildType-$flavor';
+
+        final original = _extractXCBuildConfigBlock(content, originalUuid);
+        if (original.isEmpty) continue;
+
+        var cloned = original;
+        cloned = cloned.replaceFirst(originalUuid, newUuid);
+        cloned = cloned.replaceFirst('/* $buildType */', '/* $newName */');
+        cloned = cloned.replaceFirst(
+          RegExp(r'\bname = ' + buildType + r';'),
+          'name = $newName;',
+        );
+        sb.write(cloned);
+      }
+    }
+
+    if (sb.isEmpty) return content;
+    return content.replaceFirst(
+      '/* End XCBuildConfiguration section */',
+      '${sb.toString()}/* End XCBuildConfiguration section */',
+    );
+  }
+
+  /// 범용 XCConfigurationList UUID 등록 메서드입니다.
+  ///
+  /// [uuidSelector]로 각 buildType에 맞는 UUID를 선택합니다.
+  static String _addToConfigListGeneric(
+    String content,
+    String listUuid,
+    Map<String, FlavorConfig> flavors,
+    Map<String, _FlavorUuids> flavorUuids, {
+    required String Function(_FlavorUuids uuids, String buildType) uuidSelector,
+  }) {
+    final defMatch = RegExp(
+      RegExp.escape(listUuid) + r' /\*[^*]*\*/ = \{',
+    ).firstMatch(content);
+    if (defMatch == null) return content;
+    final listStart = defMatch.start;
+    final braceStart = defMatch.end - 1;
+    final blockEnd = _findBlockEnd(content, braceStart);
+    if (blockEnd == -1) return content;
+
+    final configsStart = content.indexOf('buildConfigurations = (', listStart);
+    if (configsStart == -1 || configsStart > blockEnd) return content;
+    final configsEnd = content.indexOf(');', configsStart);
+    if (configsEnd == -1 || configsEnd > blockEnd) return content;
+
+    final sb = StringBuffer();
+    for (final entry in flavors.entries) {
+      final flavor = entry.key;
+      final uuids = flavorUuids[flavor]!;
+      for (final buildType in ['Debug', 'Release', 'Profile']) {
+        final uuid = uuidSelector(uuids, buildType);
+        sb.writeln('\t\t\t\t$uuid /* $buildType-$flavor */,');
+      }
+    }
+
+    return content.substring(0, configsEnd) +
+        sb.toString() +
+        content.substring(configsEnd);
+  }
 }
+
+// ──────────────────────────── 내부 열거형 ────────────────────────────────────
+
+/// XCBuildConfiguration 블록의 소유 타겟 유형을 구분합니다.
+enum _TargetType { runner, project, runnerTests }
 
 // ──────────────────────────── 내부 데이터 클래스 ─────────────────────────────
 
-/// 하나의 flavor에 대해 필요한 9개의 UUID를 묶어 관리하는 내부 클래스입니다.
+/// 하나의 flavor에 대해 필요한 UUID를 묶어 관리하는 내부 클래스입니다.
 ///
 /// - 파일 참조 UUID 3개: Debug/Release/Profile xcconfig 파일의 PBXFileReference
 /// - Runner 빌드 구성 UUID 3개: Runner 타겟의 XCBuildConfiguration
 /// - Project 빌드 구성 UUID 3개: Project 레벨의 XCBuildConfiguration
+/// - RunnerTests 빌드 구성 UUID 3개: RunnerTests 타겟의 XCBuildConfiguration
 class _FlavorUuids {
   final String debugFileRef;
   final String releaseFileRef;
@@ -825,6 +975,9 @@ class _FlavorUuids {
   final String debugProjectConfig;
   final String releaseProjectConfig;
   final String profileProjectConfig;
+  final String debugRunnerTestsConfig;
+  final String releaseRunnerTestsConfig;
+  final String profileRunnerTestsConfig;
 
   const _FlavorUuids({
     required this.debugFileRef,
@@ -836,5 +989,8 @@ class _FlavorUuids {
     required this.debugProjectConfig,
     required this.releaseProjectConfig,
     required this.profileProjectConfig,
+    required this.debugRunnerTestsConfig,
+    required this.releaseRunnerTestsConfig,
+    required this.profileRunnerTestsConfig,
   });
 }

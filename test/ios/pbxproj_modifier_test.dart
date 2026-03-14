@@ -139,6 +139,81 @@ const _minimalPbxproj = '// !\$*UTF8*\$!\n'
     '\trootObject = 97C146E61CF9000F007C117D /* Project object */;\n'
     '}\n';
 
+/// Fixture with RunnerTests target included.
+///
+/// Additional UUIDs:
+///   RunnerTests PBXNativeTarget : 331C8080294A63A400263BE5
+///   RunnerTests config list     : 331C8087294A63A400263BE5
+///   RunnerTests Debug           : 331C8088294A63A400263BE5
+///   RunnerTests Release         : 331C8089294A63A400263BE5
+///   RunnerTests Profile         : 331C808A294A63A400263BE5
+final _pbxprojWithRunnerTests = _minimalPbxproj
+    // PBXNativeTarget 섹션에 RunnerTests 추가
+    .replaceFirst(
+      '/* End PBXNativeTarget section */\n',
+      '\t\t331C8080294A63A400263BE5 /* RunnerTests */ = {\n'
+      '\t\t\tisa = PBXNativeTarget;\n'
+      '\t\t\tbuildConfigurationList = 331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */;\n'
+      '\t\t\tbuildPhases = (\n'
+      '\t\t\t);\n'
+      '\t\t\tbuildRules = (\n'
+      '\t\t\t);\n'
+      '\t\t\tdependencies = (\n'
+      '\t\t\t);\n'
+      '\t\t\tname = RunnerTests;\n'
+      '\t\t\tproductName = RunnerTests;\n'
+      '\t\t\tproductType = "com.apple.product-type.bundle.unit-test";\n'
+      '\t\t};\n'
+      '/* End PBXNativeTarget section */\n',
+    )
+    // XCBuildConfiguration 섹션에 RunnerTests 구성 추가 (Runner 구성 앞에)
+    .replaceFirst(
+      '/* Begin XCBuildConfiguration section */\n',
+      '/* Begin XCBuildConfiguration section */\n'
+      '\t\t331C8088294A63A400263BE5 /* Debug */ = {\n'
+      '\t\t\tisa = XCBuildConfiguration;\n'
+      '\t\t\tbuildSettings = {\n'
+      '\t\t\t\tBUNDLE_LOADER = "\$(TEST_HOST)";\n'
+      '\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.example.runner.RunnerTests;\n'
+      '\t\t\t\tTEST_HOST = "\$(BUILT_PRODUCTS_DIR)/Runner.app/\$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";\n'
+      '\t\t\t};\n'
+      '\t\t\tname = Debug;\n'
+      '\t\t};\n'
+      '\t\t331C8089294A63A400263BE5 /* Release */ = {\n'
+      '\t\t\tisa = XCBuildConfiguration;\n'
+      '\t\t\tbuildSettings = {\n'
+      '\t\t\t\tBUNDLE_LOADER = "\$(TEST_HOST)";\n'
+      '\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.example.runner.RunnerTests;\n'
+      '\t\t\t\tTEST_HOST = "\$(BUILT_PRODUCTS_DIR)/Runner.app/\$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";\n'
+      '\t\t\t};\n'
+      '\t\t\tname = Release;\n'
+      '\t\t};\n'
+      '\t\t331C808A294A63A400263BE5 /* Profile */ = {\n'
+      '\t\t\tisa = XCBuildConfiguration;\n'
+      '\t\t\tbuildSettings = {\n'
+      '\t\t\t\tBUNDLE_LOADER = "\$(TEST_HOST)";\n'
+      '\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.example.runner.RunnerTests;\n'
+      '\t\t\t\tTEST_HOST = "\$(BUILT_PRODUCTS_DIR)/Runner.app/\$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";\n'
+      '\t\t\t};\n'
+      '\t\t\tname = Profile;\n'
+      '\t\t};\n',
+    )
+    // XCConfigurationList 섹션에 RunnerTests 구성 목록 추가
+    .replaceFirst(
+      '/* End XCConfigurationList section */\n',
+      '\t\t331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */ = {\n'
+      '\t\t\tisa = XCConfigurationList;\n'
+      '\t\t\tbuildConfigurations = (\n'
+      '\t\t\t\t331C8088294A63A400263BE5 /* Debug */,\n'
+      '\t\t\t\t331C8089294A63A400263BE5 /* Release */,\n'
+      '\t\t\t\t331C808A294A63A400263BE5 /* Profile */,\n'
+      '\t\t\t);\n'
+      '\t\t\tdefaultConfigurationIsVisible = 0;\n'
+      '\t\t\tdefaultConfigurationName = Release;\n'
+      '\t\t};\n'
+      '/* End XCConfigurationList section */\n',
+    );
+
 void main() {
   late Directory tempDir;
 
@@ -286,6 +361,49 @@ void main() {
       expect('Debug-dev'.allMatches(afterFirst).length,
              'Debug-dev'.allMatches(afterSecond).length);
       expect(uuid, '97C146ED1CF9000F007C117D');
+    });
+
+    test('clones RunnerTests configurations for each flavor', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(_pbxprojWithRunnerTests);
+
+      PbxprojModifier.modify(file.path, flavors);
+      final result = file.readAsStringSync();
+
+      // RunnerTests config list should have flavor configs
+      final rtListStart = result.indexOf(
+        '331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */ = {',
+      );
+      expect(rtListStart, isNot(-1));
+      final rtListEnd = result.indexOf('};', rtListStart);
+      final rtListBlock = result.substring(rtListStart, rtListEnd);
+
+      expect(rtListBlock, contains('Debug-dev'));
+      expect(rtListBlock, contains('Release-dev'));
+      expect(rtListBlock, contains('Profile-dev'));
+      expect(rtListBlock, contains('Debug-prod'));
+      expect(rtListBlock, contains('Release-prod'));
+      expect(rtListBlock, contains('Profile-prod'));
+
+      // Base configs should be removed from RunnerTests config list
+      expect(rtListBlock, isNot(contains('331C8088294A63A400263BE5')));
+      expect(rtListBlock, isNot(contains('331C8089294A63A400263BE5')));
+      expect(rtListBlock, isNot(contains('331C808A294A63A400263BE5')));
+    });
+
+    test('RunnerTests flavor configs are idempotent on second run', () {
+      final file = File('${tempDir.path}/project.pbxproj');
+      file.writeAsStringSync(_pbxprojWithRunnerTests);
+
+      PbxprojModifier.modify(file.path, flavors);
+      final afterFirst = file.readAsStringSync();
+      final firstCount = 'Debug-dev'.allMatches(afterFirst).length;
+
+      PbxprojModifier.modify(file.path, flavors);
+      final afterSecond = file.readAsStringSync();
+      final secondCount = 'Debug-dev'.allMatches(afterSecond).length;
+
+      expect(secondCount, firstCount);
     });
 
     test('throws SetupException when file does not exist', () {
