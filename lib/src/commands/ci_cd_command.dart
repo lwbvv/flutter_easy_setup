@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:path/path.dart' as p;
 
 import '../exceptions.dart';
@@ -8,6 +10,7 @@ import '../fastlane/gemfile_generator.dart';
 import '../fastlane/matchfile_generator.dart';
 import '../fastlane/metadata_generator.dart';
 import '../github/workflow_generator.dart';
+import '../ios/pbxproj_modifier.dart';
 import '../models/flavor_config.dart';
 import '../utils/fastlane_runner.dart';
 import '../utils/project_finder.dart';
@@ -57,10 +60,22 @@ class CiCdCommand {
     GemfileGenerator.generate(fastlaneDir, dryRun: dryRun);
     MatchfileGenerator.generate(fastlaneDir, bundleIds, dryRun: dryRun);
     AppfileGenerator.generate(fastlaneDir, dryRun: dryRun);
-    final flavorBundleIds = resolvedFlavors.map(
-      (key, info) => MapEntry(key, info.bundleId),
+    // Xcode 프로젝트에서 실제 빌드 구성 읽기
+    final pbxprojPath = ProjectFinder.iosPbxprojPath(root);
+    List<({String name, String bundleId})> buildConfigs = [];
+    if (File(pbxprojPath).existsSync()) {
+      buildConfigs = PbxprojModifier.extractRunnerBuildConfigs(pbxprojPath);
+      if (buildConfigs.isNotEmpty) {
+        print('  Found ${buildConfigs.length} build configurations from Xcode project');
+      }
+    }
+
+    FastfileGenerator.generate(
+      fastlaneDir,
+      flavorNames,
+      buildConfigs: buildConfigs,
+      dryRun: dryRun,
     );
-    FastfileGenerator.generate(fastlaneDir, flavorBundleIds, dryRun: dryRun);
 
     // 5. bundle install (fastlane 디렉터리)
     await FastlaneRunner.bundleInstall(fastlaneDir, dryRun: dryRun);

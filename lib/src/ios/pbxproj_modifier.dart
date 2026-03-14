@@ -155,6 +155,89 @@ class PbxprojModifier {
     return runnerTargetUuid;
   }
 
+  /// pbxproj 파일에서 Runner 타겟의 모든 빌드 구성(이름 + bundle ID)을 추출합니다.
+  ///
+  /// flavor 설정 후 생성된 Debug-dev, Release-prod 등의 구성을 포함합니다.
+  /// 기본 Debug/Release/Profile 구성은 제외하고 flavor 구성만 반환합니다.
+  static List<({String name, String bundleId})> extractRunnerBuildConfigs(
+    String pbxprojPath,
+  ) {
+    final file = File(pbxprojPath);
+    if (!file.existsSync()) {
+      throw SetupException(
+        'project.pbxproj not found: $pbxprojPath\n'
+        'Run "easy_setup flavor" first to set up build configurations.',
+      );
+    }
+
+    final content = file.readAsStringSync();
+
+    // Runner PBXNativeTarget UUID 추출
+    final targetUuid = _extractRunnerTargetUuid(content);
+    if (targetUuid.isEmpty) {
+      throw SetupException(
+        'Could not find Runner PBXNativeTarget in project.pbxproj',
+      );
+    }
+
+    // Runner 타겟의 buildConfigurationList UUID 추출
+    final configListUuid =
+        _extractBuildConfigListForTarget(content, targetUuid);
+    if (configListUuid.isEmpty) {
+      throw SetupException(
+        'Could not find Runner buildConfigurationList UUID',
+      );
+    }
+
+    // XCConfigurationList에서 모든 구성 UUID + 이름 추출
+    final allConfigs = _extractAllConfigsFromList(content, configListUuid);
+
+    // 각 구성 UUID에서 PRODUCT_BUNDLE_IDENTIFIER 추출
+    final result = <({String name, String bundleId})>[];
+    for (final entry in allConfigs.entries) {
+      final configName = entry.key;
+      final configUuid = entry.value;
+
+
+      final block = _extractXCBuildConfigBlock(content, configUuid);
+      if (block.isEmpty) continue;
+
+      final bundleIdMatch = RegExp(
+        r'PRODUCT_BUNDLE_IDENTIFIER\s*=\s*"?([^";]+)"?\s*;',
+      ).firstMatch(block);
+      if (bundleIdMatch == null) continue;
+
+      result.add((name: configName, bundleId: bundleIdMatch.group(1)!));
+    }
+
+    return result;
+  }
+
+  /// XCConfigurationList 내의 모든 빌드 구성 UUID를 추출합니다 (이름 제한 없음).
+  ///
+  /// 반환값: {configName: uuid} 형태의 맵
+  static Map<String, String> _extractAllConfigsFromList(
+    String content,
+    String listUuid,
+  ) {
+    final defMatch = RegExp(
+      RegExp.escape(listUuid) + r' /\*[^*]*\*/ = \{',
+    ).firstMatch(content);
+    if (defMatch == null) return {};
+    final braceStart = defMatch.end - 1;
+    final blockEnd = _findBlockEnd(content, braceStart);
+    if (blockEnd == -1) return {};
+
+    final block = content.substring(defMatch.start, blockEnd + 1);
+    final result = <String, String>{};
+    final matches =
+        RegExp(r'([0-9A-F]{24}) /\* ([^*]+) \*/').allMatches(block);
+    for (final m in matches) {
+      result[m.group(2)!.trim()] = m.group(1)!;
+    }
+    return result;
+  }
+
   // ──────────────────────────── UUID 추출 메서드 ────────────────────────────
 
   /// pbxproj에서 Runner PBXNativeTarget의 24자리 UUID를 추출합니다.

@@ -17,7 +17,7 @@ void main() {
 
   group('FastfileGenerator', () {
     test('creates Fastfile referencing ENV variables', () {
-      FastfileGenerator.generate(tempDir.path, {'dev': 'com.app.dev', 'prod': 'com.app'});
+      FastfileGenerator.generate(tempDir.path, ['dev', 'prod']);
 
       final file = File(p.join(tempDir.path, 'Fastfile'));
       expect(file.existsSync(), isTrue);
@@ -33,78 +33,100 @@ void main() {
     });
 
     test('defaults to prod flavor when available', () {
-      FastfileGenerator.generate(tempDir.path, {'dev': 'com.app.dev', 'prod': 'com.app'});
+      FastfileGenerator.generate(tempDir.path, ['dev', 'prod']);
 
-      final content = File(p.join(tempDir.path, 'Fastfile'))
-          .readAsStringSync();
+      final content =
+          File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
       expect(content, contains('options[:flavor] || "prod"'));
     });
 
     test('defaults to first flavor when prod is not available', () {
-      FastfileGenerator.generate(tempDir.path, {'staging': 'com.app.staging', 'dev': 'com.app.dev'});
+      FastfileGenerator.generate(tempDir.path, ['staging', 'dev']);
 
-      final content = File(p.join(tempDir.path, 'Fastfile'))
-          .readAsStringSync();
+      final content =
+          File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
       expect(content, contains('options[:flavor] || "staging"'));
     });
 
     test('overwrites existing file with correct content', () {
-      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
+      FastfileGenerator.generate(tempDir.path, ['prod']);
       final file = File(p.join(tempDir.path, 'Fastfile'));
       final afterFirst = file.readAsStringSync();
 
       file.writeAsStringSync('CUSTOM');
 
-      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
+      FastfileGenerator.generate(tempDir.path, ['prod']);
       expect(file.readAsStringSync(), afterFirst);
     });
 
     test('beta lane includes increment_build_number_in_pubspec', () {
-      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'});
+      FastfileGenerator.generate(tempDir.path, ['prod']);
 
-      final content = File(p.join(tempDir.path, 'Fastfile'))
-          .readAsStringSync();
+      final content =
+          File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
       expect(content, contains('def increment_build_number_in_pubspec'));
       expect(content, contains('increment_build_number_in_pubspec'));
       // Verify it's called before flutter build
-      final incrementIndex = content.indexOf('    increment_build_number_in_pubspec');
+      final incrementIndex =
+          content.indexOf('    increment_build_number_in_pubspec');
       final buildIndex = content.indexOf('flutter build ipa');
       expect(incrementIndex, lessThan(buildIndex));
     });
 
-    test('generates per-flavor build configuration signing settings', () {
-      FastfileGenerator.generate(tempDir.path, {
-        'dev': 'com.app.dev',
-        'prod': 'com.app',
-      });
+    test('generates signing settings from build configs', () {
+      final buildConfigs = [
+        (name: 'Debug-dev', bundleId: 'com.app.dev'),
+        (name: 'Release-dev', bundleId: 'com.app.dev'),
+        (name: 'Profile-dev', bundleId: 'com.app.dev'),
+        (name: 'Debug-prod', bundleId: 'com.app'),
+        (name: 'Release-prod', bundleId: 'com.app'),
+        (name: 'Profile-prod', bundleId: 'com.app'),
+      ];
 
-      final content = File(p.join(tempDir.path, 'Fastfile'))
-          .readAsStringSync();
+      FastfileGenerator.generate(
+        tempDir.path,
+        ['dev', 'prod'],
+        buildConfigs: buildConfigs,
+      );
 
-      // Debug-{flavor} configurations
+      final content =
+          File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
+
+      // 각 빌드 구성에 대한 update_code_signing_settings 호출
       expect(content, contains('build_configurations: "Debug-dev"'));
-      expect(content, contains('build_configurations: "Debug-prod"'));
-      // Release-{flavor} configurations
       expect(content, contains('build_configurations: "Release-dev"'));
-      expect(content, contains('build_configurations: "Release-prod"'));
-      // Profile-{flavor} configurations
       expect(content, contains('build_configurations: "Profile-dev"'));
+      expect(content, contains('build_configurations: "Debug-prod"'));
+      expect(content, contains('build_configurations: "Release-prod"'));
       expect(content, contains('build_configurations: "Profile-prod"'));
 
-      // Bundle IDs are used directly (not Ruby variables)
+      // bundle ID
       expect(content, contains('bundle_identifier: "com.app.dev"'));
       expect(content, contains('bundle_identifier: "com.app"'));
 
-      // Profile name mappings
-      expect(content, contains('profile_name: "match Development com.app.dev"'));
+      // Debug → Development, Release/Profile → AppStore
+      expect(
+          content, contains('profile_name: "match Development com.app.dev"'));
+      expect(content, contains('profile_name: "match AppStore com.app.dev"'));
       expect(content, contains('profile_name: "match AppStore com.app"'));
 
-      // Release/Profile use Apple Distribution identity
+      // Debug → Apple Development, Release/Profile → Apple Distribution
+      expect(content, contains('code_sign_identity: "Apple Development"'));
       expect(content, contains('code_sign_identity: "Apple Distribution"'));
     });
 
+    test('sync_certs works without build configs', () {
+      FastfileGenerator.generate(tempDir.path, ['prod']);
+
+      final content =
+          File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
+      expect(content, contains('lane :sync_certs'));
+      // update_code_signing_settings 호출이 없어야 함
+      expect(content, isNot(contains('update_code_signing_settings')));
+    });
+
     test('does not create file in dry-run mode', () {
-      FastfileGenerator.generate(tempDir.path, {'prod': 'com.app'}, dryRun: true);
+      FastfileGenerator.generate(tempDir.path, ['prod'], dryRun: true);
 
       expect(
         File(p.join(tempDir.path, 'Fastfile')).existsSync(),
