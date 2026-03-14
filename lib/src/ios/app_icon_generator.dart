@@ -6,11 +6,10 @@ import 'package:path/path.dart' as p;
 
 import '../exceptions.dart';
 
-/// iOS 앱 아이콘을 1024x1024 소스 이미지로부터 자동 생성하는 클래스입니다.
+/// iOS flavor별 앱 아이콘을 1024x1024 소스 이미지로부터 자동 생성하는 클래스입니다.
 ///
-/// 15개 고유 사이즈 PNG를 리사이즈하여 AppIcon-{flavor}.appiconset/ 에 저장하고,
-/// Contents.json (19개 엔트리)을 생성합니다.
-/// locale별 소스가 있으면 .lproj/ 서브디렉터리에 동일하게 생성합니다.
+/// 각 flavor에 대해 15개 고유 사이즈 PNG를 리사이즈하여
+/// AppIcon-{flavor}.appiconset/ 에 저장하고, Contents.json을 생성합니다.
 class AppIconGenerator {
   /// 앱 아이콘 사이즈 정의 (파일명, 픽셀 크기)
   static const List<_IconSize> _iconSizes = [
@@ -60,30 +59,16 @@ class AppIconGenerator {
   /// [assetCatalogDir]: ios/Runner/Assets.xcassets 경로
   /// [flavor]: flavor 이름
   /// [appIconPath]: 1024x1024 소스 이미지 경로 (프로젝트 루트 기준 상대경로)
-  /// [appIconLocalized]: locale별 소스 이미지 경로 맵 (선택사항)
   static void generate(
     String projectRoot,
     String assetCatalogDir,
     String flavor,
     String appIconPath, {
-    Map<String, String>? appIconLocalized,
     bool dryRun = false,
   }) {
     final appiconsetDir = p.join(assetCatalogDir, 'AppIcon-$flavor.appiconset');
-
-    // 기본 아이콘 생성
     final sourcePath = p.join(projectRoot, appIconPath);
     _generateIconSet(sourcePath, appiconsetDir, dryRun: dryRun);
-
-    // locale별 아이콘 생성
-    if (appIconLocalized != null) {
-      for (final entry in appIconLocalized.entries) {
-        final locale = entry.key;
-        final localePath = p.join(projectRoot, entry.value);
-        final localeDir = p.join(appiconsetDir, '$locale.lproj');
-        _generateIconSet(localePath, localeDir, dryRun: dryRun);
-      }
-    }
   }
 
   /// [assetCatalogDir]에서 사용하지 않는 AppIcon-*.appiconset 디렉터리를 삭제합니다.

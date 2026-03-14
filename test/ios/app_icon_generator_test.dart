@@ -231,58 +231,5 @@ void main() {
       expect(secondRunContents, firstRunContents);
     });
 
-    test('generates locale .lproj directories', () {
-      // locale별 소스 아이콘 생성
-      final jaIconPath =
-          p.join(projectRoot, 'assets', 'icons', 'icon_ja.png');
-      final koIconPath =
-          p.join(projectRoot, 'assets', 'icons', 'icon_ko.png');
-      createSourceIcon(jaIconPath);
-      createSourceIcon(koIconPath);
-
-      AppIconGenerator.generate(
-        projectRoot,
-        assetCatalogDir,
-        'dev',
-        'assets/icons/icon.png',
-        appIconLocalized: {
-          'ja': 'assets/icons/icon_ja.png',
-          'ko': 'assets/icons/icon_ko.png',
-        },
-      );
-
-      final outputDir =
-          p.join(assetCatalogDir, 'AppIcon-dev.appiconset');
-
-      // 기본 아이콘 확인
-      expect(
-        File(p.join(outputDir, 'Contents.json')).existsSync(),
-        isTrue,
-      );
-
-      // ja.lproj 확인
-      final jaDir = p.join(outputDir, 'ja.lproj');
-      expect(Directory(jaDir).existsSync(), isTrue);
-      expect(
-        File(p.join(jaDir, 'Contents.json')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(jaDir, 'Icon-App-1024x1024@1x.png')).existsSync(),
-        isTrue,
-      );
-
-      // ko.lproj 확인
-      final koDir = p.join(outputDir, 'ko.lproj');
-      expect(Directory(koDir).existsSync(), isTrue);
-      expect(
-        File(p.join(koDir, 'Contents.json')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(koDir, 'Icon-App-1024x1024@1x.png')).existsSync(),
-        isTrue,
-      );
-    });
   });
 }

@@ -124,27 +124,15 @@ class FlavorCommand {
       );
     }
 
-    // 각 flavor의 앱 아이콘 생성
+    // 각 flavor의 앱 아이콘 생성 (flavor별로만)
     for (final entry in config.flavors.entries) {
       if (entry.value.appIcon != null) {
         print('\n--- iOS App Icon (${entry.key}) ---');
-        // flavor.localized에서 locale별 app_icon 경로를 추출
-        Map<String, String>? localizedIcons;
-        if (entry.value.localized != null) {
-          localizedIcons = <String, String>{};
-          for (final locEntry in entry.value.localized!.entries) {
-            if (locEntry.value.appIcon != null) {
-              localizedIcons[locEntry.key] = locEntry.value.appIcon!;
-            }
-          }
-          if (localizedIcons.isEmpty) localizedIcons = null;
-        }
         AppIconGenerator.generate(
           root,
           assetCatalogDir,
           entry.key,
           entry.value.appIcon!,
-          appIconLocalized: localizedIcons,
           dryRun: dryRun,
         );
       }
