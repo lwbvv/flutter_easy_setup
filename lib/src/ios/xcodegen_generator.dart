@@ -96,9 +96,6 @@ class XcodeGenGenerator {
   /// Profile은 none 타입으로 설정하여 XcodeGen의 기본 설정을 방지합니다.
   static void _writeConfigs(StringBuffer sb, Map<String, FlavorConfig> flavors) {
     sb.writeln('configs:');
-    sb.writeln('  Debug: debug');
-    sb.writeln('  Profile: none');
-    sb.writeln('  Release: release');
     for (final flavor in flavors.keys) {
       sb.writeln('  Debug-$flavor: debug');
       sb.writeln('  Profile-$flavor: none');
@@ -147,18 +144,6 @@ class XcodeGenGenerator {
     sb.writeln('    GCC_WARN_UNUSED_VARIABLE: YES');
     sb.writeln('    IPHONEOS_DEPLOYMENT_TARGET: "$iosVersion"');
     sb.writeln('    SDKROOT: iphoneos');
-    sb.writeln('  configs:');
-    sb.writeln('    Debug:');
-    sb.writeln('      MTL_ENABLE_DEBUG_INFO: INCLUDE_SOURCE');
-    sb.writeln('      SWIFT_OPTIMIZATION_LEVEL: "-Onone"');
-    sb.writeln('      ONLY_ACTIVE_ARCH: YES');
-    sb.writeln('      GCC_DYNAMIC_NO_PIC: NO');
-    sb.writeln("      GCC_PREPROCESSOR_DEFINITIONS: 'DEBUG=1 \$(inherited)'");
-    sb.writeln('    Release:');
-    sb.writeln('      MTL_ENABLE_DEBUG_INFO: "NO"');
-    sb.writeln('      SWIFT_COMPILATION_MODE: wholemodule');
-    sb.writeln('      VALIDATE_PRODUCT: YES');
-    sb.writeln('      COPY_PHASE_STRIP: "NO"');
     sb.writeln();
   }
 
@@ -186,9 +171,6 @@ class XcodeGenGenerator {
 
     // configFiles
     sb.writeln('    configFiles:');
-    sb.writeln('      Debug: Flutter/Debug.xcconfig');
-    sb.writeln('      Release: Flutter/Release.xcconfig');
-    sb.writeln('      Profile: Flutter/Release.xcconfig');
     for (final flavor in flavors.keys) {
       sb.writeln('      Debug-$flavor: Flutter/Debug-$flavor.xcconfig');
       sb.writeln('      Release-$flavor: Flutter/Release-$flavor.xcconfig');
@@ -246,10 +228,6 @@ class XcodeGenGenerator {
     sb.writeln('        VERSIONING_SYSTEM: apple-generic');
     sb.writeln('      configs:');
 
-    // 기본 configs에도 Debug 최적화 설정
-    sb.writeln('        Debug:');
-    sb.writeln('          SWIFT_OPTIMIZATION_LEVEL: "-Onone"');
-
     // flavor별 config settings
     for (final entry in flavors.entries) {
       final flavor = entry.key;
@@ -295,27 +273,11 @@ class XcodeGenGenerator {
 
   /// schemes 섹션을 생성합니다.
   ///
-  /// 기본 Runner scheme + flavor별 scheme을 생성합니다.
+  /// flavor별 scheme만 생성합니다.
   /// 각 flavor scheme은 해당 flavor의 Debug/Release/Profile 구성을 매핑합니다.
   static void _writeSchemes(
       StringBuffer sb, Map<String, FlavorConfig> flavors) {
     sb.writeln('schemes:');
-
-    // 기본 Runner scheme
-    sb.writeln('  Runner:');
-    sb.writeln('    build:');
-    sb.writeln('      targets:');
-    sb.writeln('        Runner: all');
-    sb.writeln('    run:');
-    sb.writeln('      config: Debug');
-    sb.writeln('    test:');
-    sb.writeln('      config: Debug');
-    sb.writeln('    profile:');
-    sb.writeln('      config: Profile');
-    sb.writeln('    analyze:');
-    sb.writeln('      config: Debug');
-    sb.writeln('    archive:');
-    sb.writeln('      config: Release');
 
     // flavor별 scheme
     for (final flavor in flavors.keys) {
