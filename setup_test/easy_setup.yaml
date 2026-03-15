@@ -7,6 +7,8 @@ easy_setup:
       localized: # 선택사항: flavor별 localization
         ko:
           app_name: 마이앱 Dev
+        ja:
+          app_name: マイアプリ Dev
     prod:
       bundle_id: studio.etch.test
       name: MyApp
@@ -14,8 +16,10 @@ easy_setup:
       localized:
         ko:
           app_name: 마이앱
+        ja:
+          app_name: マイアプリ
 
-  localizations: [ ko, en]                          # 선택사항: Xcode knownRegions 설정
+  localizations: [ko, en, ja]                          # 선택사항: Xcode knownRegions 설정
   permission: # 선택사항: 기본 iOS 권한 설명 (Base.lproj)
     NSCameraUsageDescription: "Camera access is required"
     NSPhotoLibraryUsageDescription: "Photo library access is required"
@@ -23,3 +27,6 @@ easy_setup:
     ko:
       NSCameraUsageDescription: "카메라 접근이 필요합니다"
       NSPhotoLibraryUsageDescription: "갤러리 접근 권한이 필요합니다."
+    Ja:
+      NSCameraUsageDescription: "カメラアクセスが必要です"
+      NSPhotoLibraryUsageDescription: "ギャラリーへのアクセス権が必要です。"
