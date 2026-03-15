@@ -61,9 +61,9 @@ class XcodeGenScriptsGenerator {
   }
 
   /// 현재 빌드 configuration에서 flavor를 추출하고
-  /// Flavors/{flavor}/{locale}.lproj/InfoPlist.strings の内容を
-  /// ビルド済みバンドル(.app)に注入するスクリプト。
-  /// ソースファイルは変更せず、バンドル内のファイルのみ更新する。
+  /// Flavors/{flavor}/{locale}.lproj/InfoPlist.strings의 CFBundleDisplayName을
+  /// Runner/{locale}.lproj/InfoPlist.strings에 병합하는 스크립트.
+  /// Copy Bundle Resources 전에 실행되어 Xcode가 자연스럽게 번들에 포함시킴.
   static const _copyFlavorStringsContent = r'''#!/bin/sh
 
 # Extract flavor from CONFIGURATION (e.g. "Debug-dev" → "dev", "Release-prod" → "prod")
@@ -75,14 +75,13 @@ if [ -z "$FLAVOR" ]; then
 fi
 
 FLAVORS_DIR="${SRCROOT}/Flavors/${FLAVOR}"
-BUNDLE_DIR="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app"
 
 if [ ! -d "$FLAVORS_DIR" ]; then
   echo "Flavors directory not found: $FLAVORS_DIR, skipping."
   exit 0
 fi
 
-echo "Injecting InfoPlist.strings into bundle for flavor: $FLAVOR"
+echo "Merging InfoPlist.strings for flavor: $FLAVOR"
 
 for LPROJ in "$FLAVORS_DIR"/*.lproj; do
   if [ ! -d "$LPROJ" ]; then
@@ -91,7 +90,7 @@ for LPROJ in "$FLAVORS_DIR"/*.lproj; do
 
   LOCALE=$(basename "$LPROJ")
   SRC_STRINGS="$LPROJ/InfoPlist.strings"
-  DST_DIR="${BUNDLE_DIR}/${LOCALE}"
+  DST_DIR="${SRCROOT}/Runner/${LOCALE}"
   DST_STRINGS="${DST_DIR}/InfoPlist.strings"
 
   if [ ! -f "$SRC_STRINGS" ]; then
@@ -101,8 +100,8 @@ for LPROJ in "$FLAVORS_DIR"/*.lproj; do
   mkdir -p "$DST_DIR"
 
   if [ -f "$DST_STRINGS" ]; then
-    # Bundle already has InfoPlist.strings (e.g. permission strings)
-    # Remove existing CFBundleDisplayName, then append from flavor source
+    # Runner에 이미 InfoPlist.strings가 있으면 (permission 등)
+    # 기존 CFBundleDisplayName을 제거하고 flavor의 값으로 교체
     TEMP_FILE=$(mktemp)
     grep -v '"CFBundleDisplayName"' "$DST_STRINGS" > "$TEMP_FILE" || true
     grep '"CFBundleDisplayName"' "$SRC_STRINGS" >> "$TEMP_FILE" || true
@@ -111,7 +110,7 @@ for LPROJ in "$FLAVORS_DIR"/*.lproj; do
     cp "$SRC_STRINGS" "$DST_STRINGS"
   fi
 
-  echo "  Injected: ${LOCALE}/InfoPlist.strings"
+  echo "  Merged: ${LOCALE}/InfoPlist.strings"
 done
 ''';
 
