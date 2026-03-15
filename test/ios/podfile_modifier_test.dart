@@ -8,9 +8,9 @@ const _podfileContent = '''
 platform :ios, '12.0'
 
 project 'Runner', {
-  'Debug' => :debug,
-  'Profile' => :release,
-  'Release' => :release,
+  'Debug-old' => :debug,
+  'Profile-old' => :release,
+  'Release-old' => :release,
 }
 
 target 'Runner' do
@@ -36,7 +36,7 @@ void main() {
   };
 
   group('PodfileModifier', () {
-    test('adds flavor mappings after Release marker', () {
+    test('replaces project block with flavor-only mappings', () {
       final file = File('${tempDir.path}/Podfile');
       file.writeAsStringSync(_podfileContent);
 
@@ -49,6 +49,10 @@ void main() {
       expect(result, contains("'Debug-prod' => :debug,"));
       expect(result, contains("'Profile-prod' => :release,"));
       expect(result, contains("'Release-prod' => :release,"));
+      // 기본 Debug/Profile/Release는 포함되지 않아야 함
+      expect(result, isNot(contains("'Debug' => :debug,")));
+      expect(result, isNot(contains("'Profile' => :release,")));
+      expect(result, isNot(contains("'Release' => :release,")));
     });
 
     test('maps Debug to :debug and Profile/Release to :release', () {
@@ -76,14 +80,15 @@ void main() {
       expect(afterSecond, afterFirst);
     });
 
-    test('skips when Release marker is not found', () {
+    test('adds project block when not present but platform exists', () {
       final file = File('${tempDir.path}/Podfile');
-      file.writeAsStringSync('platform :ios, "12.0"\ntarget "Runner" do\nend\n');
+      file.writeAsStringSync("platform :ios, '12.0'\ntarget 'Runner' do\nend\n");
 
       PodfileModifier.modify(file.path, flavors);
 
       final result = file.readAsStringSync();
-      expect(result, isNot(contains('Debug-dev')));
+      expect(result, contains("'Debug-dev' => :debug,"));
+      expect(result, contains("project 'Runner'"));
     });
 
     test('skips when file does not exist', () {

@@ -118,9 +118,6 @@ platform :ios, '$iosVersion'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
-  'Debug' => :debug,
-  'Profile' => :release,
-  'Release' => :release,
 $configBlock
 }
 
@@ -200,32 +197,29 @@ $postInstall''';
     return content;
   }
 
-  /// flavor 매핑을 적용합니다.
+  /// project 'Runner' 블록 전체를 교체합니다.
   static String _applyFlavorMappings(
       String content, Map<String, FlavorConfig> flavors) {
-    // 기존 flavor 매핑이 있으면 제거 후 재생성
-    content = content.replaceAll(
-      RegExp(r"  '(?:Debug|Profile|Release)-[^']+' => :(?:debug|release),\n"),
-      '',
+    final projectBlock = RegExp(
+      r"project\s+'Runner'\s*,\s*\{[^}]*\}",
+      dotAll: true,
     );
 
-    const marker = "'Release' => :release,";
-    if (!content.contains(marker)) {
-      print('  Could not find "$marker" in Podfile, skipping flavor mappings.');
-      return content;
+    final newBlock = "project 'Runner', {\n${_buildConfigBlock(flavors)}\n}";
+
+    if (projectBlock.hasMatch(content)) {
+      return content.replaceFirst(projectBlock, newBlock);
     }
 
-    final sb = StringBuffer();
-    for (final flavor in flavors.keys) {
-      sb.writeln("  'Debug-$flavor' => :debug,");
-      sb.writeln("  'Profile-$flavor' => :release,");
-      sb.writeln("  'Release-$flavor' => :release,");
+    // project 블록이 없으면 platform 줄 뒤에 추가
+    final platformPattern = RegExp(r"platform\s*:ios\s*,\s*'[^']*'");
+    if (platformPattern.hasMatch(content)) {
+      return content.replaceFirstMapped(platformPattern, (match) {
+        return '${match.group(0)}\n\n$newBlock';
+      });
     }
 
-    return content.replaceFirst(
-      marker,
-      "$marker\n${sb.toString().trimRight()}",
-    );
+    return content;
   }
 
   /// post_install 블록 전체를 교체합니다.
