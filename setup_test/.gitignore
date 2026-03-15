@@ -46,3 +46,6 @@ app.*.map.json
 
 
 *.p8
+
+.github/
+ci_cd/

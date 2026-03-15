@@ -1,0 +1,12 @@
+# 테스트용 Flutter 프로젝트
+setup_test/
+
+# 내부 문서
+docs/
+CLAUDE.md
+
+# IDE
+.idea/
+
+# 기타
+key_make/
