@@ -58,7 +58,7 @@ class FastfileGenerator {
         syncCerts.writeln('      bundle_identifier: bundle_id,');
         syncCerts.writeln('      build_configurations: "$buildType-$flavor",');
         syncCerts.writeln(
-            '      profile_name: "match $profileType \#{bundle_id}",');
+            '      profile_name: "match $profileType #{bundle_id}",');
         syncCerts.writeln('      code_sign_identity: "$identity"');
         syncCerts.writeln('    )');
       }

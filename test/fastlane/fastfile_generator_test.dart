@@ -98,8 +98,8 @@ void main() {
       expect(content, contains('bundle_identifier: bundle_id,'));
 
       // profile_name uses Ruby string interpolation
-      expect(content, contains('profile_name: "match Development \#{bundle_id}"'));
-      expect(content, contains('profile_name: "match AppStore \#{bundle_id}"'));
+      expect(content, contains('profile_name: "match Development #{bundle_id}"'));
+      expect(content, contains('profile_name: "match AppStore #{bundle_id}"'));
 
       // Debug uses Apple Development, Release/Profile use Apple Distribution
       expect(content, contains('code_sign_identity: "Apple Development"'));

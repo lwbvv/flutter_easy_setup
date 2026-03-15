@@ -241,28 +241,6 @@ $postInstall''';
     return '$content\n$newPostInstall';
   }
 
-  /// Builds the target.build_configurations.each block.
-  static String _buildConfigIterationBlock(
-      Set<String> macros, String iosVersion) {
-    final sb = StringBuffer();
-    sb.writeln('    target.build_configurations.each do |config|');
-
-    if (macros.isNotEmpty) {
-      sb.writeln(
-          "      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [");
-      sb.writeln("        '\$(inherited)',");
-      for (final macro in macros) {
-        sb.writeln("        '$macro',");
-      }
-      sb.writeln('      ]');
-    }
-
-    sb.writeln(
-        "      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '$iosVersion'");
-    sb.writeln('    end');
-    return sb.toString();
-  }
-
   /// Builds the content of the project 'Runner' block.
   static String _buildConfigBlock(Map<String, FlavorConfig> flavors) {
     final sb = StringBuffer();

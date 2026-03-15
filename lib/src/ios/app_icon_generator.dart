@@ -178,21 +178,12 @@ class AppIconGenerator {
   static String _buildContentsJson() {
     final images = <Map<String, dynamic>>[];
     for (final entry in _contentsEntries) {
-      final map = <String, dynamic>{
+      images.add({
         'size': entry.size,
         'idiom': entry.idiom,
         'filename': entry.filename,
         'scale': entry.scale,
-      };
-      if (entry.subtype != null) {
-        map['appearances'] = [
-          {
-            'appearance': 'luminosity',
-            'value': entry.subtype,
-          }
-        ];
-      }
-      images.add(map);
+      });
     }
 
     final contents = {
@@ -220,7 +211,5 @@ class _ContentsEntry {
   final String size;
   final String scale;
   final String idiom;
-  final String? subtype;
-  const _ContentsEntry(this.filename, this.size, this.scale, this.idiom,
-      {this.subtype});
+  const _ContentsEntry(this.filename, this.size, this.scale, this.idiom);
 }
