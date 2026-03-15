@@ -1,3 +1,12 @@
+## 0.0.2
+
+- Remove unused `app_store` module (JwtGenerator, AppStoreConnectClient) and `dart_jsonwebtoken` dependency
+- Remove unused `subtype` parameter and `_buildConfigIterationBlock` method
+- Translate all code comments, README, and docs to English
+- Clarify that `localized` / `localized_permission` are for non-English locales only (English is the base language)
+- CI/CD credentials are now configured via `.env` file instead of YAML
+- Add `repository` URL to pubspec.yaml
+
 ## 0.0.1
 
 ### Flavor Command (default)
