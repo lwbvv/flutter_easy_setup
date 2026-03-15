@@ -185,5 +185,26 @@ end
       expect(result, contains('PERMISSION_BLUETOOTH=1'));
       expect(result, contains('PERMISSION_APP_TRACKING_TRANSPARENCY=1'));
     });
+
+    test('sets IPHONEOS_DEPLOYMENT_TARGET in post_install', () {
+      final file = File('${tempDir.path}/Podfile');
+
+      PodfileModifier.modify(file.path, flavors);
+
+      final result = file.readAsStringSync();
+      expect(result, contains("IPHONEOS_DEPLOYMENT_TARGET"));
+      expect(result, contains("'15.0'"));
+    });
+
+    test('uses custom ios_version for platform and deployment target', () {
+      final file = File('${tempDir.path}/Podfile');
+
+      PodfileModifier.modify(file.path, flavors, iosVersion: '16.0');
+
+      final result = file.readAsStringSync();
+      expect(result, contains("platform :ios, '16.0'"));
+      expect(result,
+          contains("config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'"));
+    });
   });
 }

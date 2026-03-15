@@ -142,6 +142,7 @@ class FlavorConfig {
 /// [metadata]: 선택사항 — App Store Connect 메타데이터 (locale별)
 class EasySetupConfig {
   final Map<String, FlavorConfig> flavors;
+  final String? iosVersion;
   final List<String>? localizations;
   final Map<String, String>? permission;
   final Map<String, Map<String, String>>? localizedPermission;
@@ -149,6 +150,7 @@ class EasySetupConfig {
 
   const EasySetupConfig({
     required this.flavors,
+    this.iosVersion,
     this.localizations,
     this.permission,
     this.localizedPermission,
@@ -233,8 +235,12 @@ class EasySetupConfig {
         }
       }
 
+      // ios_version 파싱
+      final iosVersion = easySetup['ios_version']?.toString();
+
       return EasySetupConfig(
         flavors: flavors,
+        iosVersion: iosVersion,
         localizations: localizations,
         permission: permission,
         localizedPermission: localizedPermission,

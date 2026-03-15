@@ -37,21 +37,25 @@ class PodfileModifier {
   /// Podfile을 생성하거나 수정합니다.
   ///
   /// [permission]: easy_setup.yaml의 permission 맵 (키를 기반으로 매크로 매핑)
+  /// [iosVersion]: iOS minimum deployment target (예: "15.0")
   static void modify(
     String podfilePath,
     Map<String, FlavorConfig> flavors, {
     Map<String, String>? permission,
+    String? iosVersion,
     bool dryRun = false,
   }) {
+    final version = iosVersion ?? '15.0';
     final file = File(podfilePath);
 
     if (!file.existsSync()) {
-      _createPodfile(file, flavors, permission: permission, dryRun: dryRun);
+      _createPodfile(file, flavors,
+          permission: permission, iosVersion: version, dryRun: dryRun);
       return;
     }
 
     _modifyExistingPodfile(file, flavors,
-        permission: permission, dryRun: dryRun);
+        permission: permission, iosVersion: version, dryRun: dryRun);
   }
 
   /// permission 키들로부터 필요한 GCC 매크로 목록을 생성합니다.
@@ -68,15 +72,15 @@ class PodfileModifier {
   }
 
   /// post_install 블록을 생성합니다.
-  static String _buildPostInstall(Set<String> macros) {
+  static String _buildPostInstall(Set<String> macros, String iosVersion) {
     final sb = StringBuffer();
     sb.writeln('post_install do |installer|');
     sb.writeln('  installer.pods_project.targets.each do |target|');
     sb.writeln('    flutter_additional_ios_build_settings(target)');
+    sb.writeln('');
+    sb.writeln('    target.build_configurations.each do |config|');
 
     if (macros.isNotEmpty) {
-      sb.writeln('');
-      sb.writeln('    target.build_configurations.each do |config|');
       sb.writeln(
           "      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [");
       sb.writeln("        '\$(inherited)',");
@@ -84,8 +88,11 @@ class PodfileModifier {
         sb.writeln("        '$macro',");
       }
       sb.writeln('      ]');
-      sb.writeln('    end');
     }
+
+    sb.writeln(
+        "      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '$iosVersion'");
+    sb.writeln('    end');
 
     sb.writeln('  end');
     sb.writeln('end');
@@ -97,14 +104,15 @@ class PodfileModifier {
     File file,
     Map<String, FlavorConfig> flavors, {
     Map<String, String>? permission,
+    required String iosVersion,
     required bool dryRun,
   }) {
     final configBlock = _buildConfigBlock(flavors);
     final macros = _resolveMacros(permission);
-    final postInstall = _buildPostInstall(macros);
+    final postInstall = _buildPostInstall(macros, iosVersion);
 
     final content = '''# Uncomment this line to define a global platform for your project
-platform :ios, '15.0'
+platform :ios, '$iosVersion'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -159,6 +167,7 @@ $postInstall''';
     File file,
     Map<String, FlavorConfig> flavors, {
     Map<String, String>? permission,
+    required String iosVersion,
     required bool dryRun,
   }) {
     var content = file.readAsStringSync();
@@ -166,11 +175,9 @@ $postInstall''';
     // 1. flavor 매핑 처리
     content = _applyFlavorMappings(content, flavors);
 
-    // 2. permission 매크로 처리
+    // 2. permission 매크로 + IPHONEOS_DEPLOYMENT_TARGET 처리
     final macros = _resolveMacros(permission);
-    if (macros.isNotEmpty) {
-      content = _applyPermissionMacros(content, macros);
-    }
+    content = _applyPostInstallConfig(content, macros, iosVersion);
 
     if (dryRun) {
       print('  [dry-run] Would update Podfile.');
@@ -209,47 +216,44 @@ $postInstall''';
     );
   }
 
-  /// permission 매크로를 post_install 블록에 적용합니다.
-  static String _applyPermissionMacros(String content, Set<String> macros) {
-    // 기존 GCC_PREPROCESSOR_DEFINITIONS 블록이 있으면 교체
-    final gccBlock = RegExp(
-      r"config\.build_settings\['GCC_PREPROCESSOR_DEFINITIONS'\] \|\|= \[\s*[\s\S]*?\]",
+  /// post_install 블록 전체를 교체합니다.
+  static String _applyPostInstallConfig(
+      String content, Set<String> macros, String iosVersion) {
+    // post_install 블록 전체를 찾아서 교체
+    final postInstallBlock = RegExp(
+      r'post_install do \|installer\|[\s\S]*?^end\n?',
+      multiLine: true,
     );
 
-    if (gccBlock.hasMatch(content)) {
-      // 기존 블록을 새 블록으로 교체
-      final newBlock = _buildGccBlock(macros);
-      return content.replaceFirst(gccBlock, newBlock);
+    final newPostInstall = _buildPostInstall(macros, iosVersion);
+
+    if (postInstallBlock.hasMatch(content)) {
+      return content.replaceFirst(postInstallBlock, newPostInstall);
     }
 
-    // post_install 블록은 있지만 GCC_PREPROCESSOR_DEFINITIONS가 없는 경우
-    const postInstallMarker = 'flutter_additional_ios_build_settings(target)';
-    if (content.contains(postInstallMarker)) {
-      final sb = StringBuffer();
-      sb.writeln('');
-      sb.writeln('    target.build_configurations.each do |config|');
-      sb.writeln('      ${_buildGccBlock(macros)}');
-      sb.writeln('    end');
-
-      return content.replaceFirst(
-        postInstallMarker,
-        '$postInstallMarker${sb.toString()}',
-      );
-    }
-
-    return content;
+    // post_install이 없으면 끝에 추가
+    return '$content\n$newPostInstall';
   }
 
-  /// GCC_PREPROCESSOR_DEFINITIONS 블록 문자열을 생성합니다.
-  static String _buildGccBlock(Set<String> macros) {
+  /// target.build_configurations.each 블록을 생성합니다.
+  static String _buildConfigIterationBlock(
+      Set<String> macros, String iosVersion) {
     final sb = StringBuffer();
-    sb.write(
-        "config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [\n");
-    sb.writeln("        '\$(inherited)',");
-    for (final macro in macros) {
-      sb.writeln("        '$macro',");
+    sb.writeln('    target.build_configurations.each do |config|');
+
+    if (macros.isNotEmpty) {
+      sb.writeln(
+          "      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [");
+      sb.writeln("        '\$(inherited)',");
+      for (final macro in macros) {
+        sb.writeln("        '$macro',");
+      }
+      sb.writeln('      ]');
     }
-    sb.write('      ]');
+
+    sb.writeln(
+        "      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '$iosVersion'");
+    sb.writeln('    end');
     return sb.toString();
   }
 

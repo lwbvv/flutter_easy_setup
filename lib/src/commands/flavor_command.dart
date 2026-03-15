@@ -148,6 +148,7 @@ class FlavorCommand {
       root,
       config.flavors,
       localizations: config.localizations,
+      iosVersion: config.iosVersion,
       dryRun: dryRun,
     );
 
@@ -208,6 +209,7 @@ class FlavorCommand {
       podfilePath,
       config.flavors,
       permission: config.permission,
+      iosVersion: config.iosVersion,
       dryRun: dryRun,
     );
 

@@ -20,12 +20,14 @@ class XcodeGenGenerator {
     String projectRoot,
     Map<String, FlavorConfig> flavors, {
     List<String>? localizations,
+    String? iosVersion,
     bool dryRun = false,
   }) {
     final iosDir = p.join(projectRoot, 'ios');
     final projectYmlPath = p.join(iosDir, 'project.yml');
 
-    final content = _buildProjectYml(flavors, localizations: localizations);
+    final content = _buildProjectYml(flavors,
+        localizations: localizations, iosVersion: iosVersion);
 
     if (dryRun) {
       print('  [dry-run] Would write: $projectYmlPath');
@@ -41,7 +43,9 @@ class XcodeGenGenerator {
   static String _buildProjectYml(
     Map<String, FlavorConfig> flavors, {
     List<String>? localizations,
+    String? iosVersion,
   }) {
+    final version = iosVersion ?? '13.0';
     final sb = StringBuffer();
 
     // name
@@ -49,13 +53,13 @@ class XcodeGenGenerator {
     sb.writeln();
 
     // options
-    _writeOptions(sb, localizations: localizations);
+    _writeOptions(sb, localizations: localizations, iosVersion: version);
 
     // configs
     _writeConfigs(sb, flavors);
 
     // settings (project-level)
-    _writeProjectSettings(sb);
+    _writeProjectSettings(sb, iosVersion: version);
 
     // targets
     _writeTargets(sb, flavors);
@@ -67,11 +71,12 @@ class XcodeGenGenerator {
   }
 
   /// options 섹션을 생성합니다.
-  static void _writeOptions(StringBuffer sb, {List<String>? localizations}) {
+  static void _writeOptions(StringBuffer sb,
+      {List<String>? localizations, required String iosVersion}) {
     sb.writeln('options:');
     sb.writeln('  bundleIdPrefix: ""');
     sb.writeln('  deploymentTarget:');
-    sb.writeln('    iOS: "13.0"');
+    sb.writeln('    iOS: "$iosVersion"');
 
     if (localizations != null && localizations.isNotEmpty) {
       sb.writeln('  developmentLanguage: en');
@@ -103,7 +108,8 @@ class XcodeGenGenerator {
   }
 
   /// project-level settings 섹션을 생성합니다.
-  static void _writeProjectSettings(StringBuffer sb) {
+  static void _writeProjectSettings(StringBuffer sb,
+      {required String iosVersion}) {
     sb.writeln('settings:');
     sb.writeln('  base:');
     sb.writeln('    ALWAYS_SEARCH_USER_PATHS: NO');
@@ -139,7 +145,7 @@ class XcodeGenGenerator {
     sb.writeln('    GCC_WARN_UNINITIALIZED_AUTOS: YES_AGGRESSIVE');
     sb.writeln('    GCC_WARN_UNUSED_FUNCTION: YES');
     sb.writeln('    GCC_WARN_UNUSED_VARIABLE: YES');
-    sb.writeln('    IPHONEOS_DEPLOYMENT_TARGET: "13.0"');
+    sb.writeln('    IPHONEOS_DEPLOYMENT_TARGET: "$iosVersion"');
     sb.writeln('    SDKROOT: iphoneos');
     sb.writeln('  configs:');
     sb.writeln('    Debug:');
