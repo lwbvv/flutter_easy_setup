@@ -80,9 +80,6 @@ class FlavorCommand {
     print('\n--- iOS xcconfig ---');
     final xcconfigDir = ProjectFinder.iosXcconfigDir(root);
 
-    // Flutter 기본 xcconfig 파일이 없으면 생성
-    XcconfigGenerator.ensureBaseXcconfigs(xcconfigDir, dryRun: dryRun);
-
     // 사용하지 않는 flavor xcconfig 파일 정리
     XcconfigGenerator.cleanupUnusedXcconfigs(
       xcconfigDir,

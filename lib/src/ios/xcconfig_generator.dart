@@ -14,33 +14,6 @@ import '../models/flavor_config.dart';
 /// 각 파일에는 APP_DISPLAY_NAME 변수가 설정되어,
 /// Info.plist에서 $(APP_DISPLAY_NAME)으로 참조할 수 있습니다.
 class XcconfigGenerator {
-  /// Flutter 기본 xcconfig 파일(Debug.xcconfig, Release.xcconfig)이
-  /// 존재하지 않으면 생성합니다.
-  /// flutter pub get이 생성하는 파일이지만, xcodegen 환경에서는
-  /// easy_setup이 보장해줍니다.
-  static void ensureBaseXcconfigs(String xcconfigDir, {bool dryRun = false}) {
-    final debugPath = p.join(xcconfigDir, 'Debug.xcconfig');
-    final releasePath = p.join(xcconfigDir, 'Release.xcconfig');
-
-    if (!File(debugPath).existsSync()) {
-      _writeXcconfig(
-        debugPath,
-        '#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"\n'
-        '#include "Generated.xcconfig"\n',
-        dryRun: dryRun,
-      );
-    }
-
-    if (!File(releasePath).existsSync()) {
-      _writeXcconfig(
-        releasePath,
-        '#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"\n'
-        '#include "Generated.xcconfig"\n',
-        dryRun: dryRun,
-      );
-    }
-  }
-
   /// 지정된 [xcconfigDir] 디렉터리에 flavor별 xcconfig 파일을 생성합니다.
   static void generate(
     String xcconfigDir,
