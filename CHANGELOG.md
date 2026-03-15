@@ -16,10 +16,10 @@
 
 ### CI/CD Command
 
-- **Fastlane**: Generate `Gemfile`, `Matchfile`, `Appfile`, and `Fastfile` with `sync_certs`, `build`, and `deploy` lanes
+- **Fastlane**: Generate `.env`, `Gemfile`, `Matchfile`, `Appfile`, and `Fastfile` with `sync_certs`, `build`, `deploy`, and `register` lanes
 - **GitHub Actions**: Generate `.github/workflows/ios-deploy.yml` workflow
-- **Bundle ID Registration**: Auto-register Bundle IDs via App Store Connect API
 - **App Store Metadata**: Generate metadata directory structure for App Store Connect
+- Credentials configured via `.env` file (no sensitive data in YAML)
 
 ### General
 

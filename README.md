@@ -35,9 +35,8 @@ Just write one `easy_setup.yaml` configuration file, and it will automatically s
 | **iOS** | Auto-generate app icons from 1024x1024 source image (per-flavor support) |
 | **iOS** | Auto-generate per-locale `InfoPlist.strings` (app name + permission description localization) |
 | **Firebase** | Auto-copy `google-services.json` / `GoogleService-Info.plist` per flavor |
-| **CI/CD** | Auto-generate Fastlane files (Gemfile, Matchfile, Appfile, Fastfile + register lane) |
+| **CI/CD** | Auto-generate Fastlane files (.env, Gemfile, Matchfile, Appfile, Fastfile + register lane) |
 | **CI/CD** | Auto-generate GitHub Actions workflow (ios-deploy.yml) |
-| **CI/CD** | Auto-register Apple Developer Bundle IDs (API Key) |
 | **CI/CD** | Auto-generate `register` lane for App Store Connect app creation (`fastlane produce`) |
 | **CI/CD** | App Store Connect metadata management (promotional text, description, release notes, etc.) + auto-generate `update_metadata` lane |
 
@@ -74,7 +73,7 @@ Create `easy_setup.yaml` in your Flutter project root and run:
 easy_setup
 easy_setup flavor
 
-# CI/CD pipeline setup + Bundle ID registration + register lane generation
+# CI/CD pipeline setup
 easy_setup ci-cd
 ```
 
@@ -85,8 +84,7 @@ Usage: easy_setup <command> [options]
 
 Commands:
   flavor    Configure Flutter flavor environments (Android + iOS)  [default]
-  ci-cd     Generate CI/CD pipeline setup, register Bundle IDs,
-            generate register lane (Fastlane + GitHub Actions)
+  ci-cd     Generate CI/CD pipeline setup (Fastlane + GitHub Actions)
 
 Options:
   -h, --help            Show help
@@ -121,7 +119,9 @@ flutter run --flavor dev -t lib/main.dart
 **After ci-cd command:**
 
 ```bash
-cd ci_cd/ios/fastlane && bundle install
+# 1. Edit ci_cd/ios/fastlane/.env with your actual values
+# 2. Then:
+cd ci_cd/ios/fastlane
 bundle exec fastlane match init  # First time only
 bundle exec fastlane register    # Create apps on App Store Connect (requires 2FA)
 bundle exec fastlane update_metadata  # Upload metadata (when metadata is configured)
@@ -141,7 +141,7 @@ easy_setup:
       bundle_id: com.example.app.dev
       name: MyApp Dev
       app_icon: assets/icons/dev_icon.png       # Optional: 1024x1024 source image
-      localized:                                 # Optional: per-flavor localization
+      localized:                                 # Optional: per-flavor localization (non-English only)
         ko:
           app_name: 마이앱 Dev
         ja:
@@ -161,12 +161,10 @@ easy_setup:
   permission:                                              # Optional: Default iOS permission descriptions (Base.lproj)
     NSCameraUsageDescription: "Camera access is required"
     NSPhotoLibraryUsageDescription: "Photo library access is required"
-  localized_permission:                                    # Optional: Per-locale iOS permission descriptions
+  localized_permission:                                    # Optional: Per-locale iOS permission descriptions (non-English only)
     ko:
       NSCameraUsageDescription: "카메라 접근이 필요합니다"
-    en:
-      NSCameraUsageDescription: "Camera access is required"
-      NSPhotoLibraryUsageDescription: "Photo library access is required"
+      NSPhotoLibraryUsageDescription: "갤러리 접근이 필요합니다"
 ```
 
 ### Flavor Field Descriptions
@@ -200,18 +198,18 @@ easy_setup:
 
 ### 2. Per-Flavor `localized` — App Name
 
-Add a `localized` section under each flavor to set per-locale app names:
+Add a `localized` section under each flavor to set per-locale app names. English is the base language — the `name` field is used as the English app name, so only add non-English locales here:
 
 ```yaml
 easy_setup:
   flavors:
     dev:
       bundle_id: com.example.app.dev
-      name: MyApp Dev
+      name: MyApp Dev                              # Used as the English (base) app name
       app_icon: assets/icons/dev_icon.png
-      localized:
+      localized:                                   # Non-English locales only
         ko:
-          app_name: 마이앱 Dev                      # Per-locale app name
+          app_name: 마이앱 Dev
         ja:
           app_name: マイアプリ Dev
 ```
@@ -222,63 +220,57 @@ easy_setup:
 
 ### 3. `permission` / `localized_permission` — iOS Permission Descriptions
 
-Set permission descriptions at the `easy_setup` level. `permission` provides defaults (included in `en.lproj`), `localized_permission` provides per-locale values:
+Set permission descriptions at the `easy_setup` level. `permission` provides defaults in English (included in `en.lproj`), `localized_permission` provides non-English locale values:
 
 ```yaml
 easy_setup:
-  permission:
+  permission:                                      # English (base) permission descriptions
     NSCameraUsageDescription: "Camera access is required"
     NSPhotoLibraryUsageDescription: "Photo library access is required"
-  localized_permission:
+  localized_permission:                            # Non-English locales only
     ko:
       NSCameraUsageDescription: "카메라 접근이 필요합니다"
       NSPhotoLibraryUsageDescription: "사진 접근이 필요합니다"
-    en:
-      NSCameraUsageDescription: "Camera access is required"
-      NSPhotoLibraryUsageDescription: "Photo library access is required"
 ```
 
 | Field | Description |
 |-------|-------------|
-| `permission` | Default iOS permission descriptions. Included in `en.lproj/InfoPlist.strings` |
-| `localized_permission` | Per-locale iOS permission descriptions. Generated in each `{locale}.lproj/InfoPlist.strings` |
+| `permission` | English (base) iOS permission descriptions. Included in `en.lproj/InfoPlist.strings` |
+| `localized_permission` | Non-English per-locale iOS permission descriptions. Generated in each `{locale}.lproj/InfoPlist.strings` |
 
 ### Per-Flavor Localized App Name
 
 Each flavor can define different app names per locale. Here's how it works:
 
+English is the base language — the `name` field is used as the English display name, so you only need to add non-English locales in `localized`.
+
 **How it works:**
 1. Per-locale variables are defined in each flavor's `.xcconfig` file (Debug-{flavor}.xcconfig, etc.)
-   - `APP_DISPLAY_NAME=Test Dev` (default)
-   - `APP_DISPLAY_NAME_KO=테스트 Dev` (Korean)
-   - `APP_DISPLAY_NAME_EN=Test Dev` (English)
+   - `APP_DISPLAY_NAME=MyApp Dev` (English, from `name` field)
+   - `APP_DISPLAY_NAME_KO=마이앱 Dev` (Korean, from `localized`)
 
 2. `InfoPlist.strings` references the xcconfig variables
-   - `ko.lproj/InfoPlist.strings`: `"CFBundleDisplayName" = "($APP_DISPLAY_NAME_KO)";`
-   - `en.lproj/InfoPlist.strings`: `"CFBundleDisplayName" = "($APP_DISPLAY_NAME_EN)";`
+   - `en.lproj/InfoPlist.strings`: uses `$(APP_DISPLAY_NAME)` (base)
+   - `ko.lproj/InfoPlist.strings`: uses `$(APP_DISPLAY_NAME_KO)`
 
 **Example:**
 ```yaml
 flavors:
   dev:
-    name: MyApp Dev
-    localized:
+    name: MyApp Dev              # English app name (base)
+    localized:                   # Non-English only
       ko: app_name: "마이앱 Dev"
-      en: app_name: "MyApp Dev"
   prod:
     name: MyApp
     localized:
       ko: app_name: "마이앱"
-      en: app_name: "MyApp"
 ```
 
 With this configuration:
-- `dev` flavor + Korean: displays "마이앱 Dev"
-- `dev` flavor + English: displays "MyApp Dev"
-- `prod` flavor + Korean: displays "마이앱"
-- `prod` flavor + English: displays "MyApp"
-
-Each flavor's xcconfig defines unique per-locale variables, ensuring per-flavor localization works correctly.
+- `dev` flavor + English: displays "MyApp Dev" (from `name`)
+- `dev` flavor + Korean: displays "마이앱 Dev" (from `localized.ko`)
+- `prod` flavor + English: displays "MyApp" (from `name`)
+- `prod` flavor + Korean: displays "마이앱" (from `localized.ko`)
 
 ### Generated Files
 
@@ -337,79 +329,38 @@ ios/Runner/Assets.xcassets/AppIcon-{flavor}.appiconset/
 
 ## CI/CD Setup (ci-cd command)
 
-The `easy_setup ci-cd` command automatically performs all setup needed for iOS CI/CD:
+The `easy_setup ci-cd` command automatically generates all files needed for iOS CI/CD. No `ci_cd` section is needed in `easy_setup.yaml` — flavors are read from `easy_setup.flavors`, and sensitive credentials are configured via a `.env` file after generation.
 
-1. Generate Fastlane files (Gemfile, Matchfile, Appfile, Fastfile)
-2. Auto-register Bundle IDs with API Key (when .p8 file exists)
+1. Generate Fastlane files (.env, Gemfile, Matchfile, Appfile, Fastfile)
+2. Run `bundle install`
 3. Add `register` lane to Fastfile (for App Store Connect app creation)
-4. Generate metadata files + add `update_metadata` lane (when configured)
+4. Generate metadata files + add `update_metadata` lane (when `metadata` is configured in YAML)
 5. Generate GitHub Actions workflow
-
-### YAML Configuration (`ci_cd` section)
-
-```yaml
-easy_setup:
-  flavors:
-    dev:
-      bundle_id: com.example.app.dev
-      name: MyApp Dev
-    prod:
-      bundle_id: com.example.app
-      name: MyApp
-
-  ci_cd:
-    # Target flavors for CI/CD (uses all flavors above if omitted)
-    flavors:
-      prod:
-        bundle_id: com.example.app
-
-    ios:
-      storage: https://github.com/user/app-certification.git
-      team_id: XXXXXXXXXX
-      itc_team_id: YYYYYYYYYY
-      # Optional: Apple ID (used by register lane)
-      apple_id: user@example.com
-      api_key:
-        id: KEY_ID
-        issuer_id: ISSUER_ID
-        key_path: ci_cd/ios/fastlane/AuthKey.p8
-        duration: 1200        # optional (default 1200)
-        in_house: false        # optional (default false)
-
-    # Optional: App Store Connect metadata
-    metadata:
-      ko:
-        promotional_text: "Korean promotional text"
-        description: "App description"
-        release_notes: "Bug fixes and improvements"
-        keywords: "keyword1, keyword2"
-        name: "MyApp"
-        subtitle: "Subtitle"
-        privacy_url: "https://example.com/privacy"
-        support_url: "https://example.com/support"
-        marketing_url: "https://example.com"
-      en-US:
-        promotional_text: "English promotional text"
-        description: "App description"
-```
 
 ### Generated Files
 
 | File | Description |
 |------|-------------|
-| `Gemfile` (project root) | Fastlane Ruby dependencies |
+| `ci_cd/ios/fastlane/.env` | Environment variables (Team ID, API Key, etc.) — edit this after generation |
 | `ci_cd/ios/fastlane/Gemfile` | Fastlane Ruby dependencies |
 | `ci_cd/ios/fastlane/Matchfile` | Match certificate/profile settings |
 | `ci_cd/ios/fastlane/Appfile` | App identification info (team_id, itc_team_id) |
-| `ci_cd/ios/fastlane/Fastfile` | Build + TestFlight deploy + register + update_metadata lanes |
-| `ci_cd/ios/fastlane/metadata/{locale}/*.txt` | App Store Connect metadata (when metadata is configured) |
+| `ci_cd/ios/fastlane/Fastfile` | Build + TestFlight deploy + register lanes |
+| `ci_cd/ios/fastlane/metadata/{locale}/*.txt` | App Store Connect metadata (when `metadata` is configured) |
 | `.github/workflows/ios-deploy.yml` | GitHub Actions workflow |
 
-### Auto Bundle ID Registration
+### Configuration After Generation
 
-- If the API Key file (.p8) exists at `key_path`, Bundle IDs are automatically registered via the App Store Connect API.
-- Existing Bundle IDs are skipped.
-- If the .p8 file is missing, Bundle ID registration is skipped and only the remaining setup proceeds.
+After running `easy_setup ci-cd`, edit `ci_cd/ios/fastlane/.env` with your actual values:
+
+```env
+TEAM_ID=YOUR_TEAM_ID
+ITC_TEAM_ID=YOUR_ITC_TEAM_ID
+API_KEY_ID=YOUR_KEY_ID
+API_KEY_ISSUER_ID=YOUR_ISSUER_ID
+CERTS_REPO_URL=YOUR_CERTS_REPO_URL
+APPLE_ID=YOUR_APPLE_ID
+```
 
 ### App Store Connect App Creation (register lane)
 
@@ -422,7 +373,25 @@ cd ci_cd/ios/fastlane && bundle exec fastlane register
 
 ### App Store Connect Metadata Management
 
-When the `ci_cd.metadata` section is configured, per-locale metadata files are auto-generated and an `update_metadata` lane is added to the Fastfile.
+When the `metadata` section is configured in `easy_setup.yaml`, per-locale metadata files are auto-generated and an `update_metadata` lane is added to the Fastfile.
+
+```yaml
+easy_setup:
+  metadata:
+    ko:
+      promotional_text: "Korean promotional text"
+      description: "App description"
+      release_notes: "Bug fixes and improvements"
+      keywords: "keyword1, keyword2"
+      name: "MyApp"
+      subtitle: "Subtitle"
+      privacy_url: "https://example.com/privacy"
+      support_url: "https://example.com/support"
+      marketing_url: "https://example.com"
+    en-US:
+      promotional_text: "English promotional text"
+      description: "App description"
+```
 
 **Generated directory structure:**
 
@@ -461,16 +430,9 @@ All fields are optional; only configured fields are generated as files.
 
 **Uploading metadata:**
 
-Use Fastlane `deliver` to upload metadata to App Store Connect:
-
 ```bash
 cd ci_cd/ios/fastlane && bundle exec fastlane update_metadata
 ```
-
-### Target Flavor Selection
-
-- If `ci_cd.flavors` is defined, only those flavors are targeted.
-- If `ci_cd.flavors` is not defined, all `easy_setup.flavors` are targeted.
 
 ### Required GitHub Secrets
 
@@ -597,10 +559,10 @@ easy_setup/
 
 ### `CiCdCommand` — CI/CD Orchestrator
 - Executes CI/CD pipeline setup sequentially.
-- Load YAML → resolve flavors → prepare Gemfile → 4 Fastlane files → Bundle ID registration → add register lane → generate metadata → GitHub Actions workflow → print instructions.
-- Auto-registers Bundle IDs if the API Key file (.p8) exists; skips otherwise.
+- Load YAML → resolve flavors from `easy_setup.flavors` → generate .env + Fastlane files → bundle install → add register lane → generate metadata → GitHub Actions workflow → print instructions.
+- Credentials are configured via `.env` file (not YAML) for security.
 - Adds register lane to Fastfile via `FastfileGenerator.addRegisterLane()`.
-- Generates metadata files and adds `update_metadata` lane when `ci_cd.metadata` is configured.
+- Generates metadata files and adds `update_metadata` lane when `metadata` is configured in YAML.
 
 ### `AppIconGenerator` — iOS App Icon Generation
 - Resizes 1024x1024 source PNG to 15 unique sizes per flavor (using the `image` package).
@@ -712,10 +674,6 @@ The `--dry-run` flag lets you preview what changes will be made without actually
 
 ### CI/CD Related
 
-**"API Key file not found"**
-- Verify that the .p8 file exists at the path specified in `ci_cd.ios.api_key.key_path` in `easy_setup.yaml`.
-- CI/CD file generation proceeds normally even without the .p8 file (only Bundle ID registration is skipped).
-
 **App Store Connect app creation failure**
 - Running `bundle exec fastlane register` requires Apple ID 2FA authentication.
-- Set the Apple ID in `ci_cd.ios.apple_id` or use the `FASTLANE_USER` environment variable.
+- Set `APPLE_ID` in `ci_cd/ios/fastlane/.env` or use the `FASTLANE_USER` environment variable.
