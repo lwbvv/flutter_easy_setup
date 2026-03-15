@@ -23,22 +23,22 @@ class XcconfigGenerator {
   }) {
     final vars = _buildXcconfigVars(config, flavor: flavor);
 
-    // Debug용 xcconfig — Debug.xcconfig를 상속
+    // Debug용 xcconfig — Generated.xcconfig를 직접 포함
     _writeXcconfig(
       p.join(xcconfigDir, 'Debug-$flavor.xcconfig'),
-      '#include "Debug.xcconfig"\n$vars',
+      '#include "Generated.xcconfig"\n$vars',
       dryRun: dryRun,
     );
-    // Release용 xcconfig — Release.xcconfig를 상속
+    // Release용 xcconfig
     _writeXcconfig(
       p.join(xcconfigDir, 'Release-$flavor.xcconfig'),
-      '#include "Release.xcconfig"\n$vars',
+      '#include "Generated.xcconfig"\n$vars',
       dryRun: dryRun,
     );
-    // Profile용 xcconfig — Release.xcconfig를 상속 (프로파일은 릴리스 기반)
+    // Profile용 xcconfig
     _writeXcconfig(
       p.join(xcconfigDir, 'Profile-$flavor.xcconfig'),
-      '#include "Release.xcconfig"\n$vars',
+      '#include "Generated.xcconfig"\n$vars',
       dryRun: dryRun,
     );
   }
@@ -77,7 +77,8 @@ class XcconfigGenerator {
   ///
   /// [activeFlavors]: 현재 활성 flavor 목록 (이들의 xcconfig만 보존)
   /// Debug-{flavor}, Release-{flavor}, Profile-{flavor} 패턴의 파일만 대상으로 합니다.
-  /// Flutter 기본 파일인 Debug.xcconfig와 Release.xcconfig는 보존합니다.
+  /// easy_setup이 생성하지 않는 xcconfig 파일을 삭제합니다.
+  /// Generated.xcconfig만 보존합니다 (flutter pub get이 생성).
   static void cleanupUnusedXcconfigs(
     String xcconfigDir,
     Set<String> activeFlavors, {
@@ -86,8 +87,16 @@ class XcconfigGenerator {
     final dir = Directory(xcconfigDir);
     if (!dir.existsSync()) return;
 
-    final prefixes = ['Debug-', 'Release-', 'Profile-'];
-    final preserveFiles = {'Debug.xcconfig', 'Release.xcconfig'};
+    // easy_setup이 생성할 flavor xcconfig 파일명 목록
+    final activeFiles = <String>{};
+    for (final flavor in activeFlavors) {
+      activeFiles.add('Debug-$flavor.xcconfig');
+      activeFiles.add('Release-$flavor.xcconfig');
+      activeFiles.add('Profile-$flavor.xcconfig');
+    }
+
+    // Generated.xcconfig만 보존 (flutter pub get이 생성)
+    const preserveFiles = {'Generated.xcconfig'};
 
     try {
       for (final entity in dir.listSync()) {
@@ -95,23 +104,14 @@ class XcconfigGenerator {
         final fileName = p.basename(entity.path);
         if (!fileName.endsWith('.xcconfig')) continue;
 
-        // Flutter 기본 파일은 보존
         if (preserveFiles.contains(fileName)) continue;
+        if (activeFiles.contains(fileName)) continue;
 
-        for (final prefix in prefixes) {
-          if (fileName.startsWith(prefix)) {
-            final flavor =
-                fileName.replaceFirst(prefix, '').replaceFirst('.xcconfig', '');
-            if (!activeFlavors.contains(flavor)) {
-              if (dryRun) {
-                print('  [dry-run] Would delete: ${entity.path}');
-              } else {
-                entity.deleteSync();
-                print('  Deleted unused xcconfig: ${entity.path}');
-              }
-            }
-            break;
-          }
+        if (dryRun) {
+          print('  [dry-run] Would delete: ${entity.path}');
+        } else {
+          entity.deleteSync();
+          print('  Deleted: ${entity.path}');
         }
       }
     } catch (e) {
