@@ -1,4 +1,0 @@
-#include "Debug.xcconfig"
-APP_DISPLAY_NAME=MyApp Dev
-APP_DISPLAY_NAME_KO=마이앱 Dev
-ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon-dev
