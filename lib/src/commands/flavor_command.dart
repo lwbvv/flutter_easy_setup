@@ -142,25 +142,7 @@ class FlavorCommand {
       }
     }
 
-    // 5단계: iOS — XcodeGen project.yml 생성
-    print('\n--- iOS project.yml (XcodeGen) ---');
-    XcodeGenGenerator.generate(
-      root,
-      config.flavors,
-      localizations: config.localizations,
-      iosVersion: config.iosVersion,
-      dryRun: dryRun,
-    );
-
-    // 5.5단계: iOS — XcodeGen 빌드 스크립트 생성
-    print('\n--- iOS build scripts ---');
-    XcodeGenScriptsGenerator.generate(root, dryRun: dryRun);
-
-    // 6단계: iOS — xcodegen generate 실행
-    print('\n--- iOS xcodegen generate ---');
-    XcodeGenRunner.run(root, dryRun: dryRun);
-
-    // 7단계: iOS — Info.plist 수정
+    // 5단계: iOS — Info.plist 수정
     //        CFBundleDisplayName → $(APP_DISPLAY_NAME) + permission 키 추가
     print('\n--- iOS Info.plist ---');
     final plistPath = ProjectFinder.iosInfoPlistPath(root);
@@ -170,11 +152,8 @@ class FlavorCommand {
       dryRun: dryRun,
     );
 
-    // 7.5단계: iOS — localized 설정으로 InfoPlist.strings 생성
-    //          각 flavor의 localized 앱 이름은 해당 flavor의 xcconfig에서
-    //          APP_DISPLAY_NAME_{locale} 변수로 정의되고,
-    //          InfoPlist.strings에서 $(...) 형식으로 참조됨
-    //          따라서 모든 flavor의 localized를 병합하여 .strings 템플릿 생성
+    // 5.5단계: iOS — localized 설정으로 InfoPlist.strings 생성
+    //          xcodegen generate 이전에 실행해야 .lproj 파일이 프로젝트에 포함됨
     {
       final mergedFlavorLocalized = <String, FlavorLocalizedConfig>{};
       for (final entry in config.flavors.entries) {
@@ -201,6 +180,26 @@ class FlavorCommand {
         );
       }
     }
+
+    // 6단계: iOS — XcodeGen project.yml 생성
+    print('\n--- iOS project.yml (XcodeGen) ---');
+    XcodeGenGenerator.generate(
+      root,
+      config.flavors,
+      localizations: config.localizations,
+      iosVersion: config.iosVersion,
+      dryRun: dryRun,
+    );
+
+    // 6.5단계: iOS — XcodeGen 빌드 스크립트 생성
+    print('\n--- iOS build scripts ---');
+    XcodeGenScriptsGenerator.generate(root, dryRun: dryRun);
+
+    // 7단계: iOS — xcodegen generate 실행
+    //        .lproj, xcconfig 등 모든 파일이 생성된 후에 실행해야
+    //        Xcode 프로젝트에 정확히 반영됨
+    print('\n--- iOS xcodegen generate ---');
+    XcodeGenRunner.run(root, dryRun: dryRun);
 
     // 8단계: iOS — Podfile에 flavor별 빌드 모드 매핑 + permission 매크로 추가
     print('\n--- iOS Podfile ---');

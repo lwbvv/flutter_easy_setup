@@ -1,2 +1,3 @@
+"CFBundleDisplayName" = "($APP_DISPLAY_NAME)";
 "NSCameraUsageDescription" = "Camera access is required";
 "NSPhotoLibraryUsageDescription" = "Photo library access is required";
