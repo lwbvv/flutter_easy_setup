@@ -203,23 +203,24 @@ class XcodeGenGenerator {
     sb.writeln();
 
     // preBuildScripts
-    // flavor localized가 있으면 copy_flavor_strings를 Run Script 앞에 배치
-    final hasFlavorLocalized =
-        flavors.values.any((f) => f.localized != null && f.localized!.isNotEmpty);
-
     sb.writeln('    preBuildScripts:');
-    if (hasFlavorLocalized) {
-      sb.writeln('      - name: Copy Flavor Strings');
-      sb.writeln('        path: xcodegen/script/copy_flavor_strings.sh');
-      sb.writeln('        basedOnDependencyAnalysis: false');
-    }
     sb.writeln('      - name: Run Script');
     sb.writeln('        path: xcodegen/script/run_script.sh');
     sb.writeln('        basedOnDependencyAnalysis: false');
     sb.writeln();
 
     // postBuildScripts
+    // Copy Flavor Strings → Thin Binary の順で実行
+    // Copy Bundle Resources の後に実行されるため、バンドルに直接注入可能
+    final hasFlavorLocalized =
+        flavors.values.any((f) => f.localized != null && f.localized!.isNotEmpty);
+
     sb.writeln('    postBuildScripts:');
+    if (hasFlavorLocalized) {
+      sb.writeln('      - name: Copy Flavor Strings');
+      sb.writeln('        path: xcodegen/script/copy_flavor_strings.sh');
+      sb.writeln('        basedOnDependencyAnalysis: false');
+    }
     sb.writeln('      - name: Thin Binary');
     sb.writeln('        path: xcodegen/script/thin_binary.sh');
     sb.writeln('        basedOnDependencyAnalysis: false');

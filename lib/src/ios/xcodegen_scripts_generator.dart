@@ -61,28 +61,29 @@ class XcodeGenScriptsGenerator {
   }
 
   /// 현재 빌드 configuration에서 flavor를 추출하고
-  /// Flavors/{flavor}/{locale}.lproj/InfoPlist.strings를
-  /// Runner/{locale}.lproj/InfoPlist.strings에 병합(CFBundleDisplayName만)하는 스크립트
+  /// Flavors/{flavor}/{locale}.lproj/InfoPlist.strings の内容を
+  /// ビルド済みバンドル(.app)に注入するスクリプト。
+  /// ソースファイルは変更せず、バンドル内のファイルのみ更新する。
   static const _copyFlavorStringsContent = r'''#!/bin/sh
 
 # Extract flavor from CONFIGURATION (e.g. "Debug-dev" → "dev", "Release-prod" → "prod")
 FLAVOR=$(echo "$CONFIGURATION" | sed -n 's/^[^-]*-\(.*\)/\1/p')
 
 if [ -z "$FLAVOR" ]; then
-  echo "No flavor detected in configuration: $CONFIGURATION, skipping flavor strings copy."
+  echo "No flavor detected in configuration: $CONFIGURATION, skipping."
   exit 0
 fi
 
 FLAVORS_DIR="${SRCROOT}/Flavors/${FLAVOR}"
+BUNDLE_DIR="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app"
 
 if [ ! -d "$FLAVORS_DIR" ]; then
   echo "Flavors directory not found: $FLAVORS_DIR, skipping."
   exit 0
 fi
 
-echo "Copying InfoPlist.strings for flavor: $FLAVOR"
+echo "Injecting InfoPlist.strings into bundle for flavor: $FLAVOR"
 
-# Find all .lproj directories in the flavor directory
 for LPROJ in "$FLAVORS_DIR"/*.lproj; do
   if [ ! -d "$LPROJ" ]; then
     continue
@@ -90,34 +91,27 @@ for LPROJ in "$FLAVORS_DIR"/*.lproj; do
 
   LOCALE=$(basename "$LPROJ")
   SRC_STRINGS="$LPROJ/InfoPlist.strings"
-  DST_DIR="${SRCROOT}/Runner/${LOCALE}"
+  DST_DIR="${BUNDLE_DIR}/${LOCALE}"
   DST_STRINGS="${DST_DIR}/InfoPlist.strings"
 
   if [ ! -f "$SRC_STRINGS" ]; then
     continue
   fi
 
-  # Create destination directory if needed
   mkdir -p "$DST_DIR"
 
   if [ -f "$DST_STRINGS" ]; then
-    # Merge: remove existing CFBundleDisplayName from destination, then append from source
-    # 1. Remove CFBundleDisplayName line from existing file
+    # Bundle already has InfoPlist.strings (e.g. permission strings)
+    # Remove existing CFBundleDisplayName, then append from flavor source
     TEMP_FILE=$(mktemp)
     grep -v '"CFBundleDisplayName"' "$DST_STRINGS" > "$TEMP_FILE" || true
-
-    # 2. Add CFBundleDisplayName from source
     grep '"CFBundleDisplayName"' "$SRC_STRINGS" >> "$TEMP_FILE" || true
-
-    # 3. Remove empty lines and write back
-    grep -v '^$' "$TEMP_FILE" > "$DST_STRINGS" || true
-    rm -f "$TEMP_FILE"
+    mv "$TEMP_FILE" "$DST_STRINGS"
   else
-    # No existing file, just copy
     cp "$SRC_STRINGS" "$DST_STRINGS"
   fi
 
-  echo "  Merged: $SRC_STRINGS → $DST_STRINGS"
+  echo "  Injected: ${LOCALE}/InfoPlist.strings"
 done
 ''';
 
