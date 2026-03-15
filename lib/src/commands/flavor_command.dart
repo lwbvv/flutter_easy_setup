@@ -152,34 +152,17 @@ class FlavorCommand {
       dryRun: dryRun,
     );
 
-    // 5.5단계: iOS — localized 설정으로 InfoPlist.strings 생성
+    // 5.5단계: iOS — InfoPlist.strings 생성
+    //          flavor별 strings: ios/Flavors/{flavor}/{locale}.lproj/
+    //          permission strings: ios/Runner/{locale}.lproj/
     //          xcodegen generate 이전에 실행해야 .lproj 파일이 프로젝트에 포함됨
-    {
-      final mergedFlavorLocalized = <String, FlavorLocalizedConfig>{};
-      for (final entry in config.flavors.entries) {
-        final flavorLoc = entry.value.localized;
-        if (flavorLoc != null) {
-          for (final locEntry in flavorLoc.entries) {
-            if (!mergedFlavorLocalized.containsKey(locEntry.key)) {
-              mergedFlavorLocalized[locEntry.key] = locEntry.value;
-            }
-          }
-        }
-      }
-
-      if (mergedFlavorLocalized.isNotEmpty ||
-          config.permission != null ||
-          config.localizedPermission != null) {
-        InfoPlistStringsGenerator.generate(
-          root,
-          flavorLocalized:
-              mergedFlavorLocalized.isNotEmpty ? mergedFlavorLocalized : null,
-          permission: config.permission,
-          localizedPermission: config.localizedPermission,
-          dryRun: dryRun,
-        );
-      }
-    }
+    InfoPlistStringsGenerator.generate(
+      root,
+      flavors: config.flavors,
+      permission: config.permission,
+      localizedPermission: config.localizedPermission,
+      dryRun: dryRun,
+    );
 
     // 6단계: iOS — XcodeGen project.yml 생성
     print('\n--- iOS project.yml (XcodeGen) ---');
@@ -193,7 +176,13 @@ class FlavorCommand {
 
     // 6.5단계: iOS — XcodeGen 빌드 스크립트 생성
     print('\n--- iOS build scripts ---');
-    XcodeGenScriptsGenerator.generate(root, dryRun: dryRun);
+    final hasFlavorLocalized =
+        config.flavors.values.any((f) => f.localized != null && f.localized!.isNotEmpty);
+    XcodeGenScriptsGenerator.generate(
+      root,
+      hasFlavors: hasFlavorLocalized,
+      dryRun: dryRun,
+    );
 
     // 7단계: iOS — xcodegen generate 실행
     //        .lproj, xcconfig 등 모든 파일이 생성된 후에 실행해야

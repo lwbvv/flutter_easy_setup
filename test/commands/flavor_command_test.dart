@@ -314,7 +314,7 @@ void main() {
       expect(androidDest.existsSync(), isFalse);
     });
 
-    test('each flavor defines locale-specific variables in its xcconfig', () {
+    test('each flavor generates its own localized strings in Flavors dir', () {
       final multiFlavorYaml = '''
 easy_setup:
   flavors:
@@ -324,54 +324,55 @@ easy_setup:
       localized:
         ko:
           app_name: 개발 앱
-        en:
-          app_name: Test Dev
     prod:
       bundle_id: com.example.prod
       name: Test Prod
       localized:
         ko:
           app_name: 상용 앱
-        en:
-          app_name: Test Prod
 ''';
 
       final root =
           _createFlutterProject(tempDir, yamlContent: multiFlavorYaml);
       FlavorCommand.run(projectRoot: root.path);
 
-      // Dev flavor's xcconfig should have APP_DISPLAY_NAME_KO=개발 앱
-      final devDebugXcconfig = File(p.join(
-        root.path,
-        'ios',
-        'Flutter',
-        'Debug-dev.xcconfig',
-      )).readAsStringSync();
-      expect(devDebugXcconfig, contains('APP_DISPLAY_NAME_KO=개발 앱'));
-      expect(devDebugXcconfig, contains('APP_DISPLAY_NAME_EN=Test Dev'));
+      // dev flavor의 ko strings
+      final devKo = File(p.join(root.path, 'ios', 'Flavors', 'dev',
+              'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(devKo, contains('"CFBundleDisplayName" = "개발 앱";'));
 
-      // Prod flavor's xcconfig should have APP_DISPLAY_NAME_KO=상용 앱
-      final prodDebugXcconfig = File(p.join(
-        root.path,
-        'ios',
-        'Flutter',
-        'Debug-prod.xcconfig',
-      )).readAsStringSync();
-      expect(prodDebugXcconfig, contains('APP_DISPLAY_NAME_KO=상용 앱'));
-      expect(prodDebugXcconfig, contains('APP_DISPLAY_NAME_EN=Test Prod'));
+      // dev flavor의 en strings (flavor name 사용)
+      final devEn = File(p.join(root.path, 'ios', 'Flavors', 'dev',
+              'en.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(devEn, contains('"CFBundleDisplayName" = "Test Dev";'));
 
-      // ko: yaml 값 그대로 사용
-      final koStringsPath = p.join(
-          root.path, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
-      final koContent = File(koStringsPath).readAsStringSync();
-      expect(koContent, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
+      // prod flavor의 ko strings
+      final prodKo = File(p.join(root.path, 'ios', 'Flavors', 'prod',
+              'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(prodKo, contains('"CFBundleDisplayName" = "상용 앱";'));
 
-      // en: xcconfig 변수 참조
-      final enStringsPath = p.join(
-          root.path, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
-      final enContent = File(enStringsPath).readAsStringSync();
-      expect(enContent,
-          contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME)";'));
+      // prod flavor의 en strings
+      final prodEn = File(p.join(root.path, 'ios', 'Flavors', 'prod',
+              'en.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(prodEn, contains('"CFBundleDisplayName" = "Test Prod";'));
+
+      // build phase 스크립트가 생성되었는지 확인
+      expect(
+        File(p.join(root.path, 'ios', 'xcodegen', 'script',
+                'copy_flavor_strings.sh'))
+            .existsSync(),
+        isTrue,
+      );
+
+      // project.yml에 Copy Flavor Strings 스크립트가 포함되었는지 확인
+      final projectYml =
+          File(p.join(root.path, 'ios', 'project.yml')).readAsStringSync();
+      expect(projectYml, contains('Copy Flavor Strings'));
+      expect(projectYml, contains('copy_flavor_strings.sh'));
     });
   });
 }

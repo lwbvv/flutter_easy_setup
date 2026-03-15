@@ -203,7 +203,16 @@ class XcodeGenGenerator {
     sb.writeln();
 
     // preBuildScripts
+    // flavor localized가 있으면 copy_flavor_strings를 Run Script 앞에 배치
+    final hasFlavorLocalized =
+        flavors.values.any((f) => f.localized != null && f.localized!.isNotEmpty);
+
     sb.writeln('    preBuildScripts:');
+    if (hasFlavorLocalized) {
+      sb.writeln('      - name: Copy Flavor Strings');
+      sb.writeln('        path: xcodegen/script/copy_flavor_strings.sh');
+      sb.writeln('        basedOnDependencyAnalysis: false');
+    }
     sb.writeln('      - name: Run Script');
     sb.writeln('        path: xcodegen/script/run_script.sh');
     sb.writeln('        basedOnDependencyAnalysis: false');

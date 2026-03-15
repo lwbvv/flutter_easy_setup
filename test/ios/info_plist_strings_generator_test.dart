@@ -11,7 +11,6 @@ void main() {
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('info_plist_strings_test_');
     projectRoot = tempDir.path;
-    // ios/Runner 디렉터리 생성
     Directory(p.join(projectRoot, 'ios', 'Runner')).createSync(recursive: true);
   });
 
@@ -20,191 +19,138 @@ void main() {
   });
 
   group('InfoPlistStringsGenerator', () {
-    test('generates InfoPlist.strings with xcconfig variable for non-en locale', () {
+    test('generates flavor-specific strings in Flavors directory', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
-        flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(appName: '테스트 앱'),
+        flavors: {
+          'dev': const FlavorConfig(
+            bundleId: 'com.example.dev',
+            name: 'MyApp Dev',
+            localized: {'ko': FlavorLocalizedConfig(appName: '마이앱 Dev')},
+          ),
+          'prod': const FlavorConfig(
+            bundleId: 'com.example.prod',
+            name: 'MyApp',
+            localized: {'ko': FlavorLocalizedConfig(appName: '마이앱')},
+          ),
         },
       );
 
-      final stringsPath =
-          p.join(projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
-      expect(File(stringsPath).existsSync(), isTrue);
+      // dev/ko
+      final devKo = File(p.join(projectRoot, 'ios', 'Flavors', 'dev',
+              'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(devKo, contains('"CFBundleDisplayName" = "마이앱 Dev";'));
 
-      final content = File(stringsPath).readAsStringSync();
-      // non-en locale도 xcconfig 변수를 참조하여 flavor별 다른 이름 지원
-      expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
+      // dev/en (uses flavor name)
+      final devEn = File(p.join(projectRoot, 'ios', 'Flavors', 'dev',
+              'en.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(devEn, contains('"CFBundleDisplayName" = "MyApp Dev";'));
+
+      // prod/ko
+      final prodKo = File(p.join(projectRoot, 'ios', 'Flavors', 'prod',
+              'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(prodKo, contains('"CFBundleDisplayName" = "마이앱";'));
+
+      // prod/en
+      final prodEn = File(p.join(projectRoot, 'ios', 'Flavors', 'prod',
+              'en.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(prodEn, contains('"CFBundleDisplayName" = "MyApp";'));
     });
 
-    test('en locale uses xcconfig variable for CFBundleDisplayName', () {
+    test('generates permission strings in Runner directory', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
-        flavorLocalized: {
-          'en': const FlavorLocalizedConfig(appName: 'Test App'),
+        flavors: {
+          'dev': const FlavorConfig(bundleId: 'x', name: 'X'),
         },
-      );
-
-      final stringsPath =
-          p.join(projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
-      expect(File(stringsPath).existsSync(), isTrue);
-
-      final content = File(stringsPath).readAsStringSync();
-      // en은 xcconfig 변수 참조
-      expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME)";'));
-    });
-
-    test('generates en.lproj with base permission', () {
-      InfoPlistStringsGenerator.generate(
-        projectRoot,
         permission: {
           'NSCameraUsageDescription': 'Camera access is required',
-          'NSPhotoLibraryUsageDescription': 'Photo library access is required',
         },
-      );
-
-      final stringsPath = p.join(
-          projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
-      expect(File(stringsPath).existsSync(), isTrue);
-
-      final content = File(stringsPath).readAsStringSync();
-      expect(content,
-          contains('"NSCameraUsageDescription" = "Camera access is required";'));
-      expect(
-          content,
-          contains(
-              '"NSPhotoLibraryUsageDescription" = "Photo library access is required";'));
-
-      // Base.lproj는 생성되지 않아야 함
-      final basePath = p.join(
-          projectRoot, 'ios', 'Runner', 'Base.lproj', 'InfoPlist.strings');
-      expect(File(basePath).existsSync(), isFalse);
-    });
-
-    test('generates locale-specific permission files', () {
-      InfoPlistStringsGenerator.generate(
-        projectRoot,
         localizedPermission: {
           'ko': {
             'NSCameraUsageDescription': '카메라 접근이 필요합니다',
           },
-          'en': {
-            'NSCameraUsageDescription': 'Camera access is required',
-          },
         },
       );
 
-      final koContent = File(p.join(
-              projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings'))
-          .readAsStringSync();
-      expect(koContent,
-          contains('"NSCameraUsageDescription" = "카메라 접근이 필요합니다";'));
-
+      // en permission in Runner
       final enContent = File(p.join(
               projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings'))
           .readAsStringSync();
       expect(enContent,
           contains('"NSCameraUsageDescription" = "Camera access is required";'));
-    });
 
-    test('merges flavor app_name and localized permission for same locale', () {
-      InfoPlistStringsGenerator.generate(
-        projectRoot,
-        flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(appName: '테스트'),
-        },
-        localizedPermission: {
-          'ko': {
-            'NSCameraUsageDescription': '카메라 접근이 필요합니다',
-          },
-        },
-      );
-
-      final stringsPath =
-          p.join(projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
-      final content = File(stringsPath).readAsStringSync();
-      // non-en locale도 xcconfig 변수 참조
-      expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
-      expect(content,
+      // ko permission in Runner
+      final koContent = File(p.join(
+              projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(koContent,
           contains('"NSCameraUsageDescription" = "카메라 접근이 필요합니다";'));
     });
 
-    test('generates multiple locale directories', () {
+    test('does not generate flavor strings when no localized config', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
-        flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(appName: '테스트'),
-          'ja': const FlavorLocalizedConfig(appName: 'テスト'),
+        flavors: {
+          'dev': const FlavorConfig(bundleId: 'x', name: 'X'),
         },
       );
 
-      expect(
-        File(p.join(projectRoot, 'ios', 'Runner', 'ko.lproj',
-                'InfoPlist.strings'))
-            .existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(projectRoot, 'ios', 'Runner', 'ja.lproj',
-                'InfoPlist.strings'))
-            .existsSync(),
-        isTrue,
-      );
+      final flavorsDir = Directory(p.join(projectRoot, 'ios', 'Flavors'));
+      expect(flavorsDir.existsSync(), isFalse);
     });
 
     test('does not create files in dry-run mode', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
-        flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(appName: '테스트'),
+        flavors: {
+          'dev': const FlavorConfig(
+            bundleId: 'x',
+            name: 'X',
+            localized: {'ko': FlavorLocalizedConfig(appName: '테스트')},
+          ),
         },
         dryRun: true,
       );
 
-      final lprojDir = p.join(projectRoot, 'ios', 'Runner', 'ko.lproj');
-      expect(Directory(lprojDir).existsSync(), isFalse);
+      final flavorsDir = Directory(p.join(projectRoot, 'ios', 'Flavors'));
+      expect(flavorsDir.existsSync(), isFalse);
     });
 
-    test('overwrites existing files on re-run (idempotent)', () {
+    test('is idempotent', () {
+      final flavors = {
+        'dev': const FlavorConfig(
+          bundleId: 'x',
+          name: 'X',
+          localized: {'ko': FlavorLocalizedConfig(appName: '테스트')},
+        ),
+      };
+
+      InfoPlistStringsGenerator.generate(projectRoot, flavors: flavors);
+      final first = File(p.join(projectRoot, 'ios', 'Flavors', 'dev',
+              'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+
+      InfoPlistStringsGenerator.generate(projectRoot, flavors: flavors);
+      final second = File(p.join(projectRoot, 'ios', 'Flavors', 'dev',
+              'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+
+      expect(second, first);
+    });
+
+    test('does nothing when no permission and no localized', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
-        flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(appName: '테스트'),
+        flavors: {
+          'dev': const FlavorConfig(bundleId: 'x', name: 'X'),
         },
       );
 
-      final stringsPath =
-          p.join(projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
-      final firstContent = File(stringsPath).readAsStringSync();
-
-      InfoPlistStringsGenerator.generate(
-        projectRoot,
-        flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(appName: '테스트'),
-        },
-      );
-
-      final secondContent = File(stringsPath).readAsStringSync();
-      expect(secondContent, firstContent);
-    });
-
-    test('skips locale with no effective entries', () {
-      InfoPlistStringsGenerator.generate(
-        projectRoot,
-        flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(),
-        },
-      );
-
-      // 비어있는 locale 설정 → no InfoPlist.strings entry needed
-      final lprojDir = p.join(projectRoot, 'ios', 'Runner', 'ko.lproj');
-      expect(Directory(lprojDir).existsSync(), isFalse);
-    });
-
-    test('does nothing when all parameters are null', () {
-      InfoPlistStringsGenerator.generate(projectRoot);
-
-      // 아무 .lproj 디렉터리도 생성되지 않아야 함
       final runnerDir = Directory(p.join(projectRoot, 'ios', 'Runner'));
       final lprojDirs = runnerDir
           .listSync()
@@ -213,86 +159,39 @@ void main() {
       expect(lprojDirs, isEmpty);
     });
 
-    test('merges base permission into en.lproj with localized permission', () {
+    test('generates multiple locales per flavor', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
-        permission: {
-          'NSCameraUsageDescription': 'Camera access needed',
-        },
-        localizedPermission: {
-          'ko': {
-            'NSCameraUsageDescription': '카메라 접근 필요',
-          },
+        flavors: {
+          'dev': const FlavorConfig(
+            bundleId: 'x',
+            name: 'X Dev',
+            localized: {
+              'ko': FlavorLocalizedConfig(appName: '테스트'),
+              'ja': FlavorLocalizedConfig(appName: 'テスト'),
+            },
+          ),
         },
       );
 
-      // en.lproj에 기본 permission 포함
-      final enContent = File(p.join(
-              projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings'))
-          .readAsStringSync();
-      expect(enContent,
-          contains('"NSCameraUsageDescription" = "Camera access needed";'));
-
-      // ko.lproj
-      final koContent = File(p.join(
-              projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings'))
-          .readAsStringSync();
-      expect(koContent,
-          contains('"NSCameraUsageDescription" = "카메라 접근 필요";'));
-
-      // Base.lproj는 생성되지 않아야 함
-      final basePath = p.join(
-          projectRoot, 'ios', 'Runner', 'Base.lproj', 'InfoPlist.strings');
-      expect(File(basePath).existsSync(), isFalse);
-    });
-
-    test('merges base permission and en localized permission into en.lproj', () {
-      InfoPlistStringsGenerator.generate(
-        projectRoot,
-        permission: {
-          'NSCameraUsageDescription': 'Camera access needed',
-          'NSPhotoLibraryUsageDescription': 'Photo library access needed',
-        },
-        localizedPermission: {
-          'en': {
-            'NSCameraUsageDescription': 'Camera access is required',
-          },
-        },
+      expect(
+        File(p.join(projectRoot, 'ios', 'Flavors', 'dev', 'ko.lproj',
+                'InfoPlist.strings'))
+            .existsSync(),
+        isTrue,
       );
-
-      // en의 localized_permission이 base permission을 덮어씀
-      final enContent = File(p.join(
-              projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings'))
-          .readAsStringSync();
-      expect(enContent,
-          contains('"NSCameraUsageDescription" = "Camera access is required";'));
-      expect(enContent,
-          contains('"NSPhotoLibraryUsageDescription" = "Photo library access needed";'));
-    });
-
-    test('en always gets CFBundleDisplayName even without en localized config', () {
-      // flavor에 ko만 정의되어 있고 en은 없는 경우에도
-      // en.lproj에는 CFBundleDisplayName = ($APP_DISPLAY_NAME)이 추가되어야 함
-      InfoPlistStringsGenerator.generate(
-        projectRoot,
-        flavorLocalized: {
-          'ko': const FlavorLocalizedConfig(appName: '테스트 앱'),
-        },
+      expect(
+        File(p.join(projectRoot, 'ios', 'Flavors', 'dev', 'ja.lproj',
+                'InfoPlist.strings'))
+            .existsSync(),
+        isTrue,
       );
-
-      final enPath = p.join(
-          projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
-      expect(File(enPath).existsSync(), isTrue);
-
-      final enContent = File(enPath).readAsStringSync();
-      expect(enContent,
-          contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME)";'));
-
-      // ko도 xcconfig 변수 참조
-      final koContent = File(p.join(
-              projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings'))
-          .readAsStringSync();
-      expect(koContent, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
+      expect(
+        File(p.join(projectRoot, 'ios', 'Flavors', 'dev', 'en.lproj',
+                'InfoPlist.strings'))
+            .existsSync(),
+        isTrue,
+      );
     });
   });
 }
