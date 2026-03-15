@@ -170,7 +170,7 @@ easy_setup:
         ko:
           app_name: 마이앱
 
-  localizations: [ko, en, zh-HK]                          # 선택사항: Xcode knownRegions 설정
+  localizations: [ko, en]                          # 선택사항: Xcode knownRegions 설정
   permission:                                              # 선택사항: 기본 iOS 권한 설명 (Base.lproj)
     NSCameraUsageDescription: "Camera access is required"
     NSPhotoLibraryUsageDescription: "Photo library access is required"
