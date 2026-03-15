@@ -34,20 +34,20 @@ class InfoPlistStringsGenerator {
     final allLocales = <String>{};
     if (hasFlavor) allLocales.addAll(flavorLocalized.keys);
     if (hasLocalized) allLocales.addAll(localizedPermission.keys);
-    // 기본 permission이 있으면 en locale에 포함
-    if (hasBase) allLocales.add('en');
+    // en locale은 항상 포함 (기본 permission 또는 CFBundleDisplayName)
+    if (hasBase || hasFlavor) allLocales.add('en');
 
     for (final locale in allLocales) {
       final entries = <String, String>{};
 
-      // flavor별 app_name → CFBundleDisplayName
-      // en: xcconfig의 APP_DISPLAY_NAME 변수를 참조 (flavor별로 다름)
+      // CFBundleDisplayName 설정
+      // en: 항상 xcconfig의 APP_DISPLAY_NAME 변수를 참조 (flavor별로 다름)
       // 그 외 locale: easy_setup.yaml의 값을 그대로 사용
-      final flavorConfig = flavorLocalized?[locale];
-      if (flavorConfig?.appName != null) {
-        if (locale == 'en') {
-          entries['CFBundleDisplayName'] = '(\$APP_DISPLAY_NAME)';
-        } else {
+      if (locale == 'en' && hasFlavor) {
+        entries['CFBundleDisplayName'] = '(\$APP_DISPLAY_NAME)';
+      } else {
+        final flavorConfig = flavorLocalized?[locale];
+        if (flavorConfig?.appName != null) {
           entries['CFBundleDisplayName'] = flavorConfig!.appName!;
         }
       }

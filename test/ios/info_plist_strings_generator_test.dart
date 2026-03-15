@@ -269,5 +269,30 @@ void main() {
       expect(enContent,
           contains('"NSPhotoLibraryUsageDescription" = "Photo library access needed";'));
     });
+
+    test('en always gets CFBundleDisplayName even without en localized config', () {
+      // flavor에 ko만 정의되어 있고 en은 없는 경우에도
+      // en.lproj에는 CFBundleDisplayName = ($APP_DISPLAY_NAME)이 추가되어야 함
+      InfoPlistStringsGenerator.generate(
+        projectRoot,
+        flavorLocalized: {
+          'ko': const FlavorLocalizedConfig(appName: '테스트 앱'),
+        },
+      );
+
+      final enPath = p.join(
+          projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
+      expect(File(enPath).existsSync(), isTrue);
+
+      final enContent = File(enPath).readAsStringSync();
+      expect(enContent,
+          contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME)";'));
+
+      // ko는 yaml 값 그대로
+      final koContent = File(p.join(
+              projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(koContent, contains('"CFBundleDisplayName" = "테스트 앱";'));
+    });
   });
 }
