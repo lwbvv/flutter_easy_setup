@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:easy_setup/easy_setup.dart';
@@ -38,123 +37,6 @@ project 'Runner', {
   'Release' => :release,
 }
 ''';
-
-/// Minimal project.pbxproj with standard alphabetical section ordering.
-final _pbxproj = '// !\$*UTF8*\$!\n'
-    '{\n'
-    '\tarchiveVersion = 1;\n'
-    '\tobjects = {\n'
-    '\n'
-    '/* Begin PBXFileReference section */\n'
-    '\t\t9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = "Debug.xcconfig"; path = "Flutter/Debug.xcconfig"; sourceTree = "<group>"; };\n'
-    '\t\t7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = "Release.xcconfig"; path = "Flutter/Release.xcconfig"; sourceTree = "<group>"; };\n'
-    '/* End PBXFileReference section */\n'
-    '\n'
-    '/* Begin PBXGroup section */\n'
-    '\t\t9740EEB11CF90186004384FC /* Flutter */ = {\n'
-    '\t\t\tisa = PBXGroup;\n'
-    '\t\t\tchildren = (\n'
-    '\t\t\t\t9740EEB21CF90195004384FC /* Debug.xcconfig */,\n'
-    '\t\t\t\t7AFA3C8E1D35360C0083082E /* Release.xcconfig */,\n'
-    '\t\t\t);\n'
-    '\t\t\tname = Flutter;\n'
-    '\t\t\tsourceTree = "<group>";\n'
-    '\t\t};\n'
-    '/* End PBXGroup section */\n'
-    '\n'
-    '/* Begin PBXNativeTarget section */\n'
-    '\t\t97C146ED1CF9000F007C117D /* Runner */ = {\n'
-    '\t\t\tisa = PBXNativeTarget;\n'
-    '\t\t\tbuildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;\n'
-    '\t\t\tbuildPhases = (\n'
-    '\t\t\t);\n'
-    '\t\t\tbuildRules = (\n'
-    '\t\t\t);\n'
-    '\t\t\tdependencies = (\n'
-    '\t\t\t);\n'
-    '\t\t\tname = Runner;\n'
-    '\t\t\tproductName = Runner;\n'
-    '\t\t\tproductReference = 97C146EE1CF9000F007C117D /* Runner.app */;\n'
-    '\t\t\tproductType = "com.apple.product-type.application";\n'
-    '\t\t};\n'
-    '/* End PBXNativeTarget section */\n'
-    '\n'
-    '/* Begin XCBuildConfiguration section */\n'
-    '\t\t97C147031CF9000F007C117D /* Debug */ = {\n'
-    '\t\t\tisa = XCBuildConfiguration;\n'
-    '\t\t\tbuildSettings = {\n'
-    '\t\t\t\tALWAYS_SEARCH_USER_PATHS = NO;\n'
-    '\t\t\t};\n'
-    '\t\t\tname = Debug;\n'
-    '\t\t};\n'
-    '\t\t97C147041CF9000F007C117D /* Release */ = {\n'
-    '\t\t\tisa = XCBuildConfiguration;\n'
-    '\t\t\tbuildSettings = {\n'
-    '\t\t\t\tALWAYS_SEARCH_USER_PATHS = NO;\n'
-    '\t\t\t};\n'
-    '\t\t\tname = Release;\n'
-    '\t\t};\n'
-    '\t\t249021D3217E4FDB00AE95B9 /* Profile */ = {\n'
-    '\t\t\tisa = XCBuildConfiguration;\n'
-    '\t\t\tbuildSettings = {\n'
-    '\t\t\t\tALWAYS_SEARCH_USER_PATHS = NO;\n'
-    '\t\t\t};\n'
-    '\t\t\tname = Profile;\n'
-    '\t\t};\n'
-    '\t\t97C147061CF9000F007C117D /* Debug */ = {\n'
-    '\t\t\tisa = XCBuildConfiguration;\n'
-    '\t\t\tbaseConfigurationReference = 9740EEB21CF90195004384FC /* Debug.xcconfig */;\n'
-    '\t\t\tbuildSettings = {\n'
-    '\t\t\t\tASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;\n'
-    '\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.example.runner;\n'
-    '\t\t\t};\n'
-    '\t\t\tname = Debug;\n'
-    '\t\t};\n'
-    '\t\t97C147071CF9000F007C117D /* Release */ = {\n'
-    '\t\t\tisa = XCBuildConfiguration;\n'
-    '\t\t\tbaseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;\n'
-    '\t\t\tbuildSettings = {\n'
-    '\t\t\t\tASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;\n'
-    '\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.example.runner;\n'
-    '\t\t\t};\n'
-    '\t\t\tname = Release;\n'
-    '\t\t};\n'
-    '\t\t249021D4217E4FDB00AE95B9 /* Profile */ = {\n'
-    '\t\t\tisa = XCBuildConfiguration;\n'
-    '\t\t\tbaseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;\n'
-    '\t\t\tbuildSettings = {\n'
-    '\t\t\t\tASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;\n'
-    '\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.example.runner;\n'
-    '\t\t\t};\n'
-    '\t\t\tname = Profile;\n'
-    '\t\t};\n'
-    '/* End XCBuildConfiguration section */\n'
-    '\n'
-    '/* Begin XCConfigurationList section */\n'
-    '\t\t97C146E91CF9000F007C117D /* Build configuration list for PBXProject "Runner" */ = {\n'
-    '\t\t\tisa = XCConfigurationList;\n'
-    '\t\t\tbuildConfigurations = (\n'
-    '\t\t\t\t97C147031CF9000F007C117D /* Debug */,\n'
-    '\t\t\t\t97C147041CF9000F007C117D /* Release */,\n'
-    '\t\t\t\t249021D3217E4FDB00AE95B9 /* Profile */,\n'
-    '\t\t\t);\n'
-    '\t\t\tdefaultConfigurationIsVisible = 0;\n'
-    '\t\t\tdefaultConfigurationName = Release;\n'
-    '\t\t};\n'
-    '\t\t97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */ = {\n'
-    '\t\t\tisa = XCConfigurationList;\n'
-    '\t\t\tbuildConfigurations = (\n'
-    '\t\t\t\t97C147061CF9000F007C117D /* Debug */,\n'
-    '\t\t\t\t97C147071CF9000F007C117D /* Release */,\n'
-    '\t\t\t\t249021D4217E4FDB00AE95B9 /* Profile */,\n'
-    '\t\t\t);\n'
-    '\t\t\tdefaultConfigurationIsVisible = 0;\n'
-    '\t\t\tdefaultConfigurationName = Release;\n'
-    '\t\t};\n'
-    '/* End XCConfigurationList section */\n'
-    '\t};\n'
-    '\trootObject = 97C146E61CF9000F007C117D /* Project object */;\n'
-    '}\n';
 
 const _easySetupYaml = '''
 easy_setup:
@@ -200,24 +82,27 @@ dependencies:
   // Android
   final androidAppDir = Directory(p.join(root.path, 'android', 'app'));
   androidAppDir.createSync(recursive: true);
-  File(p.join(androidAppDir.path, 'build.gradle')).writeAsStringSync(_buildGradle);
+  File(p.join(androidAppDir.path, 'build.gradle'))
+      .writeAsStringSync(_buildGradle);
 
   // iOS
   final flutterDir = Directory(p.join(root.path, 'ios', 'Flutter'));
   flutterDir.createSync(recursive: true);
-
-  final pbxprojDir = Directory(p.join(root.path, 'ios', 'Runner.xcodeproj'));
-  pbxprojDir.createSync(recursive: true);
-  File(p.join(pbxprojDir.path, 'project.pbxproj')).writeAsStringSync(_pbxproj);
-
-  final schemesDir = Directory(
-    p.join(root.path, 'ios', 'Runner.xcodeproj', 'xcshareddata', 'xcschemes'),
-  );
-  schemesDir.createSync(recursive: true);
+  // Flutter 기본 xcconfig 파일 (XcodeGen configFiles에서 참조됨)
+  File(p.join(flutterDir.path, 'Debug.xcconfig'))
+      .writeAsStringSync('#include "Generated.xcconfig"\n');
+  File(p.join(flutterDir.path, 'Release.xcconfig'))
+      .writeAsStringSync('#include "Generated.xcconfig"\n');
 
   final runnerDir = Directory(p.join(root.path, 'ios', 'Runner'));
   runnerDir.createSync(recursive: true);
   File(p.join(runnerDir.path, 'Info.plist')).writeAsStringSync(_infoPlist);
+  // Runner-Bridging-Header.h (XcodeGen Runner target에서 참조됨)
+  File(p.join(runnerDir.path, 'Runner-Bridging-Header.h'))
+      .writeAsStringSync('#import <Flutter/Flutter.h>\n');
+
+  // RunnerTests 디렉터리 (XcodeGen RunnerTests target에서 참조됨)
+  Directory(p.join(root.path, 'ios', 'RunnerTests')).createSync(recursive: true);
 
   File(p.join(root.path, 'ios', 'Podfile')).writeAsStringSync(_podfile);
 
@@ -263,8 +148,6 @@ void main() {
       File(p.join(tempDir.path, 'easy_setup.yaml'))
           .writeAsStringSync('easy_setup:\n  flavors:\n');
 
-      // Provide valid YAML with empty flavors map — the YAML parser returns
-      // null for the 'flavors' key which triggers a parse error.
       expect(
         () => FlavorCommand.run(projectRoot: tempDir.path),
         throwsA(isA<SetupException>()),
@@ -274,27 +157,25 @@ void main() {
     test('dry-run does not modify any files', () {
       final root = _createFlutterProject(tempDir);
 
-      final gradleBefore = File(p.join(root.path, 'android', 'app', 'build.gradle'))
-          .readAsStringSync();
-      final pbxprojBefore = File(p.join(root.path, 'ios', 'Runner.xcodeproj', 'project.pbxproj'))
-          .readAsStringSync();
-      final plistBefore = File(p.join(root.path, 'ios', 'Runner', 'Info.plist'))
-          .readAsStringSync();
-      final podfileBefore = File(p.join(root.path, 'ios', 'Podfile'))
-          .readAsStringSync();
+      final gradleBefore =
+          File(p.join(root.path, 'android', 'app', 'build.gradle'))
+              .readAsStringSync();
+      final plistBefore =
+          File(p.join(root.path, 'ios', 'Runner', 'Info.plist'))
+              .readAsStringSync();
+      final podfileBefore =
+          File(p.join(root.path, 'ios', 'Podfile')).readAsStringSync();
 
       FlavorCommand.run(projectRoot: root.path, dryRun: true);
 
       expect(
-        File(p.join(root.path, 'android', 'app', 'build.gradle')).readAsStringSync(),
+        File(p.join(root.path, 'android', 'app', 'build.gradle'))
+            .readAsStringSync(),
         gradleBefore,
       );
       expect(
-        File(p.join(root.path, 'ios', 'Runner.xcodeproj', 'project.pbxproj')).readAsStringSync(),
-        pbxprojBefore,
-      );
-      expect(
-        File(p.join(root.path, 'ios', 'Runner', 'Info.plist')).readAsStringSync(),
+        File(p.join(root.path, 'ios', 'Runner', 'Info.plist'))
+            .readAsStringSync(),
         plistBefore,
       );
       expect(
@@ -303,63 +184,82 @@ void main() {
       );
       // xcconfig files should not be created
       expect(
-        File(p.join(root.path, 'ios', 'Flutter', 'Debug-dev.xcconfig')).existsSync(),
+        File(p.join(root.path, 'ios', 'Flutter', 'Debug-dev.xcconfig'))
+            .existsSync(),
+        isFalse,
+      );
+      // project.yml should not be created
+      expect(
+        File(p.join(root.path, 'ios', 'project.yml')).existsSync(),
         isFalse,
       );
     });
 
-    test('full pipeline modifies all expected files', () {
+    test('full pipeline generates xcconfig, project.yml, and scripts', () {
       final root = _createFlutterProject(tempDir);
 
       FlavorCommand.run(projectRoot: root.path);
 
       // Android build.gradle should have flavorDimensions
-      final gradle = File(p.join(root.path, 'android', 'app', 'build.gradle'))
-          .readAsStringSync();
+      final gradle =
+          File(p.join(root.path, 'android', 'app', 'build.gradle'))
+              .readAsStringSync();
       expect(gradle, contains('flavorDimensions'));
       expect(gradle, contains('productFlavors'));
 
       // iOS xcconfig files should be created
       expect(
-        File(p.join(root.path, 'ios', 'Flutter', 'Debug-dev.xcconfig')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(root.path, 'ios', 'Flutter', 'Release-prod.xcconfig')).existsSync(),
-        isTrue,
-      );
-
-      // iOS pbxproj should have flavor build configurations
-      final pbxproj = File(p.join(root.path, 'ios', 'Runner.xcodeproj', 'project.pbxproj'))
-          .readAsStringSync();
-      expect(pbxproj, contains('Debug-dev'));
-      expect(pbxproj, contains('Release-prod'));
-
-      // Scheme files should be created
-      expect(
-        File(p.join(root.path, 'ios', 'Runner.xcodeproj', 'xcshareddata', 'xcschemes', 'dev.xcscheme'))
+        File(p.join(root.path, 'ios', 'Flutter', 'Debug-dev.xcconfig'))
             .existsSync(),
         isTrue,
       );
       expect(
-        File(p.join(root.path, 'ios', 'Runner.xcodeproj', 'xcshareddata', 'xcschemes', 'prod.xcscheme'))
+        File(p.join(root.path, 'ios', 'Flutter', 'Release-prod.xcconfig'))
+            .existsSync(),
+        isTrue,
+      );
+
+      // project.yml should be generated
+      final projectYml =
+          File(p.join(root.path, 'ios', 'project.yml')).readAsStringSync();
+      expect(projectYml, contains('name: Runner'));
+      expect(projectYml, contains('Debug-dev: debug'));
+      expect(projectYml, contains('Release-prod: release'));
+      expect(projectYml,
+          contains('PRODUCT_BUNDLE_IDENTIFIER: com.example.app.dev'));
+      expect(projectYml,
+          contains('PRODUCT_BUNDLE_IDENTIFIER: com.example.app'));
+
+      // Build scripts should be generated
+      expect(
+        File(p.join(
+                root.path, 'ios', 'xcodegen', 'script', 'run_script.sh'))
+            .existsSync(),
+        isTrue,
+      );
+      expect(
+        File(p.join(
+                root.path, 'ios', 'xcodegen', 'script', 'thin_binary.sh'))
             .existsSync(),
         isTrue,
       );
 
       // Info.plist should use APP_DISPLAY_NAME variable
-      final plist = File(p.join(root.path, 'ios', 'Runner', 'Info.plist'))
-          .readAsStringSync();
+      final plist =
+          File(p.join(root.path, 'ios', 'Runner', 'Info.plist'))
+              .readAsStringSync();
       expect(plist, contains(r'$(APP_DISPLAY_NAME)'));
 
       // Podfile should have flavor mappings
-      final podfile = File(p.join(root.path, 'ios', 'Podfile')).readAsStringSync();
+      final podfile =
+          File(p.join(root.path, 'ios', 'Podfile')).readAsStringSync();
       expect(podfile, contains("'Debug-dev' => :debug,"));
       expect(podfile, contains("'Release-prod' => :release,"));
     });
 
     test('copies Firebase config files when firebase is configured', () {
-      final root = _createFlutterProject(tempDir, yamlContent: _easySetupYamlWithFirebase);
+      final root = _createFlutterProject(tempDir,
+          yamlContent: _easySetupYamlWithFirebase);
 
       // Create Firebase source files
       final devConfigDir = Directory(p.join(root.path, 'config', 'dev'));
@@ -373,34 +273,48 @@ void main() {
 
       // Android Firebase config should be copied
       final androidDest = File(p.join(
-        root.path, 'android', 'app', 'src', 'dev', 'google-services.json',
+        root.path,
+        'android',
+        'app',
+        'src',
+        'dev',
+        'google-services.json',
       ));
       expect(androidDest.existsSync(), isTrue);
       expect(androidDest.readAsStringSync(), '{"project_id":"dev"}');
 
       // iOS Firebase config should be copied
       final iosDest = File(p.join(
-        root.path, 'ios', 'Runner', 'Firebase', 'dev', 'GoogleService-Info.plist',
+        root.path,
+        'ios',
+        'Runner',
+        'Firebase',
+        'dev',
+        'GoogleService-Info.plist',
       ));
       expect(iosDest.existsSync(), isTrue);
       expect(iosDest.readAsStringSync(), '<plist>dev</plist>');
     });
 
     test('skips Firebase copy when source files do not exist', () {
-      final root = _createFlutterProject(tempDir, yamlContent: _easySetupYamlWithFirebase);
+      final root = _createFlutterProject(tempDir,
+          yamlContent: _easySetupYamlWithFirebase);
 
       // Do NOT create Firebase source files — should not throw
       FlavorCommand.run(projectRoot: root.path);
 
       final androidDest = File(p.join(
-        root.path, 'android', 'app', 'src', 'dev', 'google-services.json',
+        root.path,
+        'android',
+        'app',
+        'src',
+        'dev',
+        'google-services.json',
       ));
       expect(androidDest.existsSync(), isFalse);
     });
 
     test('each flavor defines locale-specific variables in its xcconfig', () {
-      // Multiple flavors with different app_names for the same locale
-      // → Each flavor should have its own xcconfig with locale-specific variables
       final multiFlavorYaml = '''
 easy_setup:
   flavors:
@@ -422,7 +336,8 @@ easy_setup:
           app_name: Test Prod
 ''';
 
-      final root = _createFlutterProject(tempDir, yamlContent: multiFlavorYaml);
+      final root =
+          _createFlutterProject(tempDir, yamlContent: multiFlavorYaml);
       FlavorCommand.run(projectRoot: root.path);
 
       // Dev flavor's xcconfig should have APP_DISPLAY_NAME_KO=개발 앱
@@ -446,16 +361,17 @@ easy_setup:
       expect(prodDebugXcconfig, contains('APP_DISPLAY_NAME_EN=Test Prod'));
 
       // InfoPlist.strings should reference the xcconfig variables
-      final koStringsPath =
-          p.join(root.path, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
+      final koStringsPath = p.join(
+          root.path, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
       final koContent = File(koStringsPath).readAsStringSync();
-      // Should reference the variable, not hardcode the value
-      expect(koContent, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
+      expect(koContent,
+          contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
 
-      final enStringsPath =
-          p.join(root.path, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
+      final enStringsPath = p.join(
+          root.path, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
       final enContent = File(enStringsPath).readAsStringSync();
-      expect(enContent, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_EN)";'));
+      expect(enContent,
+          contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_EN)";'));
     });
   });
 }

@@ -29,8 +29,7 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 |---------|---------------|
 | **Android** | `build.gradle`에 `flavorDimensions` + `productFlavors` 블록 추가 (Groovy/Kotlin DSL 모두 지원) |
 | **iOS** | xcconfig 파일 생성 (Debug/Release/Profile per flavor) |
-| **iOS** | `project.pbxproj`에 빌드 구성(XCBuildConfiguration) 추가 |
-| **iOS** | flavor별 `.xcscheme` 파일 생성 |
+| **iOS** | XcodeGen `project.yml` 자동 생성 → `xcodegen generate`로 Xcode 프로젝트 생성 |
 | **iOS** | `Info.plist`의 앱 이름을 xcconfig 변수로 교체 |
 | **iOS** | `Podfile`에 빌드 모드 매핑 추가 |
 | **iOS** | 1024x1024 소스 이미지로 앱 아이콘 자동 생성 (flavor별 지원) |
@@ -45,6 +44,14 @@ Flutter 프로젝트의 flavor(빌드 변형) 환경과 CI/CD 파이프라인을
 ---
 
 ## 설치
+
+### 사전 요구사항
+
+iOS 프로젝트 설정을 위해 [XcodeGen](https://github.com/yonaskolb/XcodeGen)이 필요합니다:
+
+```bash
+brew install xcodegen
+```
 
 ### 방법 1: dart pub global (권장)
 
@@ -228,7 +235,7 @@ easy_setup:
 
 ### 3. `permission` / `localized_permission` — iOS 권한 설명
 
-`easy_setup` 레벨에 권한 설명을 설정합니다. `permission`은 기본값(`Base.lproj`), `localized_permission`은 locale별 값입니다:
+`easy_setup` 레벨에 권한 설명을 설정합니다. `permission`은 기본값(`en.lproj`에 포함), `localized_permission`은 locale별 값입니다:
 
 ```yaml
 easy_setup:
@@ -246,7 +253,7 @@ easy_setup:
 
 | 필드 | 설명 |
 |------|------|
-| `permission` | 기본 iOS 권한 설명. `Base.lproj/InfoPlist.strings`에 생성됨 |
+| `permission` | 기본 iOS 권한 설명. `en.lproj/InfoPlist.strings`에 포함됨 |
 | `localized_permission` | locale별 iOS 권한 설명. 각 `{locale}.lproj/InfoPlist.strings`에 생성됨 |
 
 ### Flavor별 Localized App Name

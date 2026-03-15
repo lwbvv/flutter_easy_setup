@@ -6,12 +6,13 @@ import '../firebase/firebase_copier.dart';
 import '../ios/app_icon_generator.dart';
 import '../ios/info_plist_modifier.dart';
 import '../ios/info_plist_strings_generator.dart';
-import '../ios/pbxproj_modifier.dart';
 import '../ios/podfile_modifier.dart';
-import '../ios/scheme_generator.dart';
 import '../ios/xcconfig_generator.dart';
+import '../ios/xcodegen_generator.dart';
+import '../ios/xcodegen_scripts_generator.dart';
 import '../models/flavor_config.dart';
 import '../utils/project_finder.dart';
+import '../utils/xcodegen_runner.dart';
 
 /// flavor 설정의 전체 파이프라인을 오케스트레이션하는 명령 클래스입니다.
 ///
@@ -22,9 +23,12 @@ import '../utils/project_finder.dart';
 ///   3.5. Android Firebase — google-services.json 복사
 ///   4. iOS xcconfig — flavor별 Debug/Release/Profile 설정 파일 생성
 ///   4.5. iOS Firebase — GoogleService-Info.plist 복사
-///   5. iOS project.pbxproj — 빌드 구성(XCBuildConfiguration) 추가
-///   6. iOS xcscheme — flavor별 빌드 스키마 생성
+///   4.6. iOS App Icon — flavor별 앱 아이콘 자동 생성
+///   5. iOS project.yml — XcodeGen 설정 파일 생성
+///   5.5. iOS scripts — XcodeGen 빌드 스크립트 생성
+///   6. iOS xcodegen — xcodegen generate 실행 (project.pbxproj + schemes 생성)
 ///   7. iOS Info.plist — CFBundleDisplayName을 변수로 교체
+///   7.5. iOS InfoPlist.strings — locale별 앱 이름 + 권한 설명
 ///   8. iOS Podfile — flavor별 빌드 모드 매핑 추가
 class FlavorCommand {
   /// flavor 설정 파이프라인을 실행합니다.
@@ -138,35 +142,22 @@ class FlavorCommand {
       }
     }
 
-    // 5단계: iOS — project.pbxproj에 빌드 구성 추가
-    //        Runner 타겟 UUID를 반환받아 scheme 생성 시 사용
-    print('\n--- iOS project.pbxproj ---');
-    final pbxprojPath = ProjectFinder.iosPbxprojPath(root);
-    final runnerTargetUuid = PbxprojModifier.modify(
-      pbxprojPath,
+    // 5단계: iOS — XcodeGen project.yml 생성
+    print('\n--- iOS project.yml (XcodeGen) ---');
+    XcodeGenGenerator.generate(
+      root,
       config.flavors,
+      localizations: config.localizations,
       dryRun: dryRun,
     );
 
-    // 6단계: iOS — flavor별 .xcscheme 파일 생성
-    print('\n--- iOS schemes ---');
-    final schemesDir = ProjectFinder.iosSchemesDir(root);
+    // 5.5단계: iOS — XcodeGen 빌드 스크립트 생성
+    print('\n--- iOS build scripts ---');
+    XcodeGenScriptsGenerator.generate(root, dryRun: dryRun);
 
-    // 사용하지 않는 scheme 파일 정리 (flavor 변경 시 이전 scheme 제거)
-    SchemeGenerator.cleanupUnusedSchemes(
-      schemesDir,
-      config.flavors.keys.toSet(),
-      dryRun: dryRun,
-    );
-
-    for (final flavor in config.flavors.keys) {
-      SchemeGenerator.generate(
-        schemesDir,
-        flavor,
-        runnerTargetUuid,
-        dryRun: dryRun,
-      );
-    }
+    // 6단계: iOS — xcodegen generate 실행
+    print('\n--- iOS xcodegen generate ---');
+    XcodeGenRunner.run(root, dryRun: dryRun);
 
     // 7단계: iOS — Info.plist의 앱 표시 이름을 변수($(APP_DISPLAY_NAME))로 교체
     print('\n--- iOS Info.plist ---');
@@ -184,8 +175,6 @@ class FlavorCommand {
         final flavorLoc = entry.value.localized;
         if (flavorLoc != null) {
           for (final locEntry in flavorLoc.entries) {
-            // locale별로 최소 하나의 flavor에서 정의한 app_name이 있으면
-            // InfoPlist.strings를 생성하기 위해 기록 (실제 값은 xcconfig에서 결정)
             if (!mergedFlavorLocalized.containsKey(locEntry.key)) {
               mergedFlavorLocalized[locEntry.key] = locEntry.value;
             }
@@ -205,16 +194,6 @@ class FlavorCommand {
           dryRun: dryRun,
         );
       }
-    }
-
-    // 7.6단계: iOS — knownRegions 업데이트 (localizations 설정이 있는 경우)
-    if (config.localizations != null && config.localizations!.isNotEmpty) {
-      print('\n--- iOS knownRegions ---');
-      PbxprojModifier.modifyKnownRegions(
-        pbxprojPath,
-        config.localizations!,
-        dryRun: dryRun,
-      );
     }
 
     // 8단계: iOS — Podfile에 flavor별 빌드 모드 매핑 추가

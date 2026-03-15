@@ -37,7 +37,7 @@ void main() {
       expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
     });
 
-    test('generates Base.lproj with base permission', () {
+    test('generates en.lproj with base permission', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
         permission: {
@@ -47,7 +47,7 @@ void main() {
       );
 
       final stringsPath = p.join(
-          projectRoot, 'ios', 'Runner', 'Base.lproj', 'InfoPlist.strings');
+          projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
       expect(File(stringsPath).existsSync(), isTrue);
 
       final content = File(stringsPath).readAsStringSync();
@@ -57,6 +57,11 @@ void main() {
           content,
           contains(
               '"NSPhotoLibraryUsageDescription" = "Photo library access is required";'));
+
+      // Base.lproj는 생성되지 않아야 함
+      final basePath = p.join(
+          projectRoot, 'ios', 'Runner', 'Base.lproj', 'InfoPlist.strings');
+      expect(File(basePath).existsSync(), isFalse);
     });
 
     test('generates locale-specific permission files', () {
@@ -191,7 +196,7 @@ void main() {
       expect(lprojDirs, isEmpty);
     });
 
-    test('generates base + localized permission together', () {
+    test('merges base permission into en.lproj with localized permission', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
         permission: {
@@ -204,11 +209,11 @@ void main() {
         },
       );
 
-      // Base.lproj
-      final baseContent = File(p.join(
-              projectRoot, 'ios', 'Runner', 'Base.lproj', 'InfoPlist.strings'))
+      // en.lproj에 기본 permission 포함
+      final enContent = File(p.join(
+              projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings'))
           .readAsStringSync();
-      expect(baseContent,
+      expect(enContent,
           contains('"NSCameraUsageDescription" = "Camera access needed";'));
 
       // ko.lproj
@@ -217,6 +222,35 @@ void main() {
           .readAsStringSync();
       expect(koContent,
           contains('"NSCameraUsageDescription" = "카메라 접근 필요";'));
+
+      // Base.lproj는 생성되지 않아야 함
+      final basePath = p.join(
+          projectRoot, 'ios', 'Runner', 'Base.lproj', 'InfoPlist.strings');
+      expect(File(basePath).existsSync(), isFalse);
+    });
+
+    test('merges base permission and en localized permission into en.lproj', () {
+      InfoPlistStringsGenerator.generate(
+        projectRoot,
+        permission: {
+          'NSCameraUsageDescription': 'Camera access needed',
+          'NSPhotoLibraryUsageDescription': 'Photo library access needed',
+        },
+        localizedPermission: {
+          'en': {
+            'NSCameraUsageDescription': 'Camera access is required',
+          },
+        },
+      );
+
+      // en의 localized_permission이 base permission을 덮어씀
+      final enContent = File(p.join(
+              projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings'))
+          .readAsStringSync();
+      expect(enContent,
+          contains('"NSCameraUsageDescription" = "Camera access is required";'));
+      expect(enContent,
+          contains('"NSPhotoLibraryUsageDescription" = "Photo library access needed";'));
     });
   });
 }

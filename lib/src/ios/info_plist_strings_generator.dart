@@ -6,14 +6,14 @@ import '../models/flavor_config.dart';
 
 /// iOS locale별 InfoPlist.strings 파일을 생성하는 클래스입니다.
 ///
-/// 기본 permission은 Base.lproj에, locale별 permission은 각 locale.lproj에,
-/// flavor별 app_name은 CFBundleDisplayName으로 병합하여 생성합니다.
+/// 기본 permission은 en.lproj에 포함되고, locale별 permission은 각 locale.lproj에,
+/// flavor별 app_name은 xcconfig 변수를 참조하는 CFBundleDisplayName으로 생성합니다.
 class InfoPlistStringsGenerator {
   /// InfoPlist.strings 파일들을 생성합니다.
   ///
   /// [projectRoot]: Flutter 프로젝트 루트
   /// [flavorLocalized]: flavor별 locale 설정 (app_name 등)
-  /// [permission]: 기본 iOS 권한 설명 (Base.lproj에 기록)
+  /// [permission]: 기본 iOS 권한 설명 (en.lproj에 기록)
   /// [localizedPermission]: locale별 iOS 권한 설명
   static void generate(
     String projectRoot, {
@@ -30,20 +30,12 @@ class InfoPlistStringsGenerator {
 
     print('\n--- iOS InfoPlist.strings ---');
 
-    // Base.lproj: 기본 permission
-    if (hasBase) {
-      _writeStringsFile(
-        projectRoot,
-        'Base',
-        permission,
-        dryRun: dryRun,
-      );
-    }
-
     // 모든 locale 키를 수집
     final allLocales = <String>{};
     if (hasFlavor) allLocales.addAll(flavorLocalized.keys);
     if (hasLocalized) allLocales.addAll(localizedPermission.keys);
+    // 기본 permission이 있으면 en locale에 포함
+    if (hasBase) allLocales.add('en');
 
     for (final locale in allLocales) {
       final entries = <String, String>{};
@@ -54,6 +46,11 @@ class InfoPlistStringsGenerator {
       if (flavorConfig?.appName != null) {
         final varName = 'APP_DISPLAY_NAME_${locale.toUpperCase()}';
         entries['CFBundleDisplayName'] = '(\$$varName)';
+      }
+
+      // 기본 permission을 en locale에 포함
+      if (locale == 'en' && hasBase) {
+        entries.addAll(permission);
       }
 
       // locale별 permission
