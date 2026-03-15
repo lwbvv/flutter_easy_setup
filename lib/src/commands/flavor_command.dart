@@ -76,11 +76,14 @@ class FlavorCommand {
       }
     }
 
-    // 4단계: iOS — flavor별 xcconfig 파일 생성 (Debug/Release/Profile)
+    // 4단계: iOS — xcconfig 파일 생성
     print('\n--- iOS xcconfig ---');
     final xcconfigDir = ProjectFinder.iosXcconfigDir(root);
 
-    // 사용하지 않는 xcconfig 파일 정리 (flavor 변경 시 이전 xcconfig 제거)
+    // Flutter 기본 xcconfig 파일이 없으면 생성
+    XcconfigGenerator.ensureBaseXcconfigs(xcconfigDir, dryRun: dryRun);
+
+    // 사용하지 않는 flavor xcconfig 파일 정리
     XcconfigGenerator.cleanupUnusedXcconfigs(
       xcconfigDir,
       config.flavors.keys.toSet(),
