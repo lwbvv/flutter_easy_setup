@@ -41,14 +41,16 @@ class InfoPlistStringsGenerator {
       final entries = <String, String>{};
 
       // CFBundleDisplayName 설정
-      // en: 항상 xcconfig의 APP_DISPLAY_NAME 변수를 참조 (flavor별로 다름)
-      // 그 외 locale: easy_setup.yaml의 값을 그대로 사용
+      // 모든 locale에서 xcconfig 변수를 참조하여 flavor별로 다른 이름을 표시
+      // en: $(APP_DISPLAY_NAME) — 기본 앱 이름
+      // 그 외: $(APP_DISPLAY_NAME_{LOCALE}) — locale별 앱 이름
       if (locale == 'en' && hasFlavor) {
         entries['CFBundleDisplayName'] = '(\$APP_DISPLAY_NAME)';
       } else {
         final flavorConfig = flavorLocalized?[locale];
         if (flavorConfig?.appName != null) {
-          entries['CFBundleDisplayName'] = flavorConfig!.appName!;
+          final varName = 'APP_DISPLAY_NAME_${locale.toUpperCase()}';
+          entries['CFBundleDisplayName'] = '(\$$varName)';
         }
       }
 

@@ -364,7 +364,7 @@ easy_setup:
       final koStringsPath = p.join(
           root.path, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
       final koContent = File(koStringsPath).readAsStringSync();
-      expect(koContent, contains('"CFBundleDisplayName" = "개발 앱";'));
+      expect(koContent, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
 
       // en: xcconfig 변수 참조
       final enStringsPath = p.join(
