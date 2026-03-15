@@ -172,10 +172,13 @@ $postInstall''';
   }) {
     var content = file.readAsStringSync();
 
-    // 1. flavor 매핑 처리
+    // 1. platform :ios 버전 업데이트
+    content = _applyPlatformVersion(content, iosVersion);
+
+    // 2. flavor 매핑 처리
     content = _applyFlavorMappings(content, flavors);
 
-    // 2. permission 매크로 + IPHONEOS_DEPLOYMENT_TARGET 처리
+    // 3. permission 매크로 + IPHONEOS_DEPLOYMENT_TARGET 처리
     final macros = _resolveMacros(permission);
     content = _applyPostInstallConfig(content, macros, iosVersion);
 
@@ -186,6 +189,15 @@ $postInstall''';
 
     file.writeAsStringSync(content);
     print('  Updated Podfile with flavor mappings and permission macros.');
+  }
+
+  /// platform :ios 버전을 업데이트합니다.
+  static String _applyPlatformVersion(String content, String iosVersion) {
+    final pattern = RegExp(r"platform\s*:ios\s*,\s*'[^']*'");
+    if (pattern.hasMatch(content)) {
+      return content.replaceFirst(pattern, "platform :ios, '$iosVersion'");
+    }
+    return content;
   }
 
   /// flavor 매핑을 적용합니다.

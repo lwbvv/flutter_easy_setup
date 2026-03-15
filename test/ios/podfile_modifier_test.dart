@@ -206,5 +206,16 @@ end
       expect(result,
           contains("config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'"));
     });
+
+    test('updates existing platform version in Podfile', () {
+      final file = File('${tempDir.path}/Podfile');
+      file.writeAsStringSync(_podfileContent); // has platform :ios, '12.0'
+
+      PodfileModifier.modify(file.path, flavors, iosVersion: '16.0');
+
+      final result = file.readAsStringSync();
+      expect(result, contains("platform :ios, '16.0'"));
+      expect(result, isNot(contains("platform :ios, '12.0'")));
+    });
   });
 }
