@@ -95,5 +95,57 @@ void main() {
 
       expect(file.readAsStringSync(), _plistWithDisplayName);
     });
+
+    test('adds permission keys to Info.plist', () {
+      final file = File('${tempDir.path}/Info.plist');
+      file.writeAsStringSync(_plistWithDisplayName);
+
+      InfoPlistModifier.modify(file.path, permission: {
+        'NSCameraUsageDescription': 'Camera access is required',
+        'NSPhotoLibraryUsageDescription': 'Photo library access is required',
+      });
+
+      final result = file.readAsStringSync();
+      expect(result, contains('<key>NSCameraUsageDescription</key>'));
+      expect(result, contains('<string>Camera access is required</string>'));
+      expect(result, contains('<key>NSPhotoLibraryUsageDescription</key>'));
+      expect(result,
+          contains('<string>Photo library access is required</string>'));
+    });
+
+    test('updates existing permission values', () {
+      final file = File('${tempDir.path}/Info.plist');
+      // 먼저 permission 추가
+      file.writeAsStringSync(_plistWithDisplayName);
+      InfoPlistModifier.modify(file.path, permission: {
+        'NSCameraUsageDescription': 'Old value',
+      });
+
+      // 다른 값으로 다시 실행
+      InfoPlistModifier.modify(file.path, permission: {
+        'NSCameraUsageDescription': 'New value',
+      });
+
+      final result = file.readAsStringSync();
+      expect(result, contains('<string>New value</string>'));
+      expect(result, isNot(contains('<string>Old value</string>')));
+    });
+
+    test('permission is idempotent', () {
+      final file = File('${tempDir.path}/Info.plist');
+      file.writeAsStringSync(_plistWithDisplayName);
+
+      InfoPlistModifier.modify(file.path, permission: {
+        'NSCameraUsageDescription': 'Camera access is required',
+      });
+      final first = file.readAsStringSync();
+
+      InfoPlistModifier.modify(file.path, permission: {
+        'NSCameraUsageDescription': 'Camera access is required',
+      });
+      final second = file.readAsStringSync();
+
+      expect(second, first);
+    });
   });
 }

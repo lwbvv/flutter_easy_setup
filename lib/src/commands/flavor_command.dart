@@ -159,10 +159,15 @@ class FlavorCommand {
     print('\n--- iOS xcodegen generate ---');
     XcodeGenRunner.run(root, dryRun: dryRun);
 
-    // 7단계: iOS — Info.plist의 앱 표시 이름을 변수($(APP_DISPLAY_NAME))로 교체
+    // 7단계: iOS — Info.plist 수정
+    //        CFBundleDisplayName → $(APP_DISPLAY_NAME) + permission 키 추가
     print('\n--- iOS Info.plist ---');
     final plistPath = ProjectFinder.iosInfoPlistPath(root);
-    InfoPlistModifier.modify(plistPath, dryRun: dryRun);
+    InfoPlistModifier.modify(
+      plistPath,
+      permission: config.permission,
+      dryRun: dryRun,
+    );
 
     // 7.5단계: iOS — localized 설정으로 InfoPlist.strings 생성
     //          각 flavor의 localized 앱 이름은 해당 flavor의 xcconfig에서
