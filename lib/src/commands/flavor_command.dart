@@ -201,10 +201,15 @@ class FlavorCommand {
       }
     }
 
-    // 8단계: iOS — Podfile에 flavor별 빌드 모드 매핑 추가
+    // 8단계: iOS — Podfile에 flavor별 빌드 모드 매핑 + permission 매크로 추가
     print('\n--- iOS Podfile ---');
     final podfilePath = ProjectFinder.iosPodfilePath(root);
-    PodfileModifier.modify(podfilePath, config.flavors, dryRun: dryRun);
+    PodfileModifier.modify(
+      podfilePath,
+      config.flavors,
+      permission: config.permission,
+      dryRun: dryRun,
+    );
 
     // 완료 메시지 출력
     _printSummary(dryRun: dryRun);

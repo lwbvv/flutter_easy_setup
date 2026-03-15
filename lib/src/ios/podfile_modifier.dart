@@ -7,46 +7,114 @@ import '../models/flavor_config.dart';
 /// Podfile이 없으면 Flutter 표준 Podfile을 생성하고,
 /// 있으면 기존 Podfile에 flavor별 빌드 모드 매핑을 추가합니다.
 ///
-/// project 'Runner' 블록에 각 flavor의 빌드 구성을 매핑합니다:
-///   - Debug-{flavor}   → :debug
-///   - Profile-{flavor}  → :release
-///   - Release-{flavor}  → :release
+/// permission이 제공되면 post_install 블록에
+/// GCC_PREPROCESSOR_DEFINITIONS로 permission_handler 매크로를 추가합니다.
 class PodfileModifier {
+  /// Info.plist permission 키 → permission_handler GCC 매크로 매핑
+  static const _permissionMacroMap = <String, String>{
+    'NSCameraUsageDescription': 'PERMISSION_CAMERA=1',
+    'NSMicrophoneUsageDescription': 'PERMISSION_MICROPHONE=1',
+    'NSPhotoLibraryUsageDescription': 'PERMISSION_PHOTOS=1',
+    'NSPhotoLibraryAddUsageDescription': 'PERMISSION_PHOTOS=1',
+    'NSLocationWhenInUseUsageDescription': 'PERMISSION_LOCATION_WHENINUSE=1',
+    'NSLocationAlwaysAndWhenInUseUsageDescription': 'PERMISSION_LOCATION=1',
+    'NSLocationAlwaysUsageDescription': 'PERMISSION_LOCATION=1',
+    'NSContactsUsageDescription': 'PERMISSION_CONTACTS=1',
+    'NSCalendarsUsageDescription': 'PERMISSION_EVENTS=1',
+    'NSCalendarsFullAccessUsageDescription': 'PERMISSION_EVENTS_FULL_ACCESS=1',
+    'NSCalendarsWriteOnlyAccessUsageDescription': 'PERMISSION_EVENTS=1',
+    'NSRemindersUsageDescription': 'PERMISSION_REMINDERS=1',
+    'NSRemindersFullAccessUsageDescription': 'PERMISSION_REMINDERS=1',
+    'NSSpeechRecognitionUsageDescription': 'PERMISSION_SPEECH_RECOGNIZER=1',
+    'NSMotionUsageDescription': 'PERMISSION_SENSORS=1',
+    'NSBluetoothAlwaysUsageDescription': 'PERMISSION_BLUETOOTH=1',
+    'NSBluetoothPeripheralUsageDescription': 'PERMISSION_BLUETOOTH=1',
+    'NSAppleMusicUsageDescription': 'PERMISSION_MEDIA_LIBRARY=1',
+    'NSUserTrackingUsageDescription': 'PERMISSION_APP_TRACKING_TRANSPARENCY=1',
+    'NSFaceIDUsageDescription': 'PERMISSION_SENSORS=1',
+  };
+
   /// Podfile을 생성하거나 수정합니다.
   ///
-  /// - Podfile이 없으면 Flutter 표준 Podfile을 생성하며, flavor 매핑을 포함합니다.
-  /// - Podfile이 있으면 기존 파일에 flavor 매핑을 추가/갱신합니다.
+  /// [permission]: easy_setup.yaml의 permission 맵 (키를 기반으로 매크로 매핑)
   static void modify(
     String podfilePath,
     Map<String, FlavorConfig> flavors, {
+    Map<String, String>? permission,
     bool dryRun = false,
   }) {
     final file = File(podfilePath);
 
     if (!file.existsSync()) {
-      _createPodfile(file, flavors, dryRun: dryRun);
+      _createPodfile(file, flavors, permission: permission, dryRun: dryRun);
       return;
     }
 
-    _modifyExistingPodfile(file, flavors, dryRun: dryRun);
+    _modifyExistingPodfile(file, flavors,
+        permission: permission, dryRun: dryRun);
+  }
+
+  /// permission 키들로부터 필요한 GCC 매크로 목록을 생성합니다.
+  static Set<String> _resolveMacros(Map<String, String>? permission) {
+    if (permission == null || permission.isEmpty) return {};
+    final macros = <String>{};
+    for (final key in permission.keys) {
+      final macro = _permissionMacroMap[key];
+      if (macro != null) {
+        macros.add(macro);
+      }
+    }
+    return macros;
+  }
+
+  /// post_install 블록을 생성합니다.
+  static String _buildPostInstall(Set<String> macros) {
+    final sb = StringBuffer();
+    sb.writeln('post_install do |installer|');
+    sb.writeln('  installer.pods_project.targets.each do |target|');
+    sb.writeln('    flutter_additional_ios_build_settings(target)');
+
+    if (macros.isNotEmpty) {
+      sb.writeln('');
+      sb.writeln('    target.build_configurations.each do |config|');
+      sb.writeln(
+          "      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [");
+      sb.writeln("        '\$(inherited)',");
+      for (final macro in macros) {
+        sb.writeln("        '$macro',");
+      }
+      sb.writeln('      ]');
+      sb.writeln('    end');
+    }
+
+    sb.writeln('  end');
+    sb.writeln('end');
+    return sb.toString();
   }
 
   /// Flutter 표준 Podfile을 생성합니다.
   static void _createPodfile(
     File file,
     Map<String, FlavorConfig> flavors, {
+    Map<String, String>? permission,
     required bool dryRun,
   }) {
     final configBlock = _buildConfigBlock(flavors);
+    final macros = _resolveMacros(permission);
+    final postInstall = _buildPostInstall(macros);
 
     final content = '''# Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
-$configBlock}
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+$configBlock
+}
 
 def flutter_root
   generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
@@ -74,12 +142,7 @@ target 'Runner' do
   end
 end
 
-post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
-  end
-end
-''';
+$postInstall''';
 
     if (dryRun) {
       print('  [dry-run] Would create Podfile: ${file.path}');
@@ -91,28 +154,48 @@ end
     print('  Created Podfile: ${file.path}');
   }
 
-  /// 기존 Podfile에 flavor별 빌드 모드 매핑을 추가합니다.
+  /// 기존 Podfile에 flavor별 빌드 모드 매핑과 permission 매크로를 추가합니다.
   static void _modifyExistingPodfile(
     File file,
     Map<String, FlavorConfig> flavors, {
+    Map<String, String>? permission,
     required bool dryRun,
   }) {
     var content = file.readAsStringSync();
 
+    // 1. flavor 매핑 처리
+    content = _applyFlavorMappings(content, flavors);
+
+    // 2. permission 매크로 처리
+    final macros = _resolveMacros(permission);
+    if (macros.isNotEmpty) {
+      content = _applyPermissionMacros(content, macros);
+    }
+
+    if (dryRun) {
+      print('  [dry-run] Would update Podfile.');
+      return;
+    }
+
+    file.writeAsStringSync(content);
+    print('  Updated Podfile with flavor mappings and permission macros.');
+  }
+
+  /// flavor 매핑을 적용합니다.
+  static String _applyFlavorMappings(
+      String content, Map<String, FlavorConfig> flavors) {
     // 기존 flavor 매핑이 있으면 제거 후 재생성
     content = content.replaceAll(
       RegExp(r"  '(?:Debug|Profile|Release)-[^']+' => :(?:debug|release),\n"),
       '',
     );
 
-    // 삽입 위치 마커: Flutter가 기본으로 생성하는 빌드 모드 매핑의 마지막 줄
     const marker = "'Release' => :release,";
     if (!content.contains(marker)) {
-      print('  Could not find "$marker" in Podfile, skipping.');
-      return;
+      print('  Could not find "$marker" in Podfile, skipping flavor mappings.');
+      return content;
     }
 
-    // 각 flavor에 대해 매핑 생성
     final sb = StringBuffer();
     for (final flavor in flavors.keys) {
       sb.writeln("  'Debug-$flavor' => :debug,");
@@ -120,24 +203,57 @@ end
       sb.writeln("  'Release-$flavor' => :release,");
     }
 
-    // 마커 줄 바로 뒤에 새 매핑 삽입
-    content = content.replaceFirst(
+    return content.replaceFirst(
       marker,
       "$marker\n${sb.toString().trimRight()}",
     );
+  }
 
-    if (dryRun) {
-      print('  [dry-run] Would update Podfile with flavor configuration mappings.');
-      return;
+  /// permission 매크로를 post_install 블록에 적용합니다.
+  static String _applyPermissionMacros(String content, Set<String> macros) {
+    // 기존 GCC_PREPROCESSOR_DEFINITIONS 블록이 있으면 교체
+    final gccBlock = RegExp(
+      r"config\.build_settings\['GCC_PREPROCESSOR_DEFINITIONS'\] \|\|= \[\s*[\s\S]*?\]",
+    );
+
+    if (gccBlock.hasMatch(content)) {
+      // 기존 블록을 새 블록으로 교체
+      final newBlock = _buildGccBlock(macros);
+      return content.replaceFirst(gccBlock, newBlock);
     }
 
-    file.writeAsStringSync(content);
-    print('  Updated Podfile with flavor configuration mappings.');
+    // post_install 블록은 있지만 GCC_PREPROCESSOR_DEFINITIONS가 없는 경우
+    const postInstallMarker = 'flutter_additional_ios_build_settings(target)';
+    if (content.contains(postInstallMarker)) {
+      final sb = StringBuffer();
+      sb.writeln('');
+      sb.writeln('    target.build_configurations.each do |config|');
+      sb.writeln('      ${_buildGccBlock(macros)}');
+      sb.writeln('    end');
+
+      return content.replaceFirst(
+        postInstallMarker,
+        '$postInstallMarker${sb.toString()}',
+      );
+    }
+
+    return content;
+  }
+
+  /// GCC_PREPROCESSOR_DEFINITIONS 블록 문자열을 생성합니다.
+  static String _buildGccBlock(Set<String> macros) {
+    final sb = StringBuffer();
+    sb.write(
+        "config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [\n");
+    sb.writeln("        '\$(inherited)',");
+    for (final macro in macros) {
+      sb.writeln("        '$macro',");
+    }
+    sb.write('      ]');
+    return sb.toString();
   }
 
   /// project 'Runner' 블록 내용을 생성합니다.
-  ///
-  /// flavor별 매핑만 포함합니다.
   static String _buildConfigBlock(Map<String, FlavorConfig> flavors) {
     final sb = StringBuffer();
     for (final flavor in flavors.keys) {

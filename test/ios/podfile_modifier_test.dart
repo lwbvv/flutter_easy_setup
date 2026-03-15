@@ -99,5 +99,91 @@ void main() {
 
       expect(file.readAsStringSync(), _podfileContent);
     });
+
+    test('creates Podfile with permission macros when file does not exist', () {
+      final file = File('${tempDir.path}/Podfile');
+
+      PodfileModifier.modify(file.path, flavors, permission: {
+        'NSCameraUsageDescription': 'Camera needed',
+        'NSPhotoLibraryUsageDescription': 'Photos needed',
+      });
+
+      final result = file.readAsStringSync();
+      expect(result, contains("'PERMISSION_CAMERA=1'"));
+      expect(result, contains("'PERMISSION_PHOTOS=1'"));
+      expect(result, contains("GCC_PREPROCESSOR_DEFINITIONS"));
+    });
+
+    test('adds permission macros to existing Podfile with post_install', () {
+      final file = File('${tempDir.path}/Podfile');
+      final podfileWithPostInstall = '''
+platform :ios, '12.0'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+target 'Runner' do
+  use_frameworks!
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end
+''';
+      file.writeAsStringSync(podfileWithPostInstall);
+
+      PodfileModifier.modify(file.path, flavors, permission: {
+        'NSCameraUsageDescription': 'Camera needed',
+        'NSMicrophoneUsageDescription': 'Mic needed',
+      });
+
+      final result = file.readAsStringSync();
+      expect(result, contains("'PERMISSION_CAMERA=1'"));
+      expect(result, contains("'PERMISSION_MICROPHONE=1'"));
+    });
+
+    test('permission macros are idempotent', () {
+      final file = File('${tempDir.path}/Podfile');
+
+      PodfileModifier.modify(file.path, flavors, permission: {
+        'NSCameraUsageDescription': 'Camera needed',
+      });
+      final first = file.readAsStringSync();
+
+      PodfileModifier.modify(file.path, flavors, permission: {
+        'NSCameraUsageDescription': 'Camera needed',
+      });
+      final second = file.readAsStringSync();
+
+      expect(second, first);
+    });
+
+    test('maps all known permission keys correctly', () {
+      final file = File('${tempDir.path}/Podfile');
+
+      PodfileModifier.modify(file.path, flavors, permission: {
+        'NSCameraUsageDescription': 'x',
+        'NSMicrophoneUsageDescription': 'x',
+        'NSLocationWhenInUseUsageDescription': 'x',
+        'NSContactsUsageDescription': 'x',
+        'NSSpeechRecognitionUsageDescription': 'x',
+        'NSBluetoothAlwaysUsageDescription': 'x',
+        'NSUserTrackingUsageDescription': 'x',
+      });
+
+      final result = file.readAsStringSync();
+      expect(result, contains('PERMISSION_CAMERA=1'));
+      expect(result, contains('PERMISSION_MICROPHONE=1'));
+      expect(result, contains('PERMISSION_LOCATION_WHENINUSE=1'));
+      expect(result, contains('PERMISSION_CONTACTS=1'));
+      expect(result, contains('PERMISSION_SPEECH_RECOGNIZER=1'));
+      expect(result, contains('PERMISSION_BLUETOOTH=1'));
+      expect(result, contains('PERMISSION_APP_TRACKING_TRANSPARENCY=1'));
+    });
   });
 }
