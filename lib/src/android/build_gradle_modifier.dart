@@ -3,16 +3,16 @@ import 'dart:io';
 import '../exceptions.dart';
 import '../models/flavor_config.dart';
 
-/// Android의 build.gradle(.kts) 파일에 flavor 설정을 추가하는 클래스입니다.
+/// A class that adds flavor configuration to Android's build.gradle(.kts) file.
 ///
-/// buildTypes 블록 바로 뒤에 flavorDimensions와 productFlavors 블록을 삽입합니다.
-/// Groovy DSL(.gradle)과 Kotlin DSL(.kts) 양쪽 문법을 모두 지원합니다.
+/// Inserts flavorDimensions and productFlavors blocks right after the buildTypes block.
+/// Supports both Groovy DSL (.gradle) and Kotlin DSL (.kts) syntax.
 class BuildGradleModifier {
-  /// build.gradle 파일을 읽고 flavor 설정을 삽입합니다.
+  /// Reads the build.gradle file and inserts flavor configuration.
   ///
-  /// - 파일이 없으면 건너뜁니다 (Android 프로젝트가 아닐 수 있음).
-  /// - 이미 flavorDimensions가 있으면 기존 설정을 제거하고 새로 생성합니다.
-  /// - buildTypes 블록의 닫는 중괄호를 찾아 그 뒤에 flavor 설정을 삽입합니다.
+  /// - Skips if the file does not exist (may not be an Android project).
+  /// - If flavorDimensions already exists, removes the existing config and regenerates.
+  /// - Finds the closing brace of the buildTypes block and inserts flavor config after it.
   static void modify(
     String gradlePath,
     Map<String, FlavorConfig> flavors, {
@@ -27,32 +27,32 @@ class BuildGradleModifier {
     var content = file.readAsStringSync();
     final isKts = gradlePath.endsWith('.kts');
 
-    // 기존 flavor 설정이 있으면 제거 후 재생성
+    // Remove existing flavor config if present, then regenerate
     if (content.contains('flavorDimensions')) {
       content = _stripExistingFlavorConfig(content);
     }
 
-    // buildTypes { ... } 블록의 위치를 찾음
+    // Find the position of the buildTypes { ... } block
     final buildTypesMatch = RegExp(r'\bbuildTypes\s*\{').firstMatch(content);
     if (buildTypesMatch == null) {
       print('  buildTypes block not found in build.gradle, skipping Android setup.');
       return;
     }
 
-    // 여는 중괄호 위치로부터 짝이 맞는 닫는 중괄호를 탐색
+    // Find the matching closing brace from the opening brace position
     final openBrace = content.indexOf('{', buildTypesMatch.start);
     final blockEnd = _findBlockEnd(content, openBrace);
     if (blockEnd == -1) {
       throw SetupException('Could not find end of buildTypes block in build.gradle');
     }
 
-    // signingConfigs 블록 삽입 (signing이 있는 flavor가 있으면)
+    // Insert signingConfigs block (if any flavor has signing config)
     final signingBlock = _buildSigningConfigsBlock(flavors, isKts);
     final hasSigningConfigsBlock = RegExp(r'\bsigningConfigs\s*\{').hasMatch(content);
     if (signingBlock != null && !hasSigningConfigsBlock) {
-      // android { 블록 내, buildTypes 앞에 삽입
+      // Insert inside the android { block, before buildTypes
       content = '${content.substring(0, buildTypesMatch.start)}$signingBlock\n    ${content.substring(buildTypesMatch.start)}';
-      // buildTypes 위치가 바뀌었으므로 다시 찾음
+      // buildTypes position has shifted, so find it again
       final newBuildTypesMatch = RegExp(r'\bbuildTypes\s*\{').firstMatch(content)!;
       final newOpenBrace = content.indexOf('{', newBuildTypesMatch.start);
       final newBlockEnd = _findBlockEnd(content, newOpenBrace);
@@ -64,7 +64,7 @@ class BuildGradleModifier {
       content =
           '${content.substring(0, newBlockEnd + 1)}\n\n$flavorBlock${content.substring(newBlockEnd + 1)}';
     } else {
-      // buildTypes 블록 바로 뒤에 flavor 설정 블록을 삽입
+      // Insert flavor config block right after the buildTypes block
       final flavorBlock = _buildFlavorBlock(flavors, isKts);
       content =
           '${content.substring(0, blockEnd + 1)}\n\n$flavorBlock${content.substring(blockEnd + 1)}';
@@ -79,9 +79,9 @@ class BuildGradleModifier {
     print('  Wrote Android flavor config to ${file.path}');
   }
 
-  // ---- 내부 헬퍼 메서드 ----
+  // ---- Internal helper methods ----
 
-  /// 중괄호 깊이(depth)를 추적하여 짝이 맞는 닫는 중괄호의 인덱스를 반환합니다.
+  /// Tracks brace depth and returns the index of the matching closing brace.
   static int _findBlockEnd(String content, int openBraceIndex) {
     int depth = 0;
     for (int i = openBraceIndex; i < content.length; i++) {
@@ -96,9 +96,9 @@ class BuildGradleModifier {
     return -1;
   }
 
-  /// 기존 flavor 관련 블록(signingConfigs, flavorDimensions, productFlavors)을 제거합니다.
+  /// Removes existing flavor-related blocks (signingConfigs, flavorDimensions, productFlavors).
   static String _stripExistingFlavorConfig(String content) {
-    // 1. productFlavors { ... } 블록 제거
+    // 1. Remove productFlavors { ... } block
     final pfMatch = RegExp(r'\bproductFlavors\s*\{').firstMatch(content);
     if (pfMatch != null) {
       final openBrace = content.indexOf('{', pfMatch.start);
@@ -114,10 +114,10 @@ class BuildGradleModifier {
       }
     }
 
-    // 2. flavorDimensions 줄 제거
+    // 2. Remove flavorDimensions line
     content = content.replaceAll(RegExp(r'[ \t]*flavorDimensions[^\n]*\n'), '');
 
-    // 3. signingConfigs { ... } 블록 제거
+    // 3. Remove signingConfigs { ... } block
     final scMatch = RegExp(r'\bsigningConfigs\s*\{').firstMatch(content);
     if (scMatch != null) {
       final openBrace = content.indexOf('{', scMatch.start);
@@ -133,16 +133,16 @@ class BuildGradleModifier {
       }
     }
 
-    // 연속 빈 줄 정리
+    // Clean up consecutive blank lines
     content = content.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-    // 닫는 중괄호 앞의 불필요한 빈 줄 제거
+    // Remove unnecessary blank lines before closing braces
     content = content.replaceAll(RegExp(r'\n{2,}(?=[ \t]*})'), '\n');
 
     return content;
   }
 
-  /// signing이 있는 flavor들에 대해 signingConfigs 블록을 생성합니다.
-  /// signing이 있는 flavor가 없으면 null을 반환합니다.
+  /// Builds the signingConfigs block for flavors that have signing config.
+  /// Returns null if no flavors have signing config.
   static String? _buildSigningConfigsBlock(
     Map<String, FlavorConfig> flavors,
     bool isKts,
@@ -179,16 +179,16 @@ class BuildGradleModifier {
     return sb.toString();
   }
 
-  /// flavor 설정을 위한 Gradle 코드 블록을 생성합니다.
+  /// Builds the Gradle code block for flavor configuration.
   ///
-  /// [isKts]가 true이면 Kotlin DSL 문법으로, false이면 Groovy DSL 문법으로 생성합니다.
+  /// If [isKts] is true, generates Kotlin DSL syntax; otherwise generates Groovy DSL syntax.
   static String _buildFlavorBlock(
     Map<String, FlavorConfig> flavors,
     bool isKts,
   ) {
     final sb = StringBuffer();
     if (isKts) {
-      // Kotlin DSL 문법
+      // Kotlin DSL syntax
       sb.writeln('    flavorDimensions += listOf("env")');
       sb.writeln('    productFlavors {');
       for (final entry in flavors.entries) {
@@ -212,7 +212,7 @@ class BuildGradleModifier {
       }
       sb.writeln('    }');
     } else {
-      // Groovy DSL 문법
+      // Groovy DSL syntax
       sb.writeln('    flavorDimensions "env"');
       sb.writeln('    productFlavors {');
       for (final entry in flavors.entries) {

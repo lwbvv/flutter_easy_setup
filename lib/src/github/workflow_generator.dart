@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// .github/workflows/ios-deploy.yml을 생성하는 클래스입니다.
+/// A class that generates .github/workflows/ios-deploy.yml.
 class WorkflowGenerator {
-  /// [projectRoot]의 .github/workflows/ios-deploy.yml을 생성합니다.
+  /// Generates .github/workflows/ios-deploy.yml in [projectRoot].
   ///
-  /// [flavorNames]: workflow_dispatch의 choice 옵션으로 들어갈 flavor 목록
+  /// [flavorNames]: list of flavors to include as choice options in workflow_dispatch
   static void generate(
     String projectRoot,
     List<String> flavorNames, {

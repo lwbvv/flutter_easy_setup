@@ -16,29 +16,29 @@ import '../models/flavor_config.dart';
 import '../utils/project_finder.dart';
 import '../utils/xcodegen_runner.dart';
 
-/// flavor 설정의 전체 파이프라인을 오케스트레이션하는 명령 클래스입니다.
+/// Command class that orchestrates the entire flavor setup pipeline.
 ///
-/// 아래 순서대로 Android와 iOS 설정을 자동으로 수행합니다:
-///   1. Flutter 프로젝트 루트 탐지
-///   2. easy_setup.yaml 로드 및 파싱
-///   3. Android build.gradle — productFlavors 블록 추가 (signingConfigs 포함)
-///   3.5. Android Firebase — google-services.json 복사
-///   4. iOS xcconfig — flavor별 Debug/Release/Profile 설정 파일 생성
-///   4.5. iOS Firebase — GoogleService-Info.plist 복사
-///   4.6. iOS App Icon — flavor별 앱 아이콘 자동 생성
-///   5. iOS project.yml — XcodeGen 설정 파일 생성
-///   5.5. iOS scripts — XcodeGen 빌드 스크립트 생성
-///   6. iOS xcodegen — xcodegen generate 실행 (project.pbxproj + schemes 생성)
-///   7. iOS Info.plist — CFBundleDisplayName을 변수로 교체
-///   7.5. iOS InfoPlist.strings — locale별 앱 이름 + 권한 설명
-///   8. iOS Podfile — flavor별 빌드 모드 매핑 추가
+/// Automatically configures Android and iOS settings in the following order:
+///   1. Detect Flutter project root
+///   2. Load and parse easy_setup.yaml
+///   3. Android build.gradle — add productFlavors block (including signingConfigs)
+///   3.5. Android Firebase — copy google-services.json
+///   4. iOS xcconfig — generate Debug/Release/Profile config files per flavor
+///   4.5. iOS Firebase — copy GoogleService-Info.plist
+///   4.6. iOS App Icon — auto-generate app icons per flavor
+///   5. iOS project.yml — generate XcodeGen configuration file
+///   5.5. iOS scripts — generate XcodeGen build scripts
+///   6. iOS xcodegen — run xcodegen generate (creates project.pbxproj + schemes)
+///   7. iOS Info.plist — replace CFBundleDisplayName with variable
+///   7.5. iOS InfoPlist.strings — app names + permission descriptions per locale
+///   8. iOS Podfile — add build mode mapping per flavor
 class FlavorCommand {
-  /// flavor 설정 파이프라인을 실행합니다.
+  /// Runs the flavor setup pipeline.
   ///
-  /// [projectRoot]를 지정하면 자동 탐지를 건너뛰고 해당 경로를 사용합니다.
-  /// [dryRun]이 true이면 파일을 변경하지 않고 미리보기만 출력합니다.
+  /// If [projectRoot] is specified, skips auto-detection and uses the given path.
+  /// If [dryRun] is true, prints a preview without modifying any files.
   static void run({bool dryRun = false, String? projectRoot}) {
-    // 1단계: Flutter 프로젝트 루트 경로 확인
+    // Step 1: Verify Flutter project root path
     final root = projectRoot ?? ProjectFinder.findFlutterRoot();
     if (root == null) {
       throw SetupException(
@@ -48,7 +48,7 @@ class FlavorCommand {
     }
     print('Flutter project root: $root');
 
-    // 2단계: easy_setup.yaml 설정 파일 로드
+    // Step 2: Load easy_setup.yaml configuration file
     final configPath = ProjectFinder.configPath(root);
     print('Loading config from: $configPath');
     final config = EasySetupConfig.fromFile(configPath);
@@ -58,12 +58,12 @@ class FlavorCommand {
     print('Flavors: ${config.flavors.keys.join(', ')}');
     if (dryRun) print('\n[dry-run mode] No files will be written.');
 
-    // 3단계: Android — build.gradle에 flavorDimensions + productFlavors 삽입
+    // Step 3: Android — insert flavorDimensions + productFlavors into build.gradle
     print('\n--- Android ---');
     final gradlePath = ProjectFinder.androidBuildGradlePath(root);
     BuildGradleModifier.modify(gradlePath, config.flavors, dryRun: dryRun);
 
-    // 3.5단계: Android Firebase — google-services.json 복사
+    // Step 3.5: Android Firebase — copy google-services.json
     for (final entry in config.flavors.entries) {
       final firebase = entry.value.firebase;
       if (firebase?.android != null) {
@@ -76,11 +76,11 @@ class FlavorCommand {
       }
     }
 
-    // 4단계: iOS — xcconfig 파일 생성
+    // Step 4: iOS — generate xcconfig files
     print('\n--- iOS xcconfig ---');
     final xcconfigDir = ProjectFinder.iosXcconfigDir(root);
 
-    // 사용하지 않는 flavor xcconfig 파일 정리
+    // Clean up unused flavor xcconfig files
     XcconfigGenerator.cleanupUnusedXcconfigs(
       xcconfigDir,
       config.flavors.keys.toSet(),
@@ -96,7 +96,7 @@ class FlavorCommand {
       );
     }
 
-    // 4.5단계: iOS Firebase — GoogleService-Info.plist 복사
+    // Step 4.5: iOS Firebase — copy GoogleService-Info.plist
     for (final entry in config.flavors.entries) {
       final firebase = entry.value.firebase;
       if (firebase?.ios != null) {
@@ -109,10 +109,10 @@ class FlavorCommand {
       }
     }
 
-    // 4.6단계: iOS — app_icon이 있는 flavor에 대해 앱 아이콘 자동 생성
+    // Step 4.6: iOS — auto-generate app icons for flavors that have app_icon configured
     final assetCatalogDir = ProjectFinder.iosAssetCatalogDir(root);
 
-    // 현재 설정된 flavor 목록 추출 (앱 아이콘이 있는 flavor)
+    // Extract the list of currently configured flavors (those with app icons)
     final activeFlavorsWithIcon = <String>{};
     for (final entry in config.flavors.entries) {
       if (entry.value.appIcon != null) {
@@ -120,7 +120,7 @@ class FlavorCommand {
       }
     }
 
-    // 사용하지 않는 앱 아이콘 정리 (flavor 변경 시 이전 아이콘 제거)
+    // Clean up unused app icons (remove old icons when flavors change)
     if (activeFlavorsWithIcon.isNotEmpty ||
         Directory(assetCatalogDir).existsSync()) {
       AppIconGenerator.cleanupUnusedAppIcons(
@@ -130,7 +130,7 @@ class FlavorCommand {
       );
     }
 
-    // 각 flavor의 앱 아이콘 생성 (flavor별로만)
+    // Generate app icons for each flavor
     for (final entry in config.flavors.entries) {
       if (entry.value.appIcon != null) {
         print('\n--- iOS App Icon (${entry.key}) ---');
@@ -144,8 +144,8 @@ class FlavorCommand {
       }
     }
 
-    // 5단계: iOS — Info.plist 수정
-    //        CFBundleDisplayName → $(APP_DISPLAY_NAME) + permission 키 추가
+    // Step 5: iOS — modify Info.plist
+    //        CFBundleDisplayName → $(APP_DISPLAY_NAME) + add permission keys
     print('\n--- iOS Info.plist ---');
     final plistPath = ProjectFinder.iosInfoPlistPath(root);
     InfoPlistModifier.modify(
@@ -154,10 +154,10 @@ class FlavorCommand {
       dryRun: dryRun,
     );
 
-    // 5.5단계: iOS — InfoPlist.strings 생성
-    //          flavor별 strings: ios/Flavors/{flavor}/{locale}.lproj/
-    //          permission strings: ios/Runner/{locale}.lproj/
-    //          xcodegen generate 이전에 실행해야 .lproj 파일이 프로젝트에 포함됨
+    // Step 5.5: iOS — generate InfoPlist.strings
+    //           flavor strings: ios/Flavors/{flavor}/{locale}.lproj/
+    //           permission strings: ios/Runner/{locale}.lproj/
+    //           must run before xcodegen generate so .lproj files are included in the project
     InfoPlistStringsGenerator.generate(
       root,
       flavors: config.flavors,
@@ -166,7 +166,7 @@ class FlavorCommand {
       dryRun: dryRun,
     );
 
-    // 6단계: iOS — XcodeGen project.yml 생성
+    // Step 6: iOS — generate XcodeGen project.yml
     print('\n--- iOS project.yml (XcodeGen) ---');
     XcodeGenGenerator.generate(
       root,
@@ -176,7 +176,7 @@ class FlavorCommand {
       dryRun: dryRun,
     );
 
-    // 6.5단계: iOS — XcodeGen 빌드 스크립트 생성
+    // Step 6.5: iOS — generate XcodeGen build scripts
     print('\n--- iOS build scripts ---');
     final hasFlavorLocalized =
         config.flavors.values.any((f) => f.localized != null && f.localized!.isNotEmpty);
@@ -186,13 +186,13 @@ class FlavorCommand {
       dryRun: dryRun,
     );
 
-    // 7단계: iOS — xcodegen generate 실행
-    //        .lproj, xcconfig 등 모든 파일이 생성된 후에 실행해야
-    //        Xcode 프로젝트에 정확히 반영됨
+    // Step 7: iOS — run xcodegen generate
+    //        must run after all .lproj, xcconfig, etc. files are generated
+    //        so they are correctly reflected in the Xcode project
     print('\n--- iOS xcodegen generate ---');
     XcodeGenRunner.run(root, dryRun: dryRun);
 
-    // 8단계: iOS — Podfile에 flavor별 빌드 모드 매핑 + permission 매크로 추가
+    // Step 8: iOS — add build mode mapping per flavor + permission macros to Podfile
     print('\n--- iOS Podfile ---');
     final podfilePath = ProjectFinder.iosPodfilePath(root);
     PodfileModifier.modify(
@@ -203,21 +203,21 @@ class FlavorCommand {
       dryRun: dryRun,
     );
 
-    // 9단계: iOS — .gitignore에 easy_setup이 생성/관리하는 파일 추가
+    // Step 9: iOS — add easy_setup generated/managed files to .gitignore
     _updateGitignore(
       root,
       hasFlavorLocalized: hasFlavorLocalized,
       dryRun: dryRun,
     );
 
-    // 완료 메시지 출력
+    // Print completion message
     _printSummary(dryRun: dryRun);
   }
 
-  /// ios/.gitignore에 easy_setup이 생성/관리하는 파일을 추가합니다.
+  /// Adds easy_setup generated/managed files to ios/.gitignore.
   ///
-  /// xcodegen generate로 생성되는 xcodeproj, easy_setup이 생성하는
-  /// xcconfig/스크립트/flavor strings, CocoaPods 산출물 등을 gitignore합니다.
+  /// Gitignores xcodeproj generated by xcodegen generate, xcconfig/scripts/flavor
+  /// strings generated by easy_setup, CocoaPods artifacts, etc.
   static void _updateGitignore(
     String projectRoot, {
     required bool hasFlavorLocalized,
@@ -227,7 +227,7 @@ class FlavorCommand {
     final file = File(gitignorePath);
     String content = file.existsSync() ? file.readAsStringSync() : '';
 
-    // easy_setup 마커가 이미 있으면 블록 전체를 교체
+    // If the easy_setup marker already exists, replace the entire block
     const marker = '# === easy_setup generated ===';
     const endMarker = '# === end easy_setup ===';
 
@@ -260,14 +260,14 @@ class FlavorCommand {
 
     final block = '$marker\n${entries.join('\n')}\n$endMarker\n';
 
-    // 기존 블록이 있으면 교체
+    // Replace existing block if found
     final blockPattern = RegExp(
       '${RegExp.escape(marker)}[\\s\\S]*?${RegExp.escape(endMarker)}\\n?',
     );
 
     if (blockPattern.hasMatch(content)) {
       final newContent = content.replaceFirst(blockPattern, block);
-      if (newContent == content) return; // 변경 없음
+      if (newContent == content) return; // No changes
 
       if (dryRun) {
         print('  [dry-run] Would update ios/.gitignore');
@@ -279,7 +279,7 @@ class FlavorCommand {
       return;
     }
 
-    // 기존 블록이 없으면 추가
+    // Append if no existing block found
     if (dryRun) {
       print('  [dry-run] Would update ios/.gitignore');
       return;
@@ -294,7 +294,7 @@ class FlavorCommand {
     print('  Updated ios/.gitignore');
   }
 
-  /// 설정 완료 후 요약 메시지와 다음 단계를 안내합니다.
+  /// Prints a summary message and next steps after setup is complete.
   static void _printSummary({required bool dryRun}) {
     print('\n${dryRun ? "Preview" : "Setup"} complete!');
     if (!dryRun) {

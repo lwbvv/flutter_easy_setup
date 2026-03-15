@@ -12,21 +12,21 @@ import '../models/flavor_config.dart';
 import '../utils/fastlane_runner.dart';
 import '../utils/project_finder.dart';
 
-/// CI/CD 파이프라인 설정의 전체 파이프라인을 오케스트레이션하는 명령 클래스입니다.
+/// Command class that orchestrates the entire CI/CD pipeline setup.
 ///
-/// 아래 순서대로 Fastlane 파일과 GitHub Actions 워크플로우를 생성합니다:
-///   1. Flutter 프로젝트 루트 탐지
-///   2. easy_setup.yaml 로드
-///   3. CI/CD 대상 flavor 및 bundle_id 해석 (easy_setup.flavors에서)
-///   4. ci_cd/ios/fastlane/ Fastlane 파일 생성 (.env, Gemfile, Matchfile, Appfile, Fastfile)
-///   5. bundle install (fastlane 디렉터리)
-///   6. Fastfile에 register lane 추가
-///   7. metadata 파일 생성 + update_metadata lane 추가 (선택사항)
-///   8. .github/workflows/ios-deploy.yml 생성
+/// Generates Fastlane files and GitHub Actions workflows in the following order:
+///   1. Detect Flutter project root
+///   2. Load easy_setup.yaml
+///   3. Resolve target flavors and bundle_ids for CI/CD (from easy_setup.flavors)
+///   4. Generate Fastlane files in ci_cd/ios/fastlane/ (.env, Gemfile, Matchfile, Appfile, Fastfile)
+///   5. Run bundle install (in fastlane directory)
+///   6. Add register lane to Fastfile
+///   7. Generate metadata files + add update_metadata lane (optional)
+///   8. Generate .github/workflows/ios-deploy.yml
 class CiCdCommand {
-  /// CI/CD 설정 파이프라인을 실행합니다.
+  /// Runs the CI/CD setup pipeline.
   static Future<void> run({bool dryRun = false, String? projectRoot}) async {
-    // 1. Flutter 프로젝트 루트 확인
+    // 1. Verify Flutter project root
     final root = projectRoot ?? ProjectFinder.findFlutterRoot();
     if (root == null) {
       throw SetupException(
@@ -36,12 +36,12 @@ class CiCdCommand {
     }
     print('Flutter project root: $root');
 
-    // 2. easy_setup.yaml 로드
+    // 2. Load easy_setup.yaml
     final configPath = ProjectFinder.configPath(root);
     print('Loading config from: $configPath');
     final config = EasySetupConfig.fromFile(configPath);
 
-    // 3. CI/CD 대상 flavor & bundle_id & name 해석
+    // 3. Resolve target flavor, bundle_id, and name for CI/CD
     final resolvedFlavors = _resolveFlavors(config);
     final flavorNames = resolvedFlavors.keys.toList();
     final bundleIds =
@@ -50,7 +50,7 @@ class CiCdCommand {
     print('CI/CD flavors: ${flavorNames.join(', ')}');
     if (dryRun) print('\n[dry-run mode] No files will be written.');
 
-    // 4. Fastlane 파일 생성 — ci_cd/ios/fastlane/ 디렉터리에 모든 파일 생성
+    // 4. Generate Fastlane files — create all files in ci_cd/ios/fastlane/ directory
     print('\n--- Fastlane ---');
     final fastlaneDir = p.join(root, 'ci_cd', 'ios', 'fastlane');
     DotenvGenerator.generate(fastlaneDir, dryRun: dryRun);
@@ -62,10 +62,10 @@ class CiCdCommand {
     );
     FastfileGenerator.generate(fastlaneDir, flavorBundleIds, dryRun: dryRun);
 
-    // 5. bundle install (fastlane 디렉터리)
+    // 5. Run bundle install (in fastlane directory)
     await FastlaneRunner.bundleInstall(fastlaneDir, dryRun: dryRun);
 
-    // 6. Fastfile에 register lane 추가
+    // 6. Add register lane to Fastfile
     if (!dryRun) {
       print('\n--- Register Lane ---');
       final fastfilePath = p.join(fastlaneDir, 'Fastfile');
@@ -81,7 +81,7 @@ class CiCdCommand {
       );
     }
 
-    // 7. metadata 파일 생성 + update_metadata lane 추가 (선택사항)
+    // 7. Generate metadata files + add update_metadata lane (optional)
     if (config.metadata != null && config.metadata!.isNotEmpty) {
       print('\n--- Metadata ---');
       MetadataGenerator.generate(fastlaneDir, config.metadata!, dryRun: dryRun);
@@ -94,16 +94,16 @@ class CiCdCommand {
       }
     }
 
-    // 8. GitHub Actions 워크플로우 생성
+    // 8. Generate GitHub Actions workflow
     print('\n--- GitHub Actions ---');
     WorkflowGenerator.generate(root, flavorNames, dryRun: dryRun);
 
-    // 9. 완료 안내
+    // 9. Print completion summary
     final hasMetadata = config.metadata != null && config.metadata!.isNotEmpty;
     _printSummary(dryRun: dryRun, hasMetadata: hasMetadata);
   }
 
-  /// CI/CD 대상 flavor의 bundleId + name을 해석합니다 (easy_setup.flavors에서).
+  /// Resolves the bundleId and name for CI/CD target flavors (from easy_setup.flavors).
   static Map<String, _FlavorInfo> _resolveFlavors(EasySetupConfig config) {
     if (config.flavors.isEmpty) {
       throw SetupException('No flavors defined in easy_setup.yaml');
@@ -159,7 +159,7 @@ class CiCdCommand {
   }
 }
 
-/// 단일 flavor의 bundleId + name을 담는 내부 클래스입니다.
+/// Internal class that holds the bundleId and name for a single flavor.
 class _FlavorInfo {
   final String bundleId;
   final String name;

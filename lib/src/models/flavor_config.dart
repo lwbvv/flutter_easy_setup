@@ -5,7 +5,7 @@ import 'package:yaml/yaml.dart';
 import '../exceptions.dart';
 import 'ci_cd_config.dart' show LocaleMetadataConfig;
 
-/// Android signing 설정을 담는 모델 클래스입니다.
+/// Model class that holds Android signing configuration.
 class SigningConfig {
   final String keystore;
   final String alias;
@@ -20,7 +20,7 @@ class SigningConfig {
   }
 }
 
-/// Firebase 설정 파일 경로를 담는 모델 클래스입니다.
+/// Model class that holds Firebase configuration file paths.
 class FirebaseConfig {
   final String? android;
   final String? ios;
@@ -35,7 +35,7 @@ class FirebaseConfig {
   }
 }
 
-/// iOS flavor별 추가 설정을 담는 모델 클래스입니다.
+/// Model class that holds additional per-flavor iOS configuration.
 class IosFlavorConfig {
   final String? teamId;
   final String? provisioningProfile;
@@ -59,9 +59,9 @@ class IosFlavorConfig {
   }
 }
 
-/// Flavor별 locale 설정을 담는 모델 클래스입니다.
+/// Model class that holds per-flavor locale configuration.
 ///
-/// [appName]: locale별 앱 표시 이름
+/// [appName]: The app display name for the locale
 class FlavorLocalizedConfig {
   final String? appName;
 
@@ -74,10 +74,10 @@ class FlavorLocalizedConfig {
   }
 }
 
-/// 단일 flavor의 설정값을 담는 모델 클래스입니다.
+/// Model class that holds configuration values for a single flavor.
 ///
-/// [bundleId]: 앱의 고유 식별자 (예: com.example.app.dev)
-/// [name]: 사용자에게 보이는 앱 이름 (예: MyApp Dev)
+/// [bundleId]: The app's unique identifier (e.g., com.example.app.dev)
+/// [name]: The user-facing app display name (e.g., MyApp Dev)
 class FlavorConfig {
   final String bundleId;
   final String name;
@@ -101,7 +101,7 @@ class FlavorConfig {
     this.localized,
   });
 
-  /// YAML 맵으로부터 FlavorConfig 인스턴스를 생성합니다.
+  /// Creates a FlavorConfig instance from a YAML map.
   factory FlavorConfig.fromYaml(Map yaml) {
     Map<String, FlavorLocalizedConfig>? localized;
     final localizedMap = yaml['localized'];
@@ -133,13 +133,13 @@ class FlavorConfig {
   }
 }
 
-/// easy_setup.yaml 파일 전체를 파싱한 결과를 담는 클래스입니다.
+/// Class that holds the parsed result of the entire easy_setup.yaml file.
 ///
-/// [flavors]: flavor 이름(dev, prod 등)을 키로, [FlavorConfig]를 값으로 하는 맵
-/// [localizations]: 선택사항 — Xcode knownRegions에 등록할 언어 목록
-/// [permission]: 선택사항 — 기본 iOS 권한 설명 (Base.lproj용)
-/// [localizedPermission]: 선택사항 — locale별 iOS 권한 설명
-/// [metadata]: 선택사항 — App Store Connect 메타데이터 (locale별)
+/// [flavors]: A map with flavor names (dev, prod, etc.) as keys and [FlavorConfig] as values
+/// [localizations]: Optional -- list of languages to register in Xcode knownRegions
+/// [permission]: Optional -- default iOS permission descriptions (for Base.lproj)
+/// [localizedPermission]: Optional -- per-locale iOS permission descriptions
+/// [metadata]: Optional -- App Store Connect metadata (per-locale)
 class EasySetupConfig {
   final Map<String, FlavorConfig> flavors;
   final String? iosVersion;
@@ -157,10 +157,10 @@ class EasySetupConfig {
     this.metadata,
   });
 
-  /// [path]에 위치한 easy_setup.yaml 파일을 읽고 파싱합니다.
+  /// Reads and parses the easy_setup.yaml file located at [path].
   ///
-  /// 파일이 없으면 사용 예시와 함께 [SetupException]을 throw합니다.
-  /// YAML 구문 오류 시에도 [SetupException]을 throw합니다.
+  /// Throws a [SetupException] with a usage example if the file is not found.
+  /// Also throws a [SetupException] on YAML syntax errors.
   factory EasySetupConfig.fromFile(String path) {
     final file = File(path);
     if (!file.existsSync()) {
@@ -194,14 +194,14 @@ class EasySetupConfig {
         flavors[entry.key as String] = FlavorConfig.fromYaml(entry.value as Map);
       }
 
-      // localizations 리스트 파싱
+      // Parse localizations list
       List<String>? localizations;
       final locList = easySetup['localizations'];
       if (locList != null) {
         localizations = (locList as List).map((e) => e as String).toList();
       }
 
-      // 기본 permission 맵 파싱
+      // Parse default permission map
       Map<String, String>? permission;
       final permMap = easySetup['permission'];
       if (permMap != null) {
@@ -211,7 +211,7 @@ class EasySetupConfig {
         }
       }
 
-      // locale별 permission 맵 파싱
+      // Parse per-locale permission map
       Map<String, Map<String, String>>? localizedPermission;
       final locPermMap = easySetup['localized_permission'];
       if (locPermMap != null) {
@@ -235,7 +235,7 @@ class EasySetupConfig {
         }
       }
 
-      // ios_version 파싱
+      // Parse ios_version
       final iosVersion = easySetup['ios_version']?.toString();
 
       return EasySetupConfig(

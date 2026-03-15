@@ -2,17 +2,17 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// XcodeGen이 참조하는 빌드 스크립트 파일을 생성하는 클래스입니다.
+/// A class that generates build script files referenced by XcodeGen.
 ///
-/// Flutter의 xcode_backend.sh를 호출하는 셸 스크립트를 생성합니다:
-///   - copy_flavor_strings.sh: 빌드 전 현재 flavor의 InfoPlist.strings를 Runner로 복사
-///   - run_script.sh: 빌드 전 Flutter 빌드 실행
-///   - thin_binary.sh: 빌드 후 바이너리 최적화
+/// Generates shell scripts that invoke Flutter's xcode_backend.sh:
+///   - copy_flavor_strings.sh: copies the current flavor's InfoPlist.strings to Runner before build
+///   - run_script.sh: runs the Flutter build before build
+///   - thin_binary.sh: optimizes the binary after build
 class XcodeGenScriptsGenerator {
-  /// 빌드 스크립트 파일들을 생성합니다.
+  /// Generates the build script files.
   ///
-  /// [projectRoot]: Flutter 프로젝트 루트
-  /// [hasFlavors]: flavor가 있는 경우에만 copy_flavor_strings.sh 생성
+  /// [projectRoot]: Flutter project root
+  /// [hasFlavors]: only generates copy_flavor_strings.sh when flavors exist
   static void generate(
     String projectRoot, {
     bool hasFlavors = false,
@@ -55,15 +55,15 @@ class XcodeGenScriptsGenerator {
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(content);
 
-    // 실행 권한 부여
+    // Grant execute permission
     Process.runSync('chmod', ['+x', path]);
     print('  Wrote: $path');
   }
 
-  /// 현재 빌드 configuration에서 flavor를 추출하고
-  /// Flavors/{flavor}/{locale}.lproj/InfoPlist.strings의 CFBundleDisplayName을
-  /// Runner/{locale}.lproj/InfoPlist.strings에 병합하는 스크립트.
-  /// Copy Bundle Resources 전에 실행되어 Xcode가 자연스럽게 번들에 포함시킴.
+  /// Script that extracts the flavor from the current build configuration and
+  /// merges CFBundleDisplayName from Flavors/{flavor}/{locale}.lproj/InfoPlist.strings
+  /// into Runner/{locale}.lproj/InfoPlist.strings.
+  /// Runs before Copy Bundle Resources so Xcode naturally includes it in the bundle.
   static const _copyFlavorStringsContent = r'''#!/bin/sh
 
 # Extract flavor from CONFIGURATION (e.g. "Debug-dev" → "dev", "Release-prod" → "prod")
@@ -100,8 +100,8 @@ for LPROJ in "$FLAVORS_DIR"/*.lproj; do
   mkdir -p "$DST_DIR"
 
   if [ -f "$DST_STRINGS" ]; then
-    # Runner에 이미 InfoPlist.strings가 있으면 (permission 등)
-    # 기존 CFBundleDisplayName을 제거하고 flavor의 값으로 교체
+    # If Runner already has InfoPlist.strings (e.g., permissions)
+    # remove the existing CFBundleDisplayName and replace with the flavor's value
     TEMP_FILE=$(mktemp)
     grep -v '"CFBundleDisplayName"' "$DST_STRINGS" > "$TEMP_FILE" || true
     grep '"CFBundleDisplayName"' "$SRC_STRINGS" >> "$TEMP_FILE" || true

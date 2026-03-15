@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// Appfile을 생성하는 클래스입니다.
+/// A class that generates the Appfile.
 class AppfileGenerator {
-  /// [outputDir]에 Appfile을 생성합니다.
+  /// Generates an Appfile in [outputDir].
   static void generate(
     String outputDir, {
     bool dryRun = false,

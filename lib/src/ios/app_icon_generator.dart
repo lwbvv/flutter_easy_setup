@@ -6,12 +6,12 @@ import 'package:path/path.dart' as p;
 
 import '../exceptions.dart';
 
-/// iOS flavor별 앱 아이콘을 1024x1024 소스 이미지로부터 자동 생성하는 클래스입니다.
+/// A class that auto-generates per-flavor iOS app icons from a 1024x1024 source image.
 ///
-/// 각 flavor에 대해 15개 고유 사이즈 PNG를 리사이즈하여
-/// AppIcon-{flavor}.appiconset/ 에 저장하고, Contents.json을 생성합니다.
+/// For each flavor, resizes to 15 unique PNG sizes and saves them
+/// in AppIcon-{flavor}.appiconset/, along with a generated Contents.json.
 class AppIconGenerator {
-  /// 앱 아이콘 사이즈 정의 (파일명, 픽셀 크기)
+  /// App icon size definitions (filename, pixel size)
   static const List<_IconSize> _iconSizes = [
     _IconSize('Icon-App-20x20@1x.png', 20),
     _IconSize('Icon-App-20x20@2x.png', 40),
@@ -30,7 +30,7 @@ class AppIconGenerator {
     _IconSize('Icon-App-1024x1024@1x.png', 1024),
   ];
 
-  /// Contents.json 엔트리 정의 (19개)
+  /// Contents.json entry definitions (19 entries)
   static const List<_ContentsEntry> _contentsEntries = [
     _ContentsEntry('Icon-App-20x20@2x.png', '20x20', '2x', 'iphone'),
     _ContentsEntry('Icon-App-20x20@3x.png', '20x20', '3x', 'iphone'),
@@ -53,12 +53,12 @@ class AppIconGenerator {
         'Icon-App-1024x1024@1x.png', '1024x1024', '1x', 'ios-marketing'),
   ];
 
-  /// [assetCatalogDir]에 AppIcon-{flavor}.appiconset/을 생성합니다.
+  /// Generates AppIcon-{flavor}.appiconset/ in [assetCatalogDir].
   ///
-  /// [projectRoot]: Flutter 프로젝트 루트 (소스 이미지 경로 해석용)
-  /// [assetCatalogDir]: ios/Runner/Assets.xcassets 경로
-  /// [flavor]: flavor 이름
-  /// [appIconPath]: 1024x1024 소스 이미지 경로 (프로젝트 루트 기준 상대경로)
+  /// [projectRoot]: Flutter project root (used to resolve source image path)
+  /// [assetCatalogDir]: ios/Runner/Assets.xcassets path
+  /// [flavor]: flavor name
+  /// [appIconPath]: 1024x1024 source image path (relative to project root)
   static void generate(
     String projectRoot,
     String assetCatalogDir,
@@ -71,10 +71,10 @@ class AppIconGenerator {
     _generateIconSet(sourcePath, appiconsetDir, dryRun: dryRun);
   }
 
-  /// [assetCatalogDir]에서 사용하지 않는 AppIcon-*.appiconset 디렉터리를 삭제합니다.
+  /// Deletes unused AppIcon-*.appiconset directories from [assetCatalogDir].
   ///
-  /// [activeFlavors]: 현재 활성 flavor 목록 (이들의 앱 아이콘만 보존)
-  /// dry-run 모드에서는 삭제할 디렉터리를 출력만 합니다.
+  /// [activeFlavors]: list of currently active flavors (only their app icons are preserved)
+  /// In dry-run mode, only prints the directories that would be deleted.
   static void cleanupUnusedAppIcons(
     String assetCatalogDir,
     Set<String> activeFlavors, {
@@ -88,16 +88,16 @@ class AppIconGenerator {
         if (entity is! Directory) continue;
         final dirName = p.basename(entity.path);
 
-        // AppIcon-{flavor}.appiconset 패턴만 대상
+        // Only target AppIcon-{flavor}.appiconset pattern
         if (!dirName.startsWith('AppIcon-') || !dirName.endsWith('.appiconset')) {
           continue;
         }
 
-        // 활성 flavor 목록에서 추출
+        // Extract flavor name from directory name
         final flavor =
             dirName.replaceFirst('AppIcon-', '').replaceFirst('.appiconset', '');
 
-        // 현재 설정된 flavor가 아니면 삭제
+        // Delete if not a currently configured flavor
         if (!activeFlavors.contains(flavor)) {
           if (dryRun) {
             print('  [dry-run] Would delete: ${entity.path}');
@@ -112,7 +112,7 @@ class AppIconGenerator {
     }
   }
 
-  /// 소스 이미지를 로드하고 15개 사이즈 PNG + Contents.json을 생성합니다.
+  /// Loads the source image and generates 15 sized PNGs + Contents.json.
   static void _generateIconSet(
     String sourcePath,
     String outputDir, {
@@ -141,12 +141,12 @@ class AppIconGenerator {
 
     Directory(outputDir).createSync(recursive: true);
 
-    // 리사이즈된 아이콘 PNG 생성
+    // Generate resized icon PNGs
     final generatedSizes = <int>{};
     for (final iconSize in _iconSizes) {
       final outputPath = p.join(outputDir, iconSize.filename);
       if (generatedSizes.contains(iconSize.pixels)) {
-        // 동일 픽셀 사이즈는 이미 생성됨 — 복사
+        // Same pixel size already generated — copy
         final existingFile = _iconSizes
             .firstWhere((s) =>
                 s.pixels == iconSize.pixels &&
@@ -166,7 +166,7 @@ class AppIconGenerator {
       }
     }
 
-    // Contents.json 생성
+    // Generate Contents.json
     final contentsJson = _buildContentsJson();
     File(p.join(outputDir, 'Contents.json'))
         .writeAsStringSync(contentsJson);
@@ -174,7 +174,7 @@ class AppIconGenerator {
     print('  Generated app icons: $outputDir');
   }
 
-  /// Contents.json 문자열을 생성합니다.
+  /// Builds the Contents.json string.
   static String _buildContentsJson() {
     final images = <Map<String, dynamic>>[];
     for (final entry in _contentsEntries) {
@@ -207,14 +207,14 @@ class AppIconGenerator {
   }
 }
 
-/// 아이콘 사이즈 정의 (파일명 + 픽셀 크기)
+/// Icon size definition (filename + pixel size)
 class _IconSize {
   final String filename;
   final int pixels;
   const _IconSize(this.filename, this.pixels);
 }
 
-/// Contents.json 엔트리 정의
+/// Contents.json entry definition
 class _ContentsEntry {
   final String filename;
   final String size;

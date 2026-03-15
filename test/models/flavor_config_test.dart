@@ -364,11 +364,11 @@ easy_setup:
       expect(dev.ios!.teamId, 'ABCDEF1234');
       // localizations
       expect(config.localizations, ['ko', 'en', 'ja']);
-      // 기본 permission
+      // Default permission
       expect(config.permission, isNotNull);
       expect(config.permission!['NSCameraUsageDescription'],
           'Camera access is required');
-      // locale별 permission
+      // Per-locale permission
       expect(config.localizedPermission, isNotNull);
       expect(config.localizedPermission!['ko']!['NSCameraUsageDescription'],
           '카메라 접근이 필요합니다');

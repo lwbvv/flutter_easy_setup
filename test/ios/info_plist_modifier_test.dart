@@ -115,13 +115,13 @@ void main() {
 
     test('updates existing permission values', () {
       final file = File('${tempDir.path}/Info.plist');
-      // 먼저 permission 추가
+      // First add permission
       file.writeAsStringSync(_plistWithDisplayName);
       InfoPlistModifier.modify(file.path, permission: {
         'NSCameraUsageDescription': 'Old value',
       });
 
-      // 다른 값으로 다시 실행
+      // Re-run with a different value
       InfoPlistModifier.modify(file.path, permission: {
         'NSCameraUsageDescription': 'New value',
       });

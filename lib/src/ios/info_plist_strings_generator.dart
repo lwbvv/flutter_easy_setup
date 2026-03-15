@@ -4,23 +4,23 @@ import 'package:path/path.dart' as p;
 
 import '../models/flavor_config.dart';
 
-/// iOS locale별 InfoPlist.strings 파일을 생성하는 클래스입니다.
+/// A class that generates InfoPlist.strings files for each iOS locale.
 ///
-/// flavor별로 별도의 디렉터리에 InfoPlist.strings를 생성합니다:
+/// Generates InfoPlist.strings in separate directories per flavor:
 ///   ios/Flavors/{flavor}/{locale}.lproj/InfoPlist.strings
 ///
-/// 빌드 시 build phase 스크립트가 현재 flavor의 strings를
-/// Runner 디렉터리로 복사하여 Xcode가 인식하도록 합니다.
+/// During build, a build phase script copies the current flavor's strings
+/// to the Runner directory so that Xcode can recognize them.
 ///
-/// permission 문자열은 모든 flavor에서 공통이므로
-/// Runner/{locale}.lproj/InfoPlist.strings에 직접 생성합니다.
+/// Permission strings are shared across all flavors, so they are
+/// generated directly in Runner/{locale}.lproj/InfoPlist.strings.
 class InfoPlistStringsGenerator {
-  /// InfoPlist.strings 파일들을 생성합니다.
+  /// Generates the InfoPlist.strings files.
   ///
-  /// [projectRoot]: Flutter 프로젝트 루트
-  /// [flavors]: 전체 flavor 설정 맵
-  /// [permission]: 기본 iOS 권한 설명 (en.lproj에 기록)
-  /// [localizedPermission]: locale별 iOS 권한 설명
+  /// [projectRoot]: Flutter project root
+  /// [flavors]: full flavor configuration map
+  /// [permission]: default iOS permission descriptions (written to en.lproj)
+  /// [localizedPermission]: per-locale iOS permission descriptions
   static void generate(
     String projectRoot, {
     required Map<String, FlavorConfig> flavors,
@@ -32,7 +32,7 @@ class InfoPlistStringsGenerator {
     final hasLocalized =
         localizedPermission != null && localizedPermission.isNotEmpty;
 
-    // flavor별 localized app_name이 있는지 확인
+    // Check if any flavor has localized app_name
     final hasFlavorLocalized =
         flavors.values.any((f) => f.localized != null && f.localized!.isNotEmpty);
 
@@ -40,12 +40,12 @@ class InfoPlistStringsGenerator {
 
     print('\n--- iOS InfoPlist.strings ---');
 
-    // 1. flavor별 InfoPlist.strings 생성 (ios/Flavors/{flavor}/{locale}.lproj/)
+    // 1. Generate per-flavor InfoPlist.strings (ios/Flavors/{flavor}/{locale}.lproj/)
     if (hasFlavorLocalized) {
       _generateFlavorStrings(projectRoot, flavors, dryRun: dryRun);
     }
 
-    // 2. permission strings 생성 (ios/Runner/{locale}.lproj/)
+    // 2. Generate permission strings (ios/Runner/{locale}.lproj/)
     _generatePermissionStrings(
       projectRoot,
       permission: permission,
@@ -54,7 +54,7 @@ class InfoPlistStringsGenerator {
     );
   }
 
-  /// flavor별 InfoPlist.strings를 ios/Flavors/{flavor}/{locale}.lproj/에 생성합니다.
+  /// Generates per-flavor InfoPlist.strings in ios/Flavors/{flavor}/{locale}.lproj/.
   static void _generateFlavorStrings(
     String projectRoot,
     Map<String, FlavorConfig> flavors, {
@@ -66,14 +66,14 @@ class InfoPlistStringsGenerator {
       final localized = config.localized;
       if (localized == null || localized.isEmpty) continue;
 
-      // 모든 locale + en (기본)
+      // All locales + en (default)
       final locales = <String>{...localized.keys, 'en'};
 
       for (final locale in locales) {
         final entries = <String, String>{};
 
         if (locale == 'en') {
-          // en은 flavor의 기본 name 사용
+          // en uses the flavor's default name
           entries['CFBundleDisplayName'] = config.name;
         } else {
           final locConfig = localized[locale];
@@ -94,7 +94,7 @@ class InfoPlistStringsGenerator {
     }
   }
 
-  /// permission strings를 ios/Runner/{locale}.lproj/에 생성합니다.
+  /// Generates permission strings in ios/Runner/{locale}.lproj/.
   static void _generatePermissionStrings(
     String projectRoot, {
     Map<String, String>? permission,
@@ -107,7 +107,7 @@ class InfoPlistStringsGenerator {
 
     if (!hasBase && !hasLocalized) return;
 
-    // 모든 locale 수집
+    // Collect all locales
     final allLocales = <String>{};
     if (hasLocalized) allLocales.addAll(localizedPermission.keys);
     if (hasBase) allLocales.add('en');
@@ -115,12 +115,12 @@ class InfoPlistStringsGenerator {
     for (final locale in allLocales) {
       final entries = <String, String>{};
 
-      // 기본 permission을 en locale에 포함
+      // Include default permissions in the en locale
       if (locale == 'en' && hasBase) {
         entries.addAll(permission);
       }
 
-      // locale별 permission
+      // Per-locale permissions
       final localePerms = localizedPermission?[locale];
       if (localePerms != null) {
         entries.addAll(localePerms);
@@ -137,7 +137,7 @@ class InfoPlistStringsGenerator {
     }
   }
 
-  /// InfoPlist.strings 파일을 생성합니다.
+  /// Writes an InfoPlist.strings file.
   static void _writeStringsFile(
     String projectRoot,
     String relativeLprojDir,

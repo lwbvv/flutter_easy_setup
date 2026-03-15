@@ -82,7 +82,7 @@ void main() {
       final content =
           File(p.join(tempDir.path, 'Fastfile')).readAsStringSync();
 
-      // 각 flavor에 대해 Debug/Release/Profile 구성 생성
+      // Generates Debug/Release/Profile configurations for each flavor
       expect(content, contains('build_configurations: "Debug-dev"'));
       expect(content, contains('build_configurations: "Release-dev"'));
       expect(content, contains('build_configurations: "Profile-dev"'));
@@ -90,18 +90,18 @@ void main() {
       expect(content, contains('build_configurations: "Release-prod"'));
       expect(content, contains('build_configurations: "Profile-prod"'));
 
-      // bundle_id 변수 할당
+      // bundle_id variable assignment
       expect(content, contains('bundle_id = "com.app.dev"'));
       expect(content, contains('bundle_id = "com.app"'));
 
-      // bundle_identifier는 변수 참조
+      // bundle_identifier uses variable reference
       expect(content, contains('bundle_identifier: bundle_id,'));
 
-      // profile_name은 Ruby 문자열 보간 사용
+      // profile_name uses Ruby string interpolation
       expect(content, contains('profile_name: "match Development \#{bundle_id}"'));
       expect(content, contains('profile_name: "match AppStore \#{bundle_id}"'));
 
-      // Debug → Apple Development, Release/Profile → Apple Distribution
+      // Debug uses Apple Development, Release/Profile use Apple Distribution
       expect(content, contains('code_sign_identity: "Apple Development"'));
       expect(content, contains('code_sign_identity: "Apple Distribution"'));
     });

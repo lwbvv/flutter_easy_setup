@@ -4,9 +4,9 @@ import 'package:path/path.dart' as p;
 
 import '../models/ci_cd_config.dart';
 
-/// Fastlane `deliver`용 metadata 디렉터리 구조를 생성하는 클래스입니다.
+/// A class that generates the metadata directory structure for Fastlane `deliver`.
 ///
-/// 생성되는 구조:
+/// Generated structure:
 /// ```
 /// ci_cd/ios/fastlane/metadata/
 ///   ko/
@@ -18,9 +18,9 @@ import '../models/ci_cd_config.dart';
 ///     ...
 /// ```
 class MetadataGenerator {
-  /// [outputDir] (fastlane 디렉터리) 하위에 metadata 파일을 생성합니다.
+  /// Generates metadata files under [outputDir] (the fastlane directory).
   ///
-  /// [metadata]: locale별 메타데이터 설정 맵
+  /// [metadata]: map of per-locale metadata configuration
   static void generate(
     String outputDir,
     Map<String, LocaleMetadataConfig> metadata, {

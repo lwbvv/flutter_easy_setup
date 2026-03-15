@@ -88,7 +88,7 @@ dependencies:
   // iOS
   final flutterDir = Directory(p.join(root.path, 'ios', 'Flutter'));
   flutterDir.createSync(recursive: true);
-  // Flutter 기본 xcconfig 파일 (XcodeGen configFiles에서 참조됨)
+  // Default Flutter xcconfig files (referenced by XcodeGen configFiles)
   File(p.join(flutterDir.path, 'Debug.xcconfig'))
       .writeAsStringSync('#include "Generated.xcconfig"\n');
   File(p.join(flutterDir.path, 'Release.xcconfig'))
@@ -97,11 +97,11 @@ dependencies:
   final runnerDir = Directory(p.join(root.path, 'ios', 'Runner'));
   runnerDir.createSync(recursive: true);
   File(p.join(runnerDir.path, 'Info.plist')).writeAsStringSync(_infoPlist);
-  // Runner-Bridging-Header.h (XcodeGen Runner target에서 참조됨)
+  // Runner-Bridging-Header.h (referenced by XcodeGen Runner target)
   File(p.join(runnerDir.path, 'Runner-Bridging-Header.h'))
       .writeAsStringSync('#import <Flutter/Flutter.h>\n');
 
-  // RunnerTests 디렉터리 (XcodeGen RunnerTests target에서 참조됨)
+  // RunnerTests directory (referenced by XcodeGen RunnerTests target)
   Directory(p.join(root.path, 'ios', 'RunnerTests')).createSync(recursive: true);
 
   File(p.join(root.path, 'ios', 'Podfile')).writeAsStringSync(_podfile);
@@ -336,31 +336,31 @@ easy_setup:
           _createFlutterProject(tempDir, yamlContent: multiFlavorYaml);
       FlavorCommand.run(projectRoot: root.path);
 
-      // dev flavor의 ko strings
+      // dev flavor's ko strings
       final devKo = File(p.join(root.path, 'ios', 'Flavors', 'dev',
               'ko.lproj', 'InfoPlist.strings'))
           .readAsStringSync();
       expect(devKo, contains('"CFBundleDisplayName" = "개발 앱";'));
 
-      // dev flavor의 en strings (flavor name 사용)
+      // dev flavor's en strings (uses flavor name)
       final devEn = File(p.join(root.path, 'ios', 'Flavors', 'dev',
               'en.lproj', 'InfoPlist.strings'))
           .readAsStringSync();
       expect(devEn, contains('"CFBundleDisplayName" = "Test Dev";'));
 
-      // prod flavor의 ko strings
+      // prod flavor's ko strings
       final prodKo = File(p.join(root.path, 'ios', 'Flavors', 'prod',
               'ko.lproj', 'InfoPlist.strings'))
           .readAsStringSync();
       expect(prodKo, contains('"CFBundleDisplayName" = "상용 앱";'));
 
-      // prod flavor의 en strings
+      // prod flavor's en strings
       final prodEn = File(p.join(root.path, 'ios', 'Flavors', 'prod',
               'en.lproj', 'InfoPlist.strings'))
           .readAsStringSync();
       expect(prodEn, contains('"CFBundleDisplayName" = "Test Prod";'));
 
-      // build phase 스크립트가 생성되었는지 확인
+      // Verify build phase script was generated
       expect(
         File(p.join(root.path, 'ios', 'xcodegen', 'script',
                 'copy_flavor_strings.sh'))
@@ -368,7 +368,7 @@ easy_setup:
         isTrue,
       );
 
-      // project.yml에 Copy Flavor Strings 스크립트가 포함되었는지 확인
+      // Verify project.yml includes the Copy Flavor Strings script
       final projectYml =
           File(p.join(root.path, 'ios', 'project.yml')).readAsStringSync();
       expect(projectYml, contains('Copy Flavor Strings'));

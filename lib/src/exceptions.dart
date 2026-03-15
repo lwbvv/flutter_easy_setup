@@ -1,7 +1,7 @@
-/// easy_setup 도구에서 발생하는 모든 예외를 나타내는 클래스입니다.
+/// Represents all exceptions thrown by the easy_setup tool.
 ///
-/// 파일 미발견, YAML 파싱 실패, pbxproj 구조 이상 등
-/// 사용자에게 알려야 하는 오류 상황에서 throw됩니다.
+/// Thrown in error situations that need to be reported to the user,
+/// such as file not found, YAML parsing failure, or pbxproj structure issues.
 class SetupException implements Exception {
   final String message;
   SetupException(this.message);

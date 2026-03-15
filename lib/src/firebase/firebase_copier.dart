@@ -2,16 +2,16 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// Firebase 설정 파일을 flavor별 디렉터리로 복사하는 클래스입니다.
+/// A class that copies Firebase config files to per-flavor directories.
 ///
 /// Android: google-services.json → android/app/src/{flavor}/google-services.json
 /// iOS: GoogleService-Info.plist → ios/Runner/Firebase/{flavor}/GoogleService-Info.plist
 class FirebaseCopier {
-  /// Android Firebase 설정 파일을 복사합니다.
+  /// Copies the Android Firebase config file.
   ///
-  /// [sourcePath]의 파일을 android/app/src/{flavor}/google-services.json으로 복사합니다.
-  /// 소스 파일이 없으면 경고 후 건너뜁니다.
-  /// 대상 파일이 이미 존재하면 건너뜁니다 (멱등성 보장).
+  /// Copies the file at [sourcePath] to android/app/src/{flavor}/google-services.json.
+  /// If the source file does not exist, prints a warning and skips.
+  /// If the destination file already exists, skips (idempotency guarantee).
   static void copyAndroidConfig(
     String projectRoot,
     String flavor,
@@ -37,11 +37,11 @@ class FirebaseCopier {
     print('  Copied: ${source.path} → $destPath');
   }
 
-  /// iOS Firebase 설정 파일을 복사합니다.
+  /// Copies the iOS Firebase config file.
   ///
-  /// [sourcePath]의 파일을 ios/Runner/Firebase/{flavor}/GoogleService-Info.plist로 복사합니다.
-  /// 소스 파일이 없으면 경고 후 건너뜁니다.
-  /// 대상 파일이 이미 존재하면 건너뜁니다 (멱등성 보장).
+  /// Copies the file at [sourcePath] to ios/Runner/Firebase/{flavor}/GoogleService-Info.plist.
+  /// If the source file does not exist, prints a warning and skips.
+  /// If the destination file already exists, skips (idempotency guarantee).
   static void copyIosConfig(
     String projectRoot,
     String flavor,

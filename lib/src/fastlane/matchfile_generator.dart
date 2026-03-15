@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// Matchfile을 생성하는 클래스입니다.
+/// A class that generates the Matchfile.
 class MatchfileGenerator {
-  /// [outputDir]에 Matchfile을 생성합니다.
+  /// Generates a Matchfile in [outputDir].
   ///
-  /// [bundleIds]: Match에 등록할 bundle ID 목록
+  /// [bundleIds]: list of bundle IDs to register with Match
   static void generate(
     String outputDir,
     List<String> bundleIds, {

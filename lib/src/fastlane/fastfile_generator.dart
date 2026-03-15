@@ -4,15 +4,15 @@ import 'package:path/path.dart' as p;
 
 import '../exceptions.dart';
 
-/// Fastfile 생성 및 lane 관리를 담당하는 클래스입니다.
+/// A class responsible for generating and managing Fastfile lanes.
 ///
-/// - [generate]: 기본 Fastfile 골격 + 내장 lane (api_key, certificates, beta) 생성
-/// - [addRegisterLane]: register lane 추가 (idempotent)
-/// - [addLane]: 임의의 lane 코드를 Fastfile에 삽입 (idempotent)
+/// - [generate]: Creates the base Fastfile skeleton + built-in lanes (api_key, certificates, beta)
+/// - [addRegisterLane]: Adds the register lane (idempotent)
+/// - [addLane]: Inserts arbitrary lane code into the Fastfile (idempotent)
 class FastfileGenerator {
-  /// [outputDir]에 Fastfile을 생성합니다 (기본 골격 + 내장 lane).
+  /// Generates a Fastfile in [outputDir] (base skeleton + built-in lanes).
   ///
-  /// [flavorBundleIds]: flavor 이름 → bundle ID 매핑
+  /// [flavorBundleIds]: flavor name to bundle ID mapping
   static void generate(
     String outputDir,
     Map<String, String> flavorBundleIds, {
@@ -25,10 +25,10 @@ class FastfileGenerator {
         ? 'prod'
         : flavorNames.first;
 
-    // sync_certs lane: flavor별 서명 설정 생성
+    // sync_certs lane: generate per-flavor signing settings
     final syncCerts = StringBuffer();
     syncCerts.writeln(
-        '    # readonly: true를 주면 기존에 만들어진 걸 가져오기만 합니다.');
+        '    # readonly: true only fetches existing certificates without creating new ones.');
     syncCerts.writeln(
         '    match(type: "development", readonly: true, api_key: api_key)');
     syncCerts.writeln(
@@ -37,7 +37,7 @@ class FastfileGenerator {
         '    match(type: "adhoc", readonly: true, api_key: api_key)');
     syncCerts.writeln();
     syncCerts.writeln(
-        '    # Xcode 프로젝트 서명 설정을 업데이트합니다.');
+        '    # Update Xcode project signing settings.');
 
     for (final entry in flavorBundleIds.entries) {
       final flavor = entry.key;
@@ -66,21 +66,21 @@ class FastfileGenerator {
 
     syncCerts.writeln();
     syncCerts.write(
-        '    UI.success "Xcode 프로젝트에 프로필 매핑이 완료되었습니다!"');
+        '    UI.success "Profile mapping to Xcode project is complete!"');
 
     final content = 'default_platform(:ios)\n'
         '\n'
         'platform :ios do\n'
-        '  # ── API Key 설정 ──────────────────────────────────\n'
+        '  # ── API Key Configuration ──────────────────────────────────\n'
         '  api_key = app_store_connect_api_key(\n'
         '    key_id: ENV["API_KEY_ID"],\n'
         '    issuer_id: ENV["API_KEY_ISSUER_ID"],\n'
-        '    key_filepath: "fastlane/AuthKey.p8", # TODO: .p8 키 파일 경로\n'
+        '    key_filepath: "fastlane/AuthKey.p8", # TODO: path to .p8 key file\n'
         '    duration: 1200,\n'
         '    in_house: false\n'
         '  )\n'
         '\n'
-        '  # ── Build Number 자동 증가 ──────────────────────────\n'
+        '  # ── Auto-increment Build Number ──────────────────────────\n'
         '  def increment_build_number_in_pubspec\n'
         '    pubspec_path = File.join(__dir__, "..", "..", "..", "pubspec.yaml")\n'
         '    content = File.read(pubspec_path)\n'
@@ -95,23 +95,23 @@ class FastfileGenerator {
         '    new_build\n'
         '  end\n'
         '\n'
-        '  # ── 인증서 동기화 + Xcode 서명 설정 ──────────────────\n'
+        '  # ── Sync Certificates + Xcode Signing Settings ──────────────────\n'
         '  desc "Sync certificates and update Xcode signing settings"\n'
         '  lane :sync_certs do\n'
         '${syncCerts.toString()}\n'
         '  end\n'
         '\n'
-        '  # ── 프로필만 재생성 ─────────────────────────────────\n'
-        '  desc "인증서는 건드리지 않고 프로필만 생성/재생성"\n'
+        '  # ── Refresh Profiles Only ─────────────────────────────────\n'
+        '  desc "Regenerate provisioning profiles without touching certificates"\n'
         '  lane :refresh_profiles do\n'
         '    match(type: "development", force: true, api_key: api_key)\n'
         '    match(type: "appstore", force: true, api_key: api_key)\n'
         '    match(type: "adhoc", force: true, api_key: api_key)\n'
         '\n'
-        '    UI.success "인증서는 유지하고 프로비저닝 프로필만 새로 갱신했습니다!"\n'
+        '    UI.success "Provisioning profiles have been refreshed while keeping certificates intact!"\n'
         '  end\n'
         '\n'
-        '  # ── flavor별 빌드 + TestFlight 배포 ───────────────\n'
+        '  # ── Per-flavor Build + TestFlight Deploy ───────────────\n'
         '  desc "Build and upload to TestFlight"\n'
         '  lane :beta do |options|\n'
         '    flavor = options[:flavor] || "$defaultFlavor"\n'
@@ -132,17 +132,17 @@ class FastfileGenerator {
     _writeFile(path, content, dryRun: dryRun);
   }
 
-  /// Fastfile에 register lane을 추가합니다 (idempotent).
+  /// Adds the register lane to the Fastfile (idempotent).
   ///
-  /// [fastfilePath]: Fastfile 경로
-  /// [flavors]: flavor별 bundleId + name 맵 ({flavorName: {bundleId, name}})
+  /// [fastfilePath]: path to the Fastfile
+  /// [flavors]: per-flavor bundleId + name map ({flavorName: {bundleId, name}})
   static void addRegisterLane({
     required String fastfilePath,
     required Map<String, ({String bundleId, String name})> flavors,
     bool dryRun = false,
   }) {
     final laneCode = StringBuffer();
-    laneCode.writeln('  # ── Bundle ID + App 등록 ──────────────────────');
+    laneCode.writeln('  # ── Bundle ID + App Registration ──────────────────────');
     laneCode.writeln(
         '  desc "Register Bundle IDs and create apps on App Store Connect"');
     laneCode.writeln('  lane :register do');
@@ -155,8 +155,8 @@ class FastfileGenerator {
       laneCode.writeln('      sku: "${info.bundleId}",');
       laneCode.writeln('      team_id: ENV["TEAM_ID"],');
       laneCode.writeln('      itc_team_id: ENV["ITC_TEAM_ID"],');
-      laneCode.writeln('      # username: "your@email.com",       # TODO: Apple ID (필요 시 주석 해제)');
-      laneCode.writeln('      enable_services: {                  # 게임센터는 디폴트가 on이라 비활성화 시켜줘야 됨');
+      laneCode.writeln('      # username: "your@email.com",       # TODO: Apple ID (uncomment if needed)');
+      laneCode.writeln('      enable_services: {                  # Game Center is on by default, so it must be explicitly disabled');
       laneCode.writeln('        game_center: "off"');
       laneCode.writeln('      },');
       laneCode.writeln('    )');
@@ -168,22 +168,22 @@ class FastfileGenerator {
 
     addLane(
       fastfilePath: fastfilePath,
-      marker: '  # ── Bundle ID + App 등록',
+      marker: '  # ── Bundle ID + App Registration',
       laneKeyword: 'lane :register do',
       laneCode: laneCode.toString(),
       dryRun: dryRun,
     );
   }
 
-  /// Fastfile에 update_metadata lane을 추가합니다 (idempotent).
+  /// Adds the update_metadata lane to the Fastfile (idempotent).
   ///
-  /// `deliver`를 사용하여 App Store Connect 메타데이터를 업로드합니다.
+  /// Uses `deliver` to upload metadata to App Store Connect.
   static void addMetadataLane({
     required String fastfilePath,
     bool dryRun = false,
   }) {
     final laneCode = StringBuffer();
-    laneCode.writeln('  # ── 메타데이터 업로드 ─────────────────────────');
+    laneCode.writeln('  # ── Metadata Upload ─────────────────────────');
     laneCode.writeln(
         '  desc "Upload metadata to App Store Connect"');
     laneCode.writeln('  lane :update_metadata do');
@@ -198,22 +198,22 @@ class FastfileGenerator {
 
     addLane(
       fastfilePath: fastfilePath,
-      marker: '  # ── 메타데이터 업로드',
+      marker: '  # ── Metadata Upload',
       laneKeyword: 'lane :update_metadata do',
       laneCode: laneCode.toString(),
       dryRun: dryRun,
     );
   }
 
-  /// Fastfile에 lane 코드를 추가합니다 (idempotent).
+  /// Adds lane code to the Fastfile (idempotent).
   ///
-  /// [marker]로 시작하는 기존 블록이 있으면 제거 후 재삽입합니다.
-  /// lane 코드는 Fastfile의 마지막 `end` (platform 블록 종료) 앞에 삽입됩니다.
+  /// If an existing block starting with [marker] is found, it is removed before reinserting.
+  /// The lane code is inserted before the last `end` (platform block closure) in the Fastfile.
   ///
-  /// [fastfilePath]: Fastfile 경로
-  /// [marker]: 기존 블록 탐지용 주석 마커
-  /// [laneKeyword]: lane 시작 키워드 (예: 'lane :register do')
-  /// [laneCode]: 삽입할 lane 전체 코드 (마커 + desc + lane 블록)
+  /// [fastfilePath]: path to the Fastfile
+  /// [marker]: comment marker for detecting existing blocks
+  /// [laneKeyword]: lane start keyword (e.g., 'lane :register do')
+  /// [laneCode]: full lane code to insert (marker + desc + lane block)
   static void addLane({
     required String fastfilePath,
     required String marker,
@@ -237,10 +237,10 @@ class FastfileGenerator {
 
     var content = fastfile.readAsStringSync();
 
-    // 기존 블록 제거
+    // Remove existing block
     content = _stripLaneBlock(content, marker, laneKeyword);
 
-    // 마지막 'end' (platform :ios do ... end) 앞에 삽입
+    // Insert before the last 'end' (platform :ios do ... end)
     final lastEndIndex = content.lastIndexOf('end');
     if (lastEndIndex == -1) {
       throw SetupException('Invalid Fastfile format: missing closing "end"');
@@ -254,7 +254,7 @@ class FastfileGenerator {
     print('  Added lane to: $fastfilePath');
   }
 
-  /// [marker]로 시작하여 [laneKeyword]를 포함하는 lane 블록을 제거합니다.
+  /// Removes the lane block that starts with [marker] and contains [laneKeyword].
   static String _stripLaneBlock(
     String content,
     String marker,
@@ -263,11 +263,11 @@ class FastfileGenerator {
     final startIndex = content.indexOf(marker);
     if (startIndex == -1) return content;
 
-    // lane 시작 찾기
+    // Find lane start
     final laneStart = content.indexOf(laneKeyword, startIndex);
     if (laneStart == -1) return content;
 
-    // lane의 end 찾기 (들여쓰기 레벨 매칭)
+    // Find the lane's end (matching indentation level)
     var depth = 0;
     var endIndex = laneStart;
     final lines = content.substring(laneStart).split('\n');
@@ -288,7 +288,7 @@ class FastfileGenerator {
       lineCount++;
     }
 
-    // marker 이전 줄바꿈부터 end 다음 줄바꿈까지 제거
+    // Remove from the newline before the marker to the newline after end
     var removeStart = startIndex;
     if (removeStart > 0 && content[removeStart - 1] == '\n') {
       removeStart--;

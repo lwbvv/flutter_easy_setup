@@ -1,13 +1,13 @@
 import 'dart:io';
 
-/// iOS Info.plist 파일을 수정하는 클래스입니다.
+/// A class that modifies the iOS Info.plist file.
 ///
-/// 1. CFBundleDisplayName의 값을 $(APP_DISPLAY_NAME)으로 변경
-/// 2. permission 맵의 키들을 Info.plist에 추가 (없는 키만)
+/// 1. Changes the CFBundleDisplayName value to $(APP_DISPLAY_NAME)
+/// 2. Adds permission map keys to Info.plist (only missing keys)
 class InfoPlistModifier {
-  /// Info.plist 파일을 수정합니다.
+  /// Modifies the Info.plist file.
   ///
-  /// [permission]: easy_setup.yaml의 permission 맵 (키만 사용하여 Info.plist에 추가)
+  /// [permission]: permission map from easy_setup.yaml (only keys are used to add to Info.plist)
   static void modify(
     String plistPath, {
     Map<String, String>? permission,
@@ -24,7 +24,7 @@ class InfoPlistModifier {
     // 1. CFBundleDisplayName → $(APP_DISPLAY_NAME)
     content = _setDisplayName(content);
 
-    // 2. permission 키들을 Info.plist에 추가
+    // 2. Add permission keys to Info.plist
     if (permission != null && permission.isNotEmpty) {
       content = _addPermissions(content, permission);
     }
@@ -43,7 +43,7 @@ class InfoPlistModifier {
     }
   }
 
-  /// CFBundleDisplayName을 $(APP_DISPLAY_NAME)으로 설정합니다.
+  /// Sets CFBundleDisplayName to $(APP_DISPLAY_NAME).
   static String _setDisplayName(String content) {
     final pattern = RegExp(
       r'(<key>CFBundleDisplayName</key>\s*<string>)[^<]*(</string>)',
@@ -56,7 +56,7 @@ class InfoPlistModifier {
       });
     }
 
-    // CFBundleDisplayName이 없으면 </dict> 직전에 추가
+    // If CFBundleDisplayName doesn't exist, add it just before </dict>
     return content.replaceFirst(
       '</dict>\n</plist>',
       '\t<key>CFBundleDisplayName</key>\n'
@@ -65,8 +65,8 @@ class InfoPlistModifier {
     );
   }
 
-  /// permission 키들을 Info.plist에 추가합니다.
-  /// 이미 존재하는 키는 값을 업데이트하고, 없는 키는 새로 추가합니다.
+  /// Adds permission keys to Info.plist.
+  /// Updates the value for keys that already exist, and adds new entries for missing keys.
   static String _addPermissions(
       String content, Map<String, String> permission) {
     final newEntries = StringBuffer();
@@ -81,18 +81,18 @@ class InfoPlistModifier {
       );
 
       if (existingPattern.hasMatch(content)) {
-        // 이미 존재하면 값 업데이트
+        // Update value if already exists
         content = content.replaceFirstMapped(existingPattern, (match) {
           return '${match.group(1)}$value${match.group(2)}';
         });
       } else {
-        // 없으면 나중에 일괄 추가
+        // If not found, batch-add later
         newEntries.writeln('\t<key>$key</key>');
         newEntries.writeln('\t<string>$value</string>');
       }
     }
 
-    // 새 항목들을 </dict> 직전에 삽입
+    // Insert new entries just before </dict>
     final newContent = newEntries.toString();
     if (newContent.isNotEmpty) {
       content = content.replaceFirst(

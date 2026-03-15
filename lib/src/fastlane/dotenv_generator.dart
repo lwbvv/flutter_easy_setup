@@ -2,15 +2,15 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-/// Fastlane용 .env 파일을 생성하는 클래스입니다.
+/// A class that generates a .env file for Fastlane.
 ///
-/// Fastlane은 fastlane/ 디렉터리의 .env 파일을 자동으로 로드합니다.
-/// 생성된 .env 파일에는 TODO 플레이스홀더가 포함되어 있으며,
-/// 사용자가 직접 실제 값을 채워야 합니다.
+/// Fastlane automatically loads .env files from the fastlane/ directory.
+/// The generated .env file contains TODO placeholders that
+/// the user must fill in with actual values.
 class DotenvGenerator {
-  /// [outputDir]에 .env 파일을 생성합니다.
+  /// Generates a .env file in [outputDir].
   ///
-  /// 이미 파일이 존재하면 덮어쓰지 않습니다 (사용자가 채운 값 보호).
+  /// Does not overwrite if the file already exists (to protect user-filled values).
   static void generate(String outputDir, {bool dryRun = false}) {
     final path = p.join(outputDir, '.env');
 
@@ -19,8 +19,8 @@ class DotenvGenerator {
       return;
     }
 
-    const content = '# Fastlane 환경 변수\n'
-        '# 아래 값들을 실제 값으로 변경하세요.\n'
+    const content = '# Fastlane environment variables\n'
+        '# Replace the values below with your actual values.\n'
         '\n'
         '# Apple Developer Team ID\n'
         'TEAM_ID=YOUR_TEAM_ID\n'
@@ -32,10 +32,10 @@ class DotenvGenerator {
         'API_KEY_ID=YOUR_KEY_ID\n'
         'API_KEY_ISSUER_ID=YOUR_ISSUER_ID\n'
         '\n'
-        '# 인증서 저장 Git 저장소 URL (예: https://github.com/your-org/certs.git)\n'
+        '# Git repository URL for certificate storage (e.g., https://github.com/your-org/certs.git)\n'
         'CERTS_REPO_URL=YOUR_CERTS_REPO_URL\n'
         '\n'
-        '# Apple ID (예: your@email.com)\n'
+        '# Apple ID (e.g., your@email.com)\n'
         'APPLE_ID=YOUR_APPLE_ID\n';
 
     _writeFile(path, content, dryRun: dryRun);

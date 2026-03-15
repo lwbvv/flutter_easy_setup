@@ -1,4 +1,4 @@
-/// 단일 locale의 메타데이터 설정
+/// Metadata configuration for a single locale
 class LocaleMetadataConfig {
   final String? promotionalText;
   final String? description;
@@ -36,7 +36,7 @@ class LocaleMetadataConfig {
     );
   }
 
-  /// 설정된 필드를 파일명 → 값 맵으로 반환합니다.
+  /// Returns the configured fields as a filename-to-value map.
   Map<String, String> toFileMap() {
     final map = <String, String>{};
     if (promotionalText != null) {

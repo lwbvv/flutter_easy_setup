@@ -49,7 +49,7 @@ void main() {
       expect(result, contains("'Debug-prod' => :debug,"));
       expect(result, contains("'Profile-prod' => :release,"));
       expect(result, contains("'Release-prod' => :release,"));
-      // 기본 Debug/Profile/Release는 포함되지 않아야 함
+      // Default Debug/Profile/Release should not be included
       expect(result, isNot(contains("'Debug' => :debug,")));
       expect(result, isNot(contains("'Profile' => :release,")));
       expect(result, isNot(contains("'Release' => :release,")));

@@ -1,7 +1,7 @@
-/// easy_setup 라이브러리의 공개 API를 정의합니다.
+/// Defines the public API of the easy_setup library.
 ///
-/// 이 파일은 외부에서 `import 'package:easy_setup/easy_setup.dart'`로
-/// 접근할 수 있는 공개 심볼(symbol)들을 re-export합니다.
+/// This file re-exports the public symbols accessible via
+/// `import 'package:easy_setup/easy_setup.dart'`.
 library;
 
 export 'src/commands/ci_cd_command.dart';

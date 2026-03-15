@@ -2,15 +2,15 @@ import 'dart:io';
 
 import '../models/flavor_config.dart';
 
-/// iOS Podfile을 생성하거나 수정하는 클래스입니다.
+/// A class that creates or modifies the iOS Podfile.
 ///
-/// Podfile이 없으면 Flutter 표준 Podfile을 생성하고,
-/// 있으면 기존 Podfile에 flavor별 빌드 모드 매핑을 추가합니다.
+/// If no Podfile exists, creates a standard Flutter Podfile.
+/// If one exists, adds per-flavor build mode mappings to it.
 ///
-/// permission이 제공되면 post_install 블록에
-/// GCC_PREPROCESSOR_DEFINITIONS로 permission_handler 매크로를 추가합니다.
+/// If permissions are provided, adds permission_handler macros
+/// as GCC_PREPROCESSOR_DEFINITIONS in the post_install block.
 class PodfileModifier {
-  /// Info.plist permission 키 → permission_handler GCC 매크로 매핑
+  /// Mapping from Info.plist permission keys to permission_handler GCC macros
   static const _permissionMacroMap = <String, String>{
     'NSCameraUsageDescription': 'PERMISSION_CAMERA=1',
     'NSMicrophoneUsageDescription': 'PERMISSION_MICROPHONE=1',
@@ -34,10 +34,10 @@ class PodfileModifier {
     'NSFaceIDUsageDescription': 'PERMISSION_SENSORS=1',
   };
 
-  /// Podfile을 생성하거나 수정합니다.
+  /// Creates or modifies the Podfile.
   ///
-  /// [permission]: easy_setup.yaml의 permission 맵 (키를 기반으로 매크로 매핑)
-  /// [iosVersion]: iOS minimum deployment target (예: "15.0")
+  /// [permission]: permission map from easy_setup.yaml (keys are mapped to macros)
+  /// [iosVersion]: iOS minimum deployment target (e.g., "15.0")
   static void modify(
     String podfilePath,
     Map<String, FlavorConfig> flavors, {
@@ -58,7 +58,7 @@ class PodfileModifier {
         permission: permission, iosVersion: version, dryRun: dryRun);
   }
 
-  /// permission 키들로부터 필요한 GCC 매크로 목록을 생성합니다.
+  /// Resolves the required GCC macro list from permission keys.
   static Set<String> _resolveMacros(Map<String, String>? permission) {
     if (permission == null || permission.isEmpty) return {};
     final macros = <String>{};
@@ -71,7 +71,7 @@ class PodfileModifier {
     return macros;
   }
 
-  /// post_install 블록을 생성합니다.
+  /// Builds the post_install block.
   static String _buildPostInstall(Set<String> macros, String iosVersion) {
     final sb = StringBuffer();
     sb.writeln('post_install do |installer|');
@@ -99,7 +99,7 @@ class PodfileModifier {
     return sb.toString();
   }
 
-  /// Flutter 표준 Podfile을 생성합니다.
+  /// Creates a standard Flutter Podfile.
   static void _createPodfile(
     File file,
     Map<String, FlavorConfig> flavors, {
@@ -159,7 +159,7 @@ $postInstall''';
     print('  Created Podfile: ${file.path}');
   }
 
-  /// 기존 Podfile에 flavor별 빌드 모드 매핑과 permission 매크로를 추가합니다.
+  /// Adds per-flavor build mode mappings and permission macros to an existing Podfile.
   static void _modifyExistingPodfile(
     File file,
     Map<String, FlavorConfig> flavors, {
@@ -169,13 +169,13 @@ $postInstall''';
   }) {
     var content = file.readAsStringSync();
 
-    // 1. platform :ios 버전 업데이트
+    // 1. Update platform :ios version
     content = _applyPlatformVersion(content, iosVersion);
 
-    // 2. flavor 매핑 처리
+    // 2. Apply flavor mappings
     content = _applyFlavorMappings(content, flavors);
 
-    // 3. permission 매크로 + IPHONEOS_DEPLOYMENT_TARGET 처리
+    // 3. Apply permission macros + IPHONEOS_DEPLOYMENT_TARGET
     final macros = _resolveMacros(permission);
     content = _applyPostInstallConfig(content, macros, iosVersion);
 
@@ -188,7 +188,7 @@ $postInstall''';
     print('  Updated Podfile with flavor mappings and permission macros.');
   }
 
-  /// platform :ios 버전을 업데이트합니다.
+  /// Updates the platform :ios version.
   static String _applyPlatformVersion(String content, String iosVersion) {
     final pattern = RegExp(r"platform\s*:ios\s*,\s*'[^']*'");
     if (pattern.hasMatch(content)) {
@@ -197,7 +197,7 @@ $postInstall''';
     return content;
   }
 
-  /// project 'Runner' 블록 전체를 교체합니다.
+  /// Replaces the entire project 'Runner' block.
   static String _applyFlavorMappings(
       String content, Map<String, FlavorConfig> flavors) {
     final projectBlock = RegExp(
@@ -211,7 +211,7 @@ $postInstall''';
       return content.replaceFirst(projectBlock, newBlock);
     }
 
-    // project 블록이 없으면 platform 줄 뒤에 추가
+    // If no project block exists, add it after the platform line
     final platformPattern = RegExp(r"platform\s*:ios\s*,\s*'[^']*'");
     if (platformPattern.hasMatch(content)) {
       return content.replaceFirstMapped(platformPattern, (match) {
@@ -222,10 +222,10 @@ $postInstall''';
     return content;
   }
 
-  /// post_install 블록 전체를 교체합니다.
+  /// Replaces the entire post_install block.
   static String _applyPostInstallConfig(
       String content, Set<String> macros, String iosVersion) {
-    // post_install 블록 전체를 찾아서 교체
+    // Find and replace the entire post_install block
     final postInstallBlock = RegExp(
       r'post_install do \|installer\|[\s\S]*?^end\n?',
       multiLine: true,
@@ -237,11 +237,11 @@ $postInstall''';
       return content.replaceFirst(postInstallBlock, newPostInstall);
     }
 
-    // post_install이 없으면 끝에 추가
+    // If no post_install exists, append to the end
     return '$content\n$newPostInstall';
   }
 
-  /// target.build_configurations.each 블록을 생성합니다.
+  /// Builds the target.build_configurations.each block.
   static String _buildConfigIterationBlock(
       Set<String> macros, String iosVersion) {
     final sb = StringBuffer();
@@ -263,7 +263,7 @@ $postInstall''';
     return sb.toString();
   }
 
-  /// project 'Runner' 블록 내용을 생성합니다.
+  /// Builds the content of the project 'Runner' block.
   static String _buildConfigBlock(Map<String, FlavorConfig> flavors) {
     final sb = StringBuffer();
     for (final flavor in flavors.keys) {

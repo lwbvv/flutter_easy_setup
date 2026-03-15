@@ -12,7 +12,7 @@ void main() {
   late String assetCatalogDir;
   late String sourceIconPath;
 
-  /// 1024x1024 테스트용 PNG 이미지를 생성합니다.
+  /// Creates a 1024x1024 PNG image for testing.
   void createSourceIcon(String path, {int width = 1024, int height = 1024}) {
     final image = img.Image(width: width, height: height);
     img.fill(image, color: img.ColorRgb8(255, 0, 0));
@@ -47,7 +47,7 @@ void main() {
           p.join(assetCatalogDir, 'AppIcon-dev.appiconset');
       expect(Directory(outputDir).existsSync(), isTrue);
 
-      // 15개 고유 파일명 PNG
+      // 15 unique filename PNGs
       final expectedFiles = [
         'Icon-App-20x20@1x.png',
         'Icon-App-20x20@2x.png',
@@ -136,7 +136,7 @@ void main() {
       final images = contents['images'] as List;
       expect(images.length, 18);
 
-      // 각 엔트리에 필수 필드가 있는지 확인
+      // Verify each entry has required fields
       for (final image in images) {
         final map = image as Map<String, dynamic>;
         expect(map.containsKey('size'), isTrue);
@@ -145,7 +145,7 @@ void main() {
         expect(map.containsKey('scale'), isTrue);
       }
 
-      // info 블록 확인
+      // Verify info block
       final info = contents['info'] as Map<String, dynamic>;
       expect(info['version'], 1);
       expect(info['author'], 'easy_setup');
@@ -218,7 +218,7 @@ void main() {
       final firstRunContents =
           File(p.join(outputDir, 'Contents.json')).readAsStringSync();
 
-      // 재실행
+      // Re-run
       AppIconGenerator.generate(
         projectRoot,
         assetCatalogDir,

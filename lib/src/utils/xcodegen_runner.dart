@@ -4,15 +4,15 @@ import 'package:path/path.dart' as p;
 
 import '../exceptions.dart';
 
-/// xcodegen CLI를 실행하는 유틸리티 클래스입니다.
+/// Utility class for running the xcodegen CLI.
 ///
-/// `xcodegen generate` 명령을 호출하여 project.yml로부터
-/// Xcode 프로젝트(project.pbxproj, schemes 등)를 생성합니다.
+/// Invokes the `xcodegen generate` command to generate
+/// an Xcode project (project.pbxproj, schemes, etc.) from project.yml.
 class XcodeGenRunner {
-  /// xcodegen generate를 실행합니다.
+  /// Runs xcodegen generate.
   ///
-  /// [projectRoot]: Flutter 프로젝트 루트
-  /// project.yml이 있는 ios/ 디렉터리에서 실행됩니다.
+  /// [projectRoot]: Flutter project root.
+  /// Runs in the ios/ directory where project.yml is located.
   static void run(String projectRoot, {bool dryRun = false}) {
     final iosDir = p.join(projectRoot, 'ios');
     final projectYmlPath = p.join(iosDir, 'project.yml');
@@ -29,7 +29,7 @@ class XcodeGenRunner {
       );
     }
 
-    // xcodegen 설치 확인
+    // Check if xcodegen is installed
     final which = Process.runSync('which', ['xcodegen']);
     if (which.exitCode != 0) {
       print('  WARNING: xcodegen is not installed.');

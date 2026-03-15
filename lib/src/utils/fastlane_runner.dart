@@ -2,12 +2,12 @@ import 'dart:io';
 
 import '../exceptions.dart';
 
-/// Fastlane 실행 환경을 준비하고 명령을 실행하는 유틸리티입니다.
+/// Utility for preparing the Fastlane execution environment and running commands.
 ///
-/// fastlane 디렉터리에서 `bundle install`을 실행하고
-/// `bundle exec fastlane` 으로 명령을 실행합니다.
+/// Runs `bundle install` in the fastlane directory and
+/// executes commands via `bundle exec fastlane`.
 class FastlaneRunner {
-  /// [fastlaneDir]에서 `bundle install`을 실행합니다.
+  /// Runs `bundle install` in [fastlaneDir].
   static Future<void> bundleInstall(String fastlaneDir,
       {bool dryRun = false}) async {
     if (dryRun) {
@@ -32,9 +32,9 @@ class FastlaneRunner {
     print('  bundle install complete');
   }
 
-  /// `bundle exec fastlane`으로 명령을 실행합니다.
+  /// Runs a command via `bundle exec fastlane`.
   ///
-  /// [environment]로 추가 환경변수를 전달할 수 있습니다.
+  /// Additional environment variables can be passed via [environment].
   static Future<ProcessResult> run(
     String fastlaneDir,
     List<String> args, {

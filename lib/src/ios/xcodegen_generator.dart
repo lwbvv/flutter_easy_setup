@@ -4,18 +4,19 @@ import 'package:path/path.dart' as p;
 
 import '../models/flavor_config.dart';
 
-/// XcodeGen의 project.yml 파일을 생성하는 클래스입니다.
+/// A class that generates the XcodeGen project.yml file.
 ///
-/// easy_setup.yaml의 flavor 설정을 XcodeGen 형식의 project.yml로 변환하고,
-/// xcodegen generate 명령으로 Xcode 프로젝트 전체를 생성합니다.
+/// Converts the flavor configuration from easy_setup.yaml into XcodeGen's
+/// project.yml format, then uses the xcodegen generate command to generate
+/// the entire Xcode project.
 ///
-/// 기존의 pbxproj_modifier, scheme_generator를 대체합니다.
+/// Replaces the previous pbxproj_modifier and scheme_generator.
 class XcodeGenGenerator {
-  /// project.yml 파일을 생성합니다.
+  /// Generates the project.yml file.
   ///
-  /// [projectRoot]: Flutter 프로젝트 루트
-  /// [flavors]: flavor 설정 맵
-  /// [localizations]: knownRegions에 등록할 언어 목록
+  /// [projectRoot]: Flutter project root
+  /// [flavors]: flavor configuration map
+  /// [localizations]: list of languages to register in knownRegions
   static void generate(
     String projectRoot,
     Map<String, FlavorConfig> flavors, {
@@ -39,7 +40,7 @@ class XcodeGenGenerator {
     print('  Wrote: $projectYmlPath');
   }
 
-  /// project.yml 내용을 생성합니다.
+  /// Builds the project.yml content.
   static String _buildProjectYml(
     Map<String, FlavorConfig> flavors, {
     List<String>? localizations,
@@ -70,7 +71,7 @@ class XcodeGenGenerator {
     return sb.toString();
   }
 
-  /// options 섹션을 생성합니다.
+  /// Writes the options section.
   static void _writeOptions(StringBuffer sb,
       {List<String>? localizations, required String iosVersion}) {
     sb.writeln('options:');
@@ -90,10 +91,10 @@ class XcodeGenGenerator {
     sb.writeln();
   }
 
-  /// configs 섹션을 생성합니다.
+  /// Writes the configs section.
   ///
-  /// Flutter 기본 3개(Debug, Release, Profile) + flavor별 3개씩 생성합니다.
-  /// Profile은 none 타입으로 설정하여 XcodeGen의 기본 설정을 방지합니다.
+  /// Generates 3 configurations per flavor (Debug, Release, Profile).
+  /// Profile is set to none type to prevent XcodeGen's default settings.
   static void _writeConfigs(StringBuffer sb, Map<String, FlavorConfig> flavors) {
     sb.writeln('configs:');
     for (final flavor in flavors.keys) {
@@ -104,7 +105,7 @@ class XcodeGenGenerator {
     sb.writeln();
   }
 
-  /// project-level settings 섹션을 생성합니다.
+  /// Writes the project-level settings section.
   static void _writeProjectSettings(StringBuffer sb,
       {required String iosVersion}) {
     sb.writeln('settings:');
@@ -147,7 +148,7 @@ class XcodeGenGenerator {
     sb.writeln();
   }
 
-  /// targets 섹션을 생성합니다.
+  /// Writes the targets section.
   static void _writeTargets(
       StringBuffer sb, Map<String, FlavorConfig> flavors) {
     sb.writeln('targets:');
@@ -161,7 +162,7 @@ class XcodeGenGenerator {
     sb.writeln();
   }
 
-  /// Runner target을 생성합니다.
+  /// Writes the Runner target.
   static void _writeRunnerTarget(
       StringBuffer sb, Map<String, FlavorConfig> flavors) {
     sb.writeln('  Runner:');
@@ -185,9 +186,9 @@ class XcodeGenGenerator {
     sb.writeln();
 
     // preBuildScripts
-    // Copy Flavor Strings를 가장 먼저 실행하여
-    // Runner/{locale}.lproj/에 flavor별 CFBundleDisplayName을 병합
-    // → Copy Bundle Resources가 자연스럽게 번들에 포함
+    // Run Copy Flavor Strings first to merge per-flavor CFBundleDisplayName
+    // into Runner/{locale}.lproj/
+    // so that Copy Bundle Resources naturally includes them in the bundle
     final hasFlavorLocalized =
         flavors.values.any((f) => f.localized != null && f.localized!.isNotEmpty);
 
@@ -228,7 +229,7 @@ class XcodeGenGenerator {
     sb.writeln('        VERSIONING_SYSTEM: apple-generic');
     sb.writeln('      configs:');
 
-    // flavor별 config settings
+    // Per-flavor config settings
     for (final entry in flavors.entries) {
       final flavor = entry.key;
       final config = entry.value;
@@ -249,7 +250,7 @@ class XcodeGenGenerator {
     sb.writeln();
   }
 
-  /// RunnerTests target을 생성합니다.
+  /// Writes the RunnerTests target.
   static void _writeRunnerTestsTarget(StringBuffer sb) {
     sb.writeln('  RunnerTests:');
     sb.writeln('    type: bundle.unit-test');
@@ -271,15 +272,15 @@ class XcodeGenGenerator {
     sb.writeln();
   }
 
-  /// schemes 섹션을 생성합니다.
+  /// Writes the schemes section.
   ///
-  /// flavor별 scheme만 생성합니다.
-  /// 각 flavor scheme은 해당 flavor의 Debug/Release/Profile 구성을 매핑합니다.
+  /// Only generates per-flavor schemes.
+  /// Each flavor scheme maps to that flavor's Debug/Release/Profile configurations.
   static void _writeSchemes(
       StringBuffer sb, Map<String, FlavorConfig> flavors) {
     sb.writeln('schemes:');
 
-    // flavor별 scheme
+    // Per-flavor schemes
     for (final flavor in flavors.keys) {
       sb.writeln('  $flavor:');
       sb.writeln('    build:');

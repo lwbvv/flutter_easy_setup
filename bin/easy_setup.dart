@@ -1,15 +1,15 @@
-// easy_setup CLI 진입점
+// easy_setup CLI entry point
 //
-// Flutter 프로젝트 설정을 자동으로 구성하는 CLI 도구입니다.
+// A CLI tool that automatically configures Flutter project setup.
 //
 // Commands:
-//   flavor    Flutter flavor 환경 설정 (Android + iOS)  [default]
-//   ci-cd     CI/CD 파이프라인 설정 생성 (Fastlane + GitHub Actions + Bundle ID 등록)
+//   flavor    Configure Flutter flavor environments (Android + iOS)  [default]
+//   ci-cd     Generate CI/CD pipeline setup (Fastlane + GitHub Actions + Bundle ID registration)
 //
 // Global Options:
-//   -h, --help          도움말 표시
-//   -n, --dry-run       실제 파일 변경 없이 미리보기만 수행
-//   -p, --project-root  Flutter 프로젝트 루트 경로 지정 (기본: 자동 탐지)
+//   -h, --help          Show help
+//   -n, --dry-run       Preview changes without modifying any files
+//   -p, --project-root  Specify Flutter project root path (default: auto-detect)
 import 'dart:io';
 
 import 'package:args/args.dart';
@@ -18,7 +18,7 @@ import 'package:easy_setup/src/commands/flavor_command.dart';
 import 'package:easy_setup/src/exceptions.dart';
 
 Future<void> main(List<String> arguments) async {
-  // 글로벌 옵션 파서 설정
+  // Configure global option parser
   final parser = ArgParser()
     ..addFlag(
       'help',
@@ -38,8 +38,8 @@ Future<void> main(List<String> arguments) async {
       help: 'Path to Flutter project root (default: auto-detect).',
     );
 
-  // 서브커맨드 결정: 첫 번째 인자가 알려진 커맨드인지 확인
-  String command = 'flavor'; // 기본값 — 하위 호환성
+  // Determine subcommand: check if the first argument is a known command
+  String command = 'flavor'; // default — backward compatibility
   var commandArgs = arguments;
 
   if (arguments.isNotEmpty && !arguments.first.startsWith('-')) {
@@ -50,7 +50,7 @@ Future<void> main(List<String> arguments) async {
     }
   }
 
-  // 인자 파싱
+  // Parse arguments
   ArgResults args;
   try {
     args = parser.parse(commandArgs);
@@ -60,7 +60,7 @@ Future<void> main(List<String> arguments) async {
     exit(1);
   }
 
-  // --help 플래그 처리
+  // Handle --help flag
   if (args['help'] as bool) {
     _printUsage(parser);
     return;
@@ -69,7 +69,7 @@ Future<void> main(List<String> arguments) async {
   final dryRun = args['dry-run'] as bool;
   final projectRoot = args['project-root'] as String?;
 
-  // 서브커맨드 실행
+  // Execute subcommand
   try {
     switch (command) {
       case 'flavor':
@@ -87,7 +87,7 @@ Future<void> main(List<String> arguments) async {
   }
 }
 
-/// CLI 사용법과 easy_setup.yaml 예시를 출력합니다.
+/// Prints CLI usage information and an easy_setup.yaml example.
 void _printUsage(ArgParser parser) {
   print('easy_setup — Configure Flutter project setup\n');
   print('Usage: easy_setup <command> [options]\n');
