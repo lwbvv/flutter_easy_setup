@@ -20,7 +20,7 @@ void main() {
   });
 
   group('InfoPlistStringsGenerator', () {
-    test('generates InfoPlist.strings with flavor app_name', () {
+    test('generates InfoPlist.strings with flavor app_name (non-en uses raw value)', () {
       InfoPlistStringsGenerator.generate(
         projectRoot,
         flavorLocalized: {
@@ -33,8 +33,25 @@ void main() {
       expect(File(stringsPath).existsSync(), isTrue);
 
       final content = File(stringsPath).readAsStringSync();
-      // InfoPlist.strings에서는 xcconfig의 변수를 참조
-      expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
+      // non-en locale은 yaml 값을 그대로 사용
+      expect(content, contains('"CFBundleDisplayName" = "테스트 앱";'));
+    });
+
+    test('en locale uses xcconfig variable for CFBundleDisplayName', () {
+      InfoPlistStringsGenerator.generate(
+        projectRoot,
+        flavorLocalized: {
+          'en': const FlavorLocalizedConfig(appName: 'Test App'),
+        },
+      );
+
+      final stringsPath =
+          p.join(projectRoot, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
+      expect(File(stringsPath).existsSync(), isTrue);
+
+      final content = File(stringsPath).readAsStringSync();
+      // en은 xcconfig 변수 참조
+      expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME)";'));
     });
 
     test('generates en.lproj with base permission', () {
@@ -106,8 +123,8 @@ void main() {
       final stringsPath =
           p.join(projectRoot, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
       final content = File(stringsPath).readAsStringSync();
-      // 변수 참조로 변경
-      expect(content, contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
+      // non-en locale은 yaml 값 그대로
+      expect(content, contains('"CFBundleDisplayName" = "테스트";'));
       expect(content,
           contains('"NSCameraUsageDescription" = "카메라 접근이 필요합니다";'));
     });

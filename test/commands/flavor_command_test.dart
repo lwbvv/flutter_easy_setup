@@ -360,18 +360,18 @@ easy_setup:
       expect(prodDebugXcconfig, contains('APP_DISPLAY_NAME_KO=상용 앱'));
       expect(prodDebugXcconfig, contains('APP_DISPLAY_NAME_EN=Test Prod'));
 
-      // InfoPlist.strings should reference the xcconfig variables
+      // ko: yaml 값 그대로 사용
       final koStringsPath = p.join(
           root.path, 'ios', 'Runner', 'ko.lproj', 'InfoPlist.strings');
       final koContent = File(koStringsPath).readAsStringSync();
-      expect(koContent,
-          contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_KO)";'));
+      expect(koContent, contains('"CFBundleDisplayName" = "개발 앱";'));
 
+      // en: xcconfig 변수 참조
       final enStringsPath = p.join(
           root.path, 'ios', 'Runner', 'en.lproj', 'InfoPlist.strings');
       final enContent = File(enStringsPath).readAsStringSync();
       expect(enContent,
-          contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME_EN)";'));
+          contains('"CFBundleDisplayName" = "(\$APP_DISPLAY_NAME)";'));
     });
   });
 }
